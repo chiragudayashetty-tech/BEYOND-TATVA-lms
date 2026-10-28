@@ -72,7 +72,7 @@ export default function AdminPage() {
         <div className="space-y-3">
           {automations.map((a) => (
             <div key={a.when} className="card flex flex-wrap items-center gap-3">
-              <span className="chip bg-brand/20 text-indigo-200">When</span>
+              <span className="chip bg-lilac/30 text-brand">When</span>
               <span className="font-medium">{a.when}</span>
               <span className="text-muted">→</span>
               <span className="flex-1 text-sm text-muted">{a.then}</span>

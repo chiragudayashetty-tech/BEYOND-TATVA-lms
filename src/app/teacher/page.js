@@ -1,5 +1,6 @@
 import AppShell, { Bar, SectionTitle, Stat } from "@/components/AppShell";
-import ModuleCard from "@/components/ModuleCard";
+import { CourseCard } from "@/components/ott/Cards";
+import { courses } from "@/lib/catalog";
 import { modules, students } from "@/lib/mock";
 import { teacherNav } from "@/lib/nav";
 
@@ -53,7 +54,7 @@ export default function TeacherPage() {
 
       <SectionTitle>Courses for your class</SectionTitle>
       <div className="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-4">
-        {modules.map((m) => <ModuleCard key={m.id} m={m} />)}
+        {courses.map((c) => <CourseCard key={c.id} course={c} />)}
       </div>
     </AppShell>
   );

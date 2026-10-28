@@ -1,17 +1,21 @@
 @import "tailwindcss";
 
-/* Beyond Tattva palette: Indigo #4F46E5, Teal #14B8A6, Navy #0F172A, Yellow #FACC15 */
+/* Bright pop theme. Brand: Indigo #4F46E5, Teal #14B8A6, Navy #0F172A, Yellow #FACC15, Soft white #F8FAFC */
 :root {
-  --background: #0b1020;
-  --surface: #121a2e;
-  --surface-2: #1a2440;
-  --border: #243055;
-  --foreground: #f1f5f9;
-  --muted: #94a3b8;
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --border: #e2e8f0;
+  --foreground: #0f172a;
+  --muted: #64748b;
   --brand: #4f46e5;
-  --teal: #14b8a6;
+  --teal: #0d9488;
   --yellow: #facc15;
-  --coral: #fb7185;
+  --coral: #f43f5e;
+  --sky: #93c5fd;
+  --lilac: #a78bfa;
+  --pink: #fb7185;
+  --mint: #5eead4;
 }
 
 @theme inline {
@@ -25,6 +29,10 @@
   --color-teal: var(--teal);
   --color-yellow: var(--yellow);
   --color-coral: var(--coral);
+  --color-sky: var(--sky);
+  --color-lilac: var(--lilac);
+  --color-pink: var(--pink);
+  --color-mint: var(--mint);
   --font-sans: var(--font-inter);
   --font-display: var(--font-poppins);
   --font-ui: var(--font-outfit);
@@ -40,32 +48,50 @@ h1, h2, h3 {
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition active:scale-[0.97] disabled:opacity-50;
 }
 @utility btn-primary {
-  @apply btn bg-brand text-white shadow-lg shadow-brand/30 hover:brightness-110;
+  @apply btn bg-foreground text-white hover:bg-brand;
 }
 @utility btn-yellow {
-  @apply btn bg-yellow text-[#0f172a] hover:brightness-105;
+  @apply btn bg-yellow text-foreground shadow-[0_4px_0_#ca8a04] hover:brightness-105 active:translate-y-[2px] active:shadow-[0_2px_0_#ca8a04];
 }
 @utility btn-ghost {
-  @apply btn border border-border bg-surface/60 hover:bg-surface-2;
+  @apply btn border-2 border-border bg-surface hover:border-foreground;
 }
 @utility input {
-  @apply w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none placeholder:text-muted focus:border-brand focus:ring-2 focus:ring-brand/30;
+  @apply w-full rounded-2xl border-2 border-border bg-surface px-4 py-3 text-sm outline-none placeholder:text-muted focus:border-brand;
 }
 @utility card {
-  @apply rounded-2xl border border-border bg-surface p-5;
+  @apply rounded-3xl border border-border bg-surface p-5 shadow-[0_2px_0_#e2e8f0];
 }
 @utility chip {
-  @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
+  @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold;
 }
+
+@keyframes kenburns {
+  from { transform: scale(1.12) translate(2%, 1%); }
+  to { transform: scale(1) translate(0, 0); }
+}
+@keyframes fadeup {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-10px) rotate(3deg); }
+}
+
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 
 .glow {
   background:
-    radial-gradient(600px 300px at 15% 0%, rgb(79 70 229 / 0.35), transparent 70%),
-    radial-gradient(500px 300px at 90% 10%, rgb(20 184 166 / 0.22), transparent 70%);
+    radial-gradient(600px 300px at 10% 0%, rgb(250 204 21 / 0.25), transparent 70%),
+    radial-gradient(500px 300px at 90% 10%, rgb(167 139 250 / 0.25), transparent 70%),
+    var(--background);
 }
-

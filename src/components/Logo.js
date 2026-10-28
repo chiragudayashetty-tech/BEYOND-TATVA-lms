@@ -1,13 +1,16 @@
 import Link from "next/link";
 
-export default function Logo({ href = "/" }) {
+/* eslint-disable @next/next/no-img-element */
+export default function Logo({ href = "/", size = "md", light = false }) {
+  const h = size === "lg" ? "h-10" : "h-8";
   return (
-    <Link href={href} className="flex items-center gap-2.5">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/brand/mark.svg" alt="" className="h-9 w-9" />
-      <span className="font-display text-lg font-semibold tracking-tight">
-        Beyond <span className="text-teal">Tattva</span>
-      </span>
+    <Link href={href} className="flex shrink-0 items-center gap-2.5" aria-label="Beyond Tatva home">
+      <img src="/brand/mark-trim.png" alt="" className={`${h} w-auto`} />
+      <img
+        src={light ? "/brand/wordmark-white.png" : "/brand/wordmark-black.png"}
+        alt="Beyond Tatva"
+        className={size === "lg" ? "h-4" : "h-3"}
+      />
     </Link>
   );
 }

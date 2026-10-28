@@ -12,14 +12,14 @@ export default function AppShell({ role, name, nav, children }) {
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-8">
-            <Logo href="/dashboard" />
+            <Logo href="/profiles" />
             <nav className="hidden gap-1 font-ui text-sm md:flex">
               {nav.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={`rounded-lg px-3 py-1.5 transition ${
-                    pathname === item.href ? "bg-surface-2 text-foreground" : "text-muted hover:text-foreground"
+                    pathname === item.href ? "bg-foreground text-white" : "text-muted hover:text-foreground"
                   }`}
                 >
                   {item.label}
@@ -28,10 +28,10 @@ export default function AppShell({ role, name, nav, children }) {
             </nav>
           </div>
           <div className="flex items-center gap-3 text-sm">
-            <span className="chip bg-brand/20 capitalize text-indigo-200">{role}</span>
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-brand to-teal font-semibold">
+            <span className="chip bg-yellow capitalize">{role}</span>
+            <Link href="/profiles" aria-label="Switch profile" className="grid h-10 w-10 place-items-center rounded-full bg-lilac font-display font-bold">
               {name[0]}
-            </div>
+            </Link>
           </div>
         </div>
         <nav className="no-scrollbar flex gap-1 overflow-x-auto px-4 pb-2 font-ui text-sm md:hidden">
