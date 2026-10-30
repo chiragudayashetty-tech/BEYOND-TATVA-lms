@@ -1,29 +1,48 @@
-import { Building2, CalendarClock, Clock, KeyRound, MessageCircle, Plus, School, Sheet, UploadCloud, Users, Webhook, Zap } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, Clapperboard, Contact, Film, GraduationCap, KeyRound, School, Users, Workflow } from "lucide-react";
 import Shell from "@/components/shell/Shell";
-import { Badge, Card, IconTile, PageTitle, StatCard } from "@/components/ui";
+import { Badge, Card, IconTile, StatCard } from "@/components/ui";
 import { iconFor } from "@/components/course";
-import { course, fmtPremiere, isReleased, nextPremiere } from "@/lib/catalog";
-import { isPreview } from "@/lib/supabase/server";
-import KeyGenerator from "./KeyGenerator";
-import { automations, integrations } from "@/lib/demo";
+import { fmtPremiere, isReleased, nextPremiere } from "@/lib/catalog";
+import { getCourse } from "@/lib/data";
+import { createClient, isPreview } from "@/lib/supabase/server";
 
 export const metadata = { title: "Admin · Beyond Tatva" };
 
-const icons = { Sheet, Zap, Building2, MessageCircle, Webhook, School };
+const sections = [
+  { href: "/admin/content", icon: Clapperboard, title: "Content", body: "Course, modules, lessons, videos and premiere dates" },
+  { href: "/admin/access", icon: KeyRound, title: "Access keys", body: "Create keys for schools and see who redeemed them" },
+  { href: "/admin/people", icon: School, title: "Schools and people", body: "Schools, join codes, classes, teachers and students" },
+  { href: "/admin/crm", icon: Contact, title: "CRM", body: "Leads, schools in the pipeline, follow-ups" },
+  { href: "/admin/automations", icon: Workflow, title: "Automations", body: "Reminders, emails, WhatsApp and Sheets sync" },
+];
 
-export default function AdminPage() {
-  const next = nextPremiere();
+export default async function AdminPage() {
+  const [course, supabase] = await Promise.all([getCourse(), createClient()]);
+  const [{ data: s }, { count: withVideo }] = await Promise.all([
+    supabase.rpc("admin_stats"),
+    supabase.from("lesson_media").select("lesson_id", { count: "exact", head: true }),
+  ]);
+  const stats = s ?? {};
+  const next = nextPremiere(course);
+
   return (
     <Shell roles={["admin"]} greeting>
+      {isPreview && (
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-warning/30 bg-warning-soft p-4 text-sm">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-warning" /> Local preview: numbers show as 0 and changes won&apos;t save. Sign in with your admin account to manage real data.
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatCard label="Students enrolled" value="312" hint="4 schools" icon={Users} />
-        <StatCard label="Unlocked full course" value="248" hint="236 keys · 12 paid" icon={KeyRound} tone="success" />
-        <StatCard label="Watch hours" value="486" hint="This week" icon={Clock} tone="warning" />
-        <StatCard label="Next premiere" value={next ? `M${next.n}` : "Done"} hint={next ? fmtPremiere(next.release) : "All modules out"} icon={CalendarClock} />
+        <StatCard label="Students" value={stats.students ?? 0} hint={`${stats.parents ?? 0} parents · ${stats.teachers ?? 0} teachers`} icon={Users} />
+        <StatCard label="Full access" value={stats.unlocked ?? 0} hint={`${stats.keys_used ?? 0} of ${stats.keys_total ?? 0} keys used`} icon={KeyRound} tone="success" />
+        <StatCard label="Lessons completed" value={stats.lessons_completed ?? 0} hint="All students, all time" icon={CheckCircle2} tone="warning" />
+        <StatCard label="Schools" value={stats.schools ?? 0} icon={GraduationCap} />
       </div>
 
-      <div id="content" className="mt-6 grid scroll-mt-24 gap-6 xl:grid-cols-[1.3fr_1fr]">
-        <Card title="Release schedule" action={<span className="text-xs text-muted">Sundays, 6 PM IST</span>}>
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1.3fr_1fr]">
+        <Card title="Release schedule" action={<Link href="/admin/content" className="text-sm font-medium text-primary hover:underline">Edit</Link>}>
           <ul className="divide-y divide-border">
             {course.modules.map((m) => {
               const out = isReleased(m);
@@ -36,52 +55,46 @@ export default function AdminPage() {
                   </div>
                   {m.free && <Badge tone="success">Free</Badge>}
                   <Badge tone={out ? "success" : "primary"}>{out ? "Live" : "Scheduled"}</Badge>
-                  <button className="btn-secondary px-3 py-1.5 text-xs"><UploadCloud className="h-3.5 w-3.5" /> Videos</button>
                 </li>
               );
             })}
           </ul>
         </Card>
 
-        <Card title="Access keys for schools">
-          <p className="-mt-2 mb-4 text-sm text-muted">Create one key per student. Each key unlocks modules 1–6 for one student.</p>
-          <KeyGenerator courseId={course.id} preview={isPreview} />
-        </Card>
-      </div>
-      <section id="integrations" className="mt-8 scroll-mt-24">
-        <PageTitle title="Integrations" subtitle="Connect Beyond Tatva to the tools you already use." />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {integrations.map((i) => (
-            <div key={i.name} className="card flex items-center gap-4 p-4">
-              <IconTile icon={icons[i.icon] ?? Zap} tone={i.connected ? "success" : "neutral"} />
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold">{i.name}</div>
-                <div className="text-xs text-muted">{i.desc}</div>
+        <div className="space-y-4">
+          {next && (
+            <div className="card flex items-center gap-4 p-5">
+              <IconTile icon={CalendarClock} />
+              <div>
+                <div className="text-sm text-muted">Next premiere</div>
+                <div className="font-semibold">Module {next.n}: {next.title}</div>
+                <div className="text-sm text-muted">{fmtPremiere(next.release)}</div>
               </div>
-              {i.connected ? <Badge tone="success">Connected</Badge> : <button className="btn-secondary px-3 py-1.5 text-xs">Connect</button>}
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="automations" className="mt-8 scroll-mt-24">
-        <PageTitle title="Automations" subtitle="Rules that run on their own.">
-          <button className="btn-primary"><Plus className="h-4 w-4" /> New automation</button>
-        </PageTitle>
-        <div className="space-y-3">
-          {automations.map((a) => (
-            <div key={a.when} className="card flex flex-wrap items-center gap-3 p-4">
-              <Badge tone="primary">When</Badge>
-              <span className="text-sm font-semibold">{a.when}</span>
-              <Badge>Then</Badge>
-              <span className="flex-1 text-sm text-muted">{a.then}</span>
-              <span role="switch" aria-checked={a.on} className={`relative h-6 w-11 rounded-full ${a.on ? "bg-primary" : "bg-border"}`}>
-                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${a.on ? "left-[22px]" : "left-0.5"}`} />
-              </span>
+          )}
+          <div className="card flex items-center gap-4 p-5">
+            <IconTile icon={Film} tone="warning" />
+            <div>
+              <div className="text-sm text-muted">Lessons with a video</div>
+              <div className="font-semibold">{isPreview ? "Sign in to see" : `${withVideo ?? 0} of ${course.lessonCount}`}</div>
             </div>
-          ))}
+          </div>
+          <ul className="card divide-y divide-border overflow-hidden">
+            {sections.map((x) => (
+              <li key={x.href}>
+                <Link href={x.href} className="flex items-center gap-3 p-4 transition hover:bg-surface-2">
+                  <IconTile icon={x.icon} size="sm" tone="neutral" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold">{x.title}</div>
+                    <div className="truncate text-xs text-muted">{x.body}</div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-subtle" />
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
-      </section>
+      </div>
     </Shell>
   );
 }

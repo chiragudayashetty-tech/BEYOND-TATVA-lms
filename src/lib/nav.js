@@ -5,17 +5,11 @@ export const nav = {
     main: [
       { href: "/browse", label: "Dashboard", icon: "LayoutDashboard" },
       { href: "/course", label: "Course", icon: "BookOpen" },
-      { href: "/live", label: "Live Classes", icon: "Radio" },
       { href: "/planner", label: "Study Planner", icon: "CalendarDays" },
-      { href: "/assignments", label: "Assignments", icon: "ClipboardList" },
-      { href: "/challenges", label: "Challenges", icon: "Swords" },
-    ],
-    more: [
       { href: "/progress", label: "Progress", icon: "ChartLine" },
-      { href: "/leaderboard", label: "Leaderboard", icon: "Trophy" },
-      { href: "/achievements", label: "Achievements", icon: "Award" },
-      { href: "/certificates", label: "Certificates", icon: "BadgeCheck" },
+      { href: "/certificates", label: "Certificate", icon: "BadgeCheck" },
     ],
+    more: [],
     mobile: [
       { href: "/browse", label: "Home", icon: "House" },
       { href: "/course", label: "Course", icon: "BookOpen" },
@@ -25,11 +19,7 @@ export const nav = {
     ],
   },
   parent: {
-    main: [
-      { href: "/parent", label: "Overview", icon: "LayoutDashboard" },
-      { href: "/parent#screen-time", label: "Screen time", icon: "Smartphone" },
-      { href: "/parent#courses", label: "Modules", icon: "BookOpen" },
-    ],
+    main: [{ href: "/parent", label: "Overview", icon: "LayoutDashboard" }],
     more: [],
     mobile: [
       { href: "/parent", label: "Overview", icon: "House" },
@@ -40,7 +30,6 @@ export const nav = {
     main: [
       { href: "/teacher", label: "My Class", icon: "Users" },
       { href: "/course", label: "Course", icon: "BookOpen" },
-      { href: "/live", label: "Live Classes", icon: "Radio" },
     ],
     more: [],
     mobile: [
@@ -52,18 +41,20 @@ export const nav = {
   admin: {
     main: [
       { href: "/admin", label: "Overview", icon: "LayoutDashboard" },
-      { href: "/admin#content", label: "Content", icon: "Clapperboard" },
-      { href: "/admin#integrations", label: "Integrations", icon: "Plug" },
-      { href: "/admin#automations", label: "Automations", icon: "Workflow" },
+      { href: "/admin/content", label: "Content", icon: "Clapperboard" },
+      { href: "/admin/access", label: "Access keys", icon: "KeyRound" },
+      { href: "/admin/people", label: "Schools & people", icon: "Users" },
+      { href: "/admin/crm", label: "CRM", icon: "Contact" },
+      { href: "/admin/automations", label: "Automations", icon: "Workflow" },
     ],
     more: [
       { href: "/browse", label: "Student view", icon: "GraduationCap" },
-      { href: "/teacher", label: "Teacher view", icon: "Users" },
-      { href: "/parent", label: "Parent view", icon: "House" },
+      { href: "/course", label: "Course page", icon: "BookOpen" },
     ],
     mobile: [
       { href: "/admin", label: "Overview", icon: "LayoutDashboard" },
-      { href: "/browse", label: "Student", icon: "GraduationCap" },
+      { href: "/admin/content", label: "Content", icon: "Clapperboard" },
+      { href: "/admin/access", label: "Keys", icon: "KeyRound" },
       { href: "/profile", label: "Profile", icon: "User" },
     ],
   },

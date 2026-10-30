@@ -4,12 +4,11 @@ import Link from "next/link";
 import { useState } from "react";
 import { CalendarClock, PlayCircle, Search, SearchX } from "lucide-react";
 import { Empty } from "@/components/ui";
-import { course } from "@/lib/catalog";
 
 const topics = ["Study", "Exam", "ChatGPT", "Prompt", "Poster", "Chatbot"];
 
 // Searches lesson and module titles within the course.
-export default function SearchClient({ initial = "" }) {
+export default function SearchClient({ initial = "", course }) {
   const [q, setQ] = useState(initial);
   const term = q.trim().toLowerCase();
   const rows = course.lessons.map((l) => ({ ...l, m: course.modules.find((m) => m.n === l.module) }));
@@ -34,7 +33,7 @@ export default function SearchClient({ initial = "" }) {
       {results.length ? (
         <ul className="card divide-y divide-border overflow-hidden">
           {results.map((l) => {
-            const out = new Date(l.m.release).getTime() <= now;
+            const out = !l.m.release || new Date(l.m.release).getTime() <= now;
             return (
               <li key={l.id}>
                 <Link href={out ? `/watch/${course.id}?l=${l.n}` : `/course#m${l.m.n}`} className="flex items-center gap-3 px-4 py-3 transition hover:bg-surface-2">

@@ -1,45 +1,41 @@
-import { CalendarCheck, Clock, Target, Zap } from "lucide-react";
+import { CheckCircle2, Flame, Target, Zap } from "lucide-react";
 import Shell from "@/components/shell/Shell";
-import { Bars, Card, IconTile, LineChart, PageTitle, Progress, StatCard } from "@/components/ui";
+import { Card, IconTile, PageTitle, Progress, StatCard } from "@/components/ui";
 import { iconFor } from "@/components/course";
-import { course, isReleased } from "@/lib/catalog";
-import { me, scoreTrend, week } from "@/lib/demo";
+import { isReleased } from "@/lib/catalog";
+import { getCourse, getStudentStats } from "@/lib/data";
 
 export const metadata = { title: "Progress · Beyond Tatva" };
 
-const hm = (m) => `${Math.floor(m / 60)}h ${m % 60}m`;
+export default async function ProgressPage() {
+  const [course, stats] = await Promise.all([getCourse(), getStudentStats()]);
+  const done = course.lessons.filter((l) => l.done).length;
+  const correct = stats.xp / 10;
+  const accuracy = stats.answers ? Math.round((correct / stats.answers) * 100) : null;
+  const released = course.modules.filter((m) => isReleased(m));
 
-export default function ProgressPage() {
-  const total = week.reduce((a, d) => a + d.value, 0);
-  const started = course.modules.filter((m) => isReleased(m));
   return (
     <Shell roles={["student"]}>
-      <PageTitle title="Your progress" subtitle="How you're learning, week by week." />
+      <PageTitle title="Your progress" subtitle="Everything here updates as you watch and answer." />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatCard label="Learning this week" value={hm(total)} hint="+18% vs last week" icon={Clock} />
-        <StatCard label="Quiz average" value="85%" hint="Up from 72%" icon={Target} tone="success" />
-        <StatCard label="Attendance" value={`${me.attendance}%`} hint="23 of 25 live classes" icon={CalendarCheck} tone="success" />
-        <StatCard label="Total XP" value={me.xp.toLocaleString("en-IN")} hint={`Level ${me.level}`} icon={Zap} tone="warning" />
-      </div>
-
-      <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <Card title="Minutes learned" action={<span className="text-xs text-muted">Last 7 days</span>}>
-          <Bars data={week.map((d, i) => ({ label: d.label, value: d.value, active: i === 3 }))} valueLabel={(v) => `${v} min`} />
-        </Card>
-        <Card title="Quiz scores" action={<span className="text-xs text-muted">Last 2 months</span>}>
-          <LineChart points={scoreTrend.points} labels={scoreTrend.labels} />
-        </Card>
+        <StatCard label="Lessons completed" value={`${done} / ${course.lessonCount}`} hint={`${course.progress}% of the course`} icon={CheckCircle2} tone="success" />
+        <StatCard label="Quick-check accuracy" value={accuracy == null ? "–" : `${accuracy}%`} hint={stats.answers ? `${correct} of ${stats.answers} correct` : "Answer one in a lesson"} icon={Target} />
+        <StatCard label="XP" value={stats.xp} hint="10 per correct answer" icon={Zap} tone="warning" />
+        <StatCard label="Streak" value={`${stats.streak} ${stats.streak === 1 ? "day" : "days"}`} hint="Days in a row with learning" icon={Flame} tone="danger" />
       </div>
 
       <Card title="By module" className="mt-6">
         <ul className="space-y-4">
-          {started.map((c) => (
-            <li key={c.id} className="flex items-center gap-4">
-              <IconTile icon={iconFor(c)} size="sm" />
+          {released.map((m) => (
+            <li key={m.id} className="flex items-center gap-4">
+              <IconTile icon={iconFor(m)} size="sm" />
               <div className="min-w-0 flex-1">
-                <div className="flex justify-between gap-3 text-sm"><span className="font-medium">Module {c.n}: {c.title}</span><span className="font-semibold">{c.progress}%</span></div>
-                <Progress value={c.progress} tone={c.progress === 100 ? "success" : "primary"} className="mt-2 h-1.5" />
+                <div className="flex justify-between gap-3 text-sm">
+                  <span className="font-medium">Module {m.n}: {m.title}</span>
+                  <span className="font-semibold">{m.lessons.filter((l) => l.done).length}/{m.lessons.length}</span>
+                </div>
+                <Progress value={m.progress} tone={m.progress === 100 ? "success" : "primary"} className="mt-2 h-1.5" />
               </div>
             </li>
           ))}

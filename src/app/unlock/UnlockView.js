@@ -65,7 +65,7 @@ export default function UnlockView({ price, hasAccess, preview }) {
           <span className="text-sm text-muted">one time · incl. GST</span>
         </div>
         <ul className="mt-4 space-y-2 text-sm">
-          {["Modules 1–6 and 24 lessons", "Weekly live doubt-clearing class", "Quizzes, project feedback and certificate"].map((t) => (
+          {["Every paid module and its lessons", "In-video quick checks and XP", "Quizzes, project feedback and certificate"].map((t) => (
             <li key={t} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />{t}</li>
           ))}
         </ul>

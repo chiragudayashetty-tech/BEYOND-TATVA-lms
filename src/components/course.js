@@ -11,22 +11,16 @@ export const iconFor = (m) => moduleIcons[m?.n ?? 0] ?? Brain;
 export function moduleState(m, hasAccess, now = Date.now()) {
   if (!isReleased(m, now)) return "upcoming";
   if (!canWatch(m, hasAccess, now)) return "locked";
-  if (m.progress === 100) return "done";
+  if (m.lessons.length && m.progress === 100) return "done";
   if (m.progress > 0) return "progress";
   return "open";
 }
 
-export function frameSrc(m, i = 0) {
-  const f = m?.frames;
-  return f?.length ? `/media/frames/${f[i % f.length]}.jpg` : null;
-}
-
 /* eslint-disable @next/next/no-img-element */
-export function Thumb({ module: m, i = 0, className = "", dim = false, children }) {
-  const src = frameSrc(m, i);
+export function Thumb({ module: m, className = "", dim = false, children }) {
   return (
     <div className={`${/\babsolute\b/.test(className) ? "" : "relative"} overflow-hidden bg-surface-2 ${className}`}>
-      {src ? <img src={src} alt="" loading="lazy" className={`h-full w-full object-cover ${dim ? "grayscale-[60%] opacity-60" : ""}`} />
+      {m?.thumb ? <img src={m.thumb} alt="" loading="lazy" className={`h-full w-full object-cover ${dim ? "grayscale-[60%] opacity-60" : ""}`} />
         : <div className="grid h-full w-full place-items-center"><IconTile icon={iconFor(m)} size="lg" /></div>}
       {children}
     </div>
@@ -41,17 +35,19 @@ function StateBadge({ m, state }) {
   return <Badge tone="primary">Available</Badge>;
 }
 
-export function ModuleCard({ module: m, hasAccess, courseId = "ai-for-students" }) {
+const firstLesson = (m) => m.lessons.find((l) => l.current) ?? m.lessons.find((l) => !l.done) ?? m.lessons[0];
+
+export function ModuleCard({ module: m, hasAccess, courseId }) {
   const state = moduleState(m, hasAccess);
-  const playable = state !== "upcoming" && state !== "locked";
-  const next = m.lessons.find((l) => l.current) ?? m.lessons.find((l) => !l.done) ?? m.lessons[0];
-  const href = playable ? `/watch/${courseId}?l=${next.n}` : state === "locked" ? "/unlock" : "/course#m" + m.n;
+  const playable = (state !== "upcoming" && state !== "locked") && m.lessons.length > 0;
+  const next = firstLesson(m);
+  const href = playable ? `/watch/${courseId}?l=${next.n}` : state === "locked" ? "/unlock" : `/course#m${m.n}`;
   return (
     <Link href={href} className="card group flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5">
       <Thumb module={m} className="aspect-video" dim={!playable}>
         <span className="absolute left-3 top-3 rounded-lg bg-black/60 px-2 py-1 text-xs font-semibold text-white backdrop-blur">Module {m.n}</span>
         {playable && <span className="absolute inset-0 m-auto grid h-11 w-11 place-items-center rounded-full bg-white/95 text-[#0f172a] opacity-0 shadow-lg transition group-hover:opacity-100"><PlayCircle className="h-6 w-6" strokeWidth={1.75} /></span>}
-        {!playable && <span className="absolute inset-0 m-auto grid h-11 w-11 place-items-center rounded-full bg-black/50 text-white backdrop-blur">{state === "upcoming" ? <CalendarClock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}</span>}
+        {!playable && <span className="absolute inset-0 m-auto grid h-11 w-11 place-items-center rounded-full bg-black/50 text-white backdrop-blur">{state === "locked" ? <Lock className="h-5 w-5" /> : <CalendarClock className="h-5 w-5" />}</span>}
       </Thumb>
       <div className="flex flex-1 flex-col p-4">
         <StateBadge m={m} state={state} />
@@ -61,7 +57,7 @@ export function ModuleCard({ module: m, hasAccess, courseId = "ai-for-students" 
           {state === "progress" || state === "done" ? (
             <div className="flex items-center gap-3"><Progress value={m.progress} tone={state === "done" ? "success" : "primary"} className="h-1.5" /><span className="font-medium text-fg">{m.progress}%</span></div>
           ) : state === "upcoming" ? (
-            <span>Premieres in <span className="font-semibold text-fg"><Countdown to={m.release} compact /></span></span>
+            m.release ? <span>Premieres in <span className="font-semibold text-fg"><Countdown to={m.release} compact /></span></span> : <span>Coming soon</span>
           ) : state === "locked" ? (
             <span className="font-medium text-primary">Unlock the full course</span>
           ) : (
@@ -89,9 +85,9 @@ export function PremiereCard({ module: m, hasAccess }) {
         </div>
         <Countdown to={m.release} />
         <div className="flex flex-wrap gap-2">
-          {hasAccess
-            ? <span className="btn bg-white text-[#0f172a]"><CalendarClock className="h-4 w-4" /> You&apos;re all set for Sunday</span>
-            : <Link href="/unlock" className="btn bg-white text-[#0f172a] hover:bg-white/90"><Lock className="h-4 w-4" /> Unlock to watch on Sunday</Link>}
+          {hasAccess || m.free
+            ? <span className="btn bg-white text-[#0f172a]"><CalendarClock className="h-4 w-4" /> You&apos;re all set for the premiere</span>
+            : <Link href="/unlock" className="btn bg-white text-[#0f172a] hover:bg-white/90"><Lock className="h-4 w-4" /> Unlock to watch it</Link>}
         </div>
       </div>
     </div>
@@ -99,22 +95,24 @@ export function PremiereCard({ module: m, hasAccess }) {
 }
 
 export function ContinueHero({ course, module: m }) {
-  const next = m.lessons.find((l) => l.current) ?? m.lessons.find((l) => !l.done) ?? m.lessons[0];
+  const next = firstLesson(m);
+  if (!next) return null;
+  const started = m.progress > 0;
   return (
     <div className="card grid overflow-hidden sm:grid-cols-[1.1fr_1fr]">
       <Link href={`/watch/${course.id}?l=${next.n}`} className="group relative block">
-        <Thumb module={m} i={next.n - 1} className="aspect-video h-full sm:aspect-auto">
+        <Thumb module={m} className="aspect-video h-full sm:aspect-auto">
           <span className="absolute inset-0 bg-black/20 transition group-hover:bg-black/30" />
           <span className="absolute inset-0 m-auto grid h-14 w-14 place-items-center rounded-full bg-white text-[#0f172a] shadow-lg transition group-hover:scale-105"><PlayCircle className="h-7 w-7" strokeWidth={1.75} /></span>
         </Thumb>
       </Link>
       <div className="flex flex-col justify-center p-5 sm:p-6">
-        <div className="text-xs font-semibold uppercase tracking-wider text-primary">Continue · Module {m.n}</div>
+        <div className="text-xs font-semibold uppercase tracking-wider text-primary">{started ? "Continue" : "Start here"} · Module {m.n}</div>
         <h2 className="mt-2 text-xl font-semibold">{next.title}</h2>
         <p className="mt-1 text-sm text-muted">{m.title} · Lesson {next.idx} of {m.lessons.length}</p>
         <div className="mt-5 flex items-center gap-3 text-sm"><Progress value={m.progress} /><span className="shrink-0 font-semibold">{m.progress}%</span></div>
         <div className="mt-5 flex flex-wrap gap-2">
-          <Link href={`/watch/${course.id}?l=${next.n}`} className="btn-primary">Resume lesson</Link>
+          <Link href={`/watch/${course.id}?l=${next.n}`} className="btn-primary">{started ? "Resume lesson" : "Start lesson"}</Link>
           <Link href="/course" className="btn-secondary">All modules</Link>
         </div>
       </div>

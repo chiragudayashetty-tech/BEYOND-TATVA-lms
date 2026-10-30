@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { Bell, Flame, LogOut, Search, Settings, User } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Avatar } from "@/components/ui";
-import { notifications } from "@/lib/demo";
 
 function useOutside(ref, close) {
   useEffect(() => {
@@ -22,7 +21,8 @@ export default function TopBar({ name, role, greeting, streak }) {
   const [menu, setMenu] = useState(null);
   const ref = useRef(null);
   useOutside(ref, () => setMenu(null));
-  const unread = notifications.filter((n) => n.unread).length;
+  const notifications = [];
+  const unread = 0;
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur">
@@ -62,6 +62,7 @@ export default function TopBar({ name, role, greeting, streak }) {
             {menu === "bell" && (
               <div className="absolute right-0 top-12 w-80 animate-[pop_.15s_ease-out] rounded-2xl border border-border bg-surface p-2 shadow-xl">
                 <div className="px-3 py-2 text-sm font-semibold">Notifications</div>
+                {notifications.length === 0 && <div className="px-3 pb-3 text-sm text-muted">You&apos;re all caught up.</div>}
                 {notifications.map((n) => (
                   <div key={n.title} className="flex gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-2">
                     <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.unread ? "bg-primary" : "bg-transparent"}`} />

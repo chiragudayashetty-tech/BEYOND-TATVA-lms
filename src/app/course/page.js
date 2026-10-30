@@ -4,10 +4,11 @@ import Shell from "@/components/shell/Shell";
 import { Badge, Card, IconTile, Progress } from "@/components/ui";
 import { PremiereCard, Thumb, iconFor, moduleState } from "@/components/course";
 import Countdown from "@/components/Countdown";
-import { PRICE_INR, course, fmtPremiere, isReleased, nextPremiere } from "@/lib/catalog";
+import { fmtPremiere, isReleased, nextPremiere } from "@/lib/catalog";
+import { getCourse } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 
-export const metadata = { title: "AI for Students · Beyond Tatva" };
+export const metadata = { title: "Course · Beyond Tatva" };
 
 const stateLabel = {
   open: ["success", "Available"],
@@ -18,8 +19,8 @@ const stateLabel = {
 };
 
 export default async function CoursePage() {
-  const { hasAccess } = await getSession();
-  const next = nextPremiere();
+  const [{ hasAccess }, course] = await Promise.all([getSession(), getCourse()]);
+  const next = nextPremiere(course);
   const released = course.modules.filter((m) => isReleased(m)).length;
 
   return (
@@ -33,7 +34,7 @@ export default async function CoursePage() {
                 <h1 className="mt-3 text-3xl font-semibold">{course.title}</h1>
                 <p className="mt-2 text-muted">{course.description}</p>
                 <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-                  {[["0–6", "Modules"], [String(course.lessonCount), "Lessons"], ["Sun", "6 PM weekly"]].map(([v, l]) => (
+                  {[[`0–${course.modules.length - 1}`, "Modules"], [String(course.lessonCount), "Lessons"], ["Sun", "6 PM weekly"]].map(([v, l]) => (
                     <div key={l} className="rounded-xl bg-surface-2 py-3">
                       <div className="font-display text-xl font-semibold">{v}</div>
                       <div className="text-xs text-muted">{l}</div>
@@ -42,7 +43,7 @@ export default async function CoursePage() {
                 </div>
               </div>
               <div className="relative min-h-56">
-                <video src="/media/hero1.mp4" poster="/media/frames/v1-1.jpg" autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />
+                <video src={course.hero ?? undefined} poster={course.modules[1]?.thumb ?? course.modules[0]?.thumb} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />
               </div>
             </div>
           </div>
@@ -126,7 +127,7 @@ export default async function CoursePage() {
                 <IconTile icon={Gift} tone="success" />
                 <h2 className="mt-3 font-semibold">AI 101 is free</h2>
                 <p className="mt-1 text-sm text-muted">Unlock modules 1–6 with a key from your school, or pay once online.</p>
-                <div className="mt-4 flex items-baseline gap-1"><span className="font-display text-3xl font-semibold">₹{PRICE_INR}</span><span className="text-sm text-muted">one time</span></div>
+                <div className="mt-4 flex items-baseline gap-1"><span className="font-display text-3xl font-semibold">₹{course.price}</span><span className="text-sm text-muted">one time</span></div>
                 <Link href="/unlock" className="btn-primary mt-4 w-full">Unlock full course</Link>
                 <Link href="/unlock#key" className="btn-ghost mt-1 w-full">I have an access key</Link>
               </>
@@ -143,7 +144,7 @@ export default async function CoursePage() {
 
           <Card title="What you'll get">
             <ul className="space-y-2.5 text-sm">
-              {["24 short video lessons with quick checks", "A quiz at the end of every module", "Live doubt-clearing class every week", "A final project: your own chatbot", "A certificate your school can verify"].map((t) => (
+              {[`${course.lessonCount} short video lessons with quick checks`, "A quiz at the end of every module", "A final project: your own chatbot", "A certificate your school can verify"].map((t) => (
                 <li key={t} className="flex gap-2.5"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />{t}</li>
               ))}
             </ul>

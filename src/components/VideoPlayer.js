@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Maximize, Pause, Play, RotateCcw, RotateCw, Volume2, VolumeX, Zap } from "lucide-react";
 
-// Demo lesson and its in-video questions. Real lessons will carry their own checkpoints.
-const VIDEO = "/media/lesson1.mp4";
-const POSTER = "/media/lesson1-poster.jpg";
-const CHECKPOINTS = [
+// In-video questions for the demo footage. Admin-authored checkpoints per lesson come later.
+const DEMO_VIDEO = "/media/lesson1.mp4";
+const DEMO_CHECKPOINTS = [
   {
     at: 58,
     question: "Which AI tool can you use for this study method?",
@@ -26,7 +25,8 @@ const CHECKPOINTS = [
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const SPEEDS = [1, 1.25, 1.5, 0.75];
 
-export default function VideoPlayer({ onXp }) {
+export default function VideoPlayer({ src, onAnswer }) {
+  const CHECKPOINTS = src === DEMO_VIDEO ? DEMO_CHECKPOINTS : [];
   const video = useRef(null);
   const box = useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -68,16 +68,28 @@ export default function VideoPlayer({ onXp }) {
     if (cp) { v.pause(); setQuestion(cp); setPicked(null); }
   };
 
-  const pick = (i) => { setPicked(i); if (i === question.answer) onXp?.(10); };
+  const pick = (i) => { setPicked(i); onAnswer?.(question.question, i === question.answer); };
   const resume = () => { setAnswered((a) => [...a, question.at]); setQuestion(null); video.current?.play(); };
   const cycleSpeed = () => { const n = (speed + 1) % SPEEDS.length; setSpeed(n); if (video.current) video.current.playbackRate = SPEEDS[n]; };
+
+  if (!src) {
+    return (
+      <div className="grid aspect-video place-items-center rounded-2xl bg-[#0f172a] text-center text-white">
+        <div>
+          <Play className="mx-auto h-8 w-8 opacity-60" />
+          <p className="mt-3 font-semibold">Video coming soon</p>
+          <p className="mt-1 text-sm text-white/60">This lesson&apos;s video hasn&apos;t been uploaded yet.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={box} className="group relative aspect-video overflow-hidden rounded-2xl bg-black">
       <video
         ref={video}
-        src={VIDEO}
-        poster={POSTER}
+        src={src}
+        poster={src === DEMO_VIDEO ? "/media/lesson1-poster.jpg" : undefined}
         playsInline
         preload="metadata"
         muted={muted}

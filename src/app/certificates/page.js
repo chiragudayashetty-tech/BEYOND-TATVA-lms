@@ -1,7 +1,7 @@
 import { Check, Download, Lock, Share2 } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { PageTitle, Progress } from "@/components/ui";
-import { course } from "@/lib/catalog";
+import { getCourse } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 
 export const metadata = { title: "Certificates · Beyond Tatva" };
@@ -24,8 +24,8 @@ function Certificate({ name, course }) {
           <div className="mt-1 border-t border-[#cbd5e1] pt-1">Founder, Beyond Tatva</div>
         </div>
         <div className="text-right">
-          <div>Issued 18 Oct 2026</div>
-          <div className="mt-1">ID BT-2026-0418</div>
+          <div>Issued on completion</div>
+          <div className="mt-1">Verifiable ID</div>
         </div>
       </div>
     </div>
@@ -33,7 +33,7 @@ function Certificate({ name, course }) {
 }
 
 export default async function CertificatesPage() {
-  const { profile } = await getSession();
+  const [{ profile }, course] = await Promise.all([getSession(), getCourse()]);
   const earned = course.progress === 100;
   return (
     <Shell roles={["student"]}>

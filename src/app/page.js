@@ -5,40 +5,41 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { IconTile } from "@/components/ui";
 import { ModuleCard } from "@/components/course";
 import Countdown from "@/components/Countdown";
-import { PRICE_INR, course, fmtPremiere, nextPremiere } from "@/lib/catalog";
+import { fmtPremiere, nextPremiere } from "@/lib/catalog";
+import { getCourse } from "@/lib/data";
 
-// Rebuild every 5 minutes so the next premiere and module states roll over on Sundays.
-export const revalidate = 300;
 
 export const metadata = { title: "Beyond Tatva · AI education for Grades 8–10" };
 
-const stats = [
-  ["300+", "Students learning"],
-  ["4", "Partner schools"],
-  ["92%", "Weekly attendance"],
-  ["6", "Weekly modules"],
-];
+
 
 const audiences = [
   {
     title: "For students",
     icon: Zap,
-    points: ["Short video lessons that ask you questions", "XP, streaks, badges and a class leaderboard", "Study planner, assignments and certificates"],
+    points: ["Short video lessons that pause to ask you questions", "XP and streaks for showing up", "A study planner and a certificate at the end"],
   },
   {
     title: "For parents",
     icon: ShieldCheck,
-    points: ["See progress and quiz scores every week", "Learning time next to total screen time", "Consent and data handled under the DPDP Act"],
+    points: ["See lessons completed and quiz accuracy", "Link to your child with a simple code", "Consent and data handled under the DPDP Act"],
   },
   {
     title: "For schools",
     icon: BarChart3,
-    points: ["Class dashboards with time spent and scores", "Alerts when a student starts slipping", "Exports to Google Sheets and your CRM"],
+    points: ["A class dashboard for every teacher", "See who is active, slipping or inactive", "Access keys for every student, invoiced to the school"],
   },
 ];
 
-export default function Home() {
-  const next = nextPremiere();
+export default async function Home() {
+  const course = await getCourse();
+  const next = nextPremiere(course);
+  const stats = [
+    [`${course.modules.length}`, "Modules"],
+    [`${course.lessonCount}`, "Video lessons"],
+    ["Sun 6 PM", "New module every week"],
+    ["Free", "AI 101 to start"],
+  ];
   return (
     <div className="min-h-screen bg-bg">
       <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur">
@@ -72,7 +73,7 @@ export default function Home() {
             <a href="#modules" className="btn-secondary px-6 py-3 text-base"><CirclePlay className="h-4 w-4" /> See all modules</a>
           </div>
           <div className="mt-8 flex items-center gap-3 text-sm text-muted">
-            <Users className="h-4 w-4" /> Trusted by 4 schools and 300+ students
+            <Users className="h-4 w-4" /> Made in Udupi for Grades 8–10
           </div>
         </div>
 
@@ -91,7 +92,7 @@ export default function Home() {
             <IconTile icon={Flame} size="sm" tone="warning" />
             <div>
               <div className="text-xs text-muted">Streak</div>
-              <div className="text-sm font-semibold">12 days</div>
+              <div className="text-sm font-semibold">Learn daily</div>
             </div>
           </div>
         </div>
@@ -122,7 +123,7 @@ export default function Home() {
           )}
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {course.modules.map((m) => <ModuleCard key={m.id} module={m} hasAccess={false} />)}
+          {course.modules.map((m) => <ModuleCard key={m.id} module={m} hasAccess={false} courseId={course.id} />)}
         </div>
       </section>
 
@@ -133,7 +134,7 @@ export default function Home() {
           <div className="mt-10 grid gap-4 lg:grid-cols-3">
             {[
               { icon: Gift, name: "Free", price: "₹0", note: "Free account", points: ["Module 0: AI 101", "Quick checks and XP", "Parent dashboard"], cta: "Start free", primary: false },
-              { icon: Sparkles, name: "Full course", price: `₹${PRICE_INR}`, note: "One time", points: ["Modules 1–6 as they premiere", "Weekly live doubt class", "Quizzes, project feedback, certificate"], cta: "Get full access", primary: true },
+              { icon: Sparkles, name: "Full course", price: `₹${course.price}`, note: "One time", points: ["Every module as it premieres", "In-video quick checks and XP", "Certificate on completion"], cta: "Get full access", primary: true },
               { icon: School, name: "Schools", price: "Per student", note: "Invoiced to the school", points: ["Access keys for every student", "Teacher dashboard and reports", "On-campus workshop option"], cta: "Talk to us", primary: false },
             ].map((t) => (
               <div key={t.name} className={`card flex flex-col p-6 ${t.primary ? "border-primary ring-4 ring-primary/10" : ""}`}>
@@ -162,7 +163,7 @@ export default function Home() {
           ))}
         </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          {[[Trophy, "Challenges and leaderboards"], [Smartphone, "Works great on any phone"], [Plug, "Connects to Sheets, CRMs and WhatsApp"]].map(([I, t]) => (
+          {[[Trophy, "Certificate on completion"], [Smartphone, "Works great on any phone"], [Plug, "Light and dark mode"]].map(([I, t]) => (
             <div key={t} className="card flex items-center gap-3 p-4 text-sm font-medium"><IconTile icon={I} size="sm" tone="neutral" />{t}</div>
           ))}
         </div>

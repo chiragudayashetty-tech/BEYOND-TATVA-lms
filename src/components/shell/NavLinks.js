@@ -3,19 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Award, BadgeCheck, BookOpen, CalendarDays, ChartLine, Circle, Clapperboard, ClipboardList, GraduationCap,
-  House, LayoutDashboard, Plug, Radio, Smartphone, Swords, Trophy, User, Users, Workflow,
+  BadgeCheck, BookOpen, CalendarDays, ChartLine, Circle, Clapperboard, Contact, GraduationCap,
+  House, KeyRound, LayoutDashboard, User, Users, Workflow,
 } from "lucide-react";
 
 const Icons = {
-  Award, BadgeCheck, BookOpen, CalendarDays, ChartLine, Circle, Clapperboard, ClipboardList, GraduationCap,
-  House, LayoutDashboard, Plug, Radio, Smartphone, Swords, Trophy, User, Users, Workflow,
+  BadgeCheck, BookOpen, CalendarDays, ChartLine, Circle, Clapperboard, Contact, GraduationCap,
+  House, KeyRound, LayoutDashboard, User, Users, Workflow,
 };
 
 const isActive = (pathname, href) => {
   const path = href.split("#")[0];
   if (href.includes("#")) return false;
-  return pathname === path || (path !== "/browse" && pathname.startsWith(`${path}/`)) || (path === "/course" && (pathname.startsWith("/watch/") || pathname === "/unlock"));
+  return pathname === path || (!["/browse", "/admin"].includes(path) && pathname.startsWith(`${path}/`)) || (path === "/course" && (pathname.startsWith("/watch/") || pathname === "/unlock"));
 };
 
 export function SidebarLinks({ items }) {

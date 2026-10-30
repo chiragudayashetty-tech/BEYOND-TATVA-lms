@@ -2,18 +2,42 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, CalendarClock, Check, CircleCheck, Download, FileText, Lock, PlayCircle, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarClock, Check, CircleCheck, Lock, PlayCircle, Zap } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
 import { Avatar, Badge } from "@/components/ui";
 import { canWatch, isReleased } from "@/lib/catalog";
+import { createClient } from "@/lib/supabase/client";
 
-const tabs = ["Overview", "Resources", "Notes"];
-const resources = [["Lesson notes", "PDF · 1.2 MB"], ["Prompt cheat-sheet", "PDF · 340 KB"], ["Practice worksheet", "Google Sheet"]];
+const tabs = ["Overview", "Notes"];
 
-export default function LessonView({ course, lesson, hasAccess }) {
+
+export default function LessonView({ course, lesson, hasAccess, video, canSave }) {
   const [tab, setTab] = useState("Overview");
   const [xp, setXp] = useState(0);
   const [done, setDone] = useState(lesson.done);
+  const [saveError, setSaveError] = useState("");
+
+  // Progress and answers are saved to Supabase; RLS lets students write only their own rows.
+  async function toggleDone() {
+    const next = !done;
+    setDone(next);
+    if (!canSave) return;
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("lesson_progress").upsert(
+      { student_id: user.id, lesson_id: lesson.id, completed_at: next ? new Date().toISOString() : null, updated_at: new Date().toISOString() },
+      { onConflict: "student_id,lesson_id" },
+    );
+    if (error) { setDone(!next); setSaveError("Couldn't save. Check your connection and try again."); }
+  }
+
+  async function saveAnswer(question, correct) {
+    if (correct) setXp((x) => x + 10);
+    if (!canSave) return;
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from("checkpoint_answers").insert({ student_id: user.id, lesson_id: lesson.id, question, correct });
+  }
   const noteKey = `notes:${lesson.id}`;
   const [notes, setNotes] = useState("");
   const [saved, setSaved] = useState(true);
@@ -37,7 +61,7 @@ export default function LessonView({ course, lesson, hasAccess }) {
     <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
       <div className="min-w-0">
         <Link href="/course" className="btn-ghost -ml-3 mb-3"><ArrowLeft className="h-4 w-4" /> {course.title}</Link>
-        <VideoPlayer onXp={(n) => setXp((x) => x + n)} />
+        <VideoPlayer src={video} onAnswer={saveAnswer} />
 
         <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -52,9 +76,10 @@ export default function LessonView({ course, lesson, hasAccess }) {
               {xp > 0 && <Badge tone="warning"><Zap className="h-3 w-3" /> +{xp} XP earned</Badge>}
             </div>
           </div>
-          <button onClick={() => setDone(!done)} className={done ? "btn-secondary text-success" : "btn-primary"}>
+          <button onClick={toggleDone} className={done ? "btn-secondary text-success" : "btn-primary"}>
             {done ? <><CircleCheck className="h-4 w-4" /> Completed</> : <><Check className="h-4 w-4" /> Mark as complete</>}
           </button>
+          {saveError && <p role="alert" className="w-full text-sm text-danger">{saveError}</p>}
         </div>
 
         <div className="mt-6 border-b border-border">
@@ -70,21 +95,10 @@ export default function LessonView({ course, lesson, hasAccess }) {
         <div className="py-5">
           {tab === "Overview" && (
             <div className="max-w-2xl space-y-3 text-sm leading-relaxed text-muted">
-              <p>In this lesson you&apos;ll learn a simple method to understand any chapter faster with AI, and how to check that what AI tells you is actually right.</p>
+              {lesson.description && <p>{lesson.description}</p>}
               <p>Watch for the <span className="font-medium text-fg">yellow markers</span> on the progress bar. The video pauses there for a quick question, and each correct answer earns 10 XP.</p>
               <p className="text-xs">Keyboard: Space to play or pause, ← and → to skip 10 seconds.</p>
             </div>
-          )}
-          {tab === "Resources" && (
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {resources.map(([n, m]) => (
-                <li key={n} className="card flex items-center gap-3 p-3">
-                  <FileText className="h-5 w-5 text-muted" />
-                  <div className="flex-1"><div className="text-sm font-medium">{n}</div><div className="text-xs text-muted">{m}</div></div>
-                  <button aria-label={`Download ${n}`} className="btn-ghost h-9 w-9 p-0"><Download className="h-4 w-4" /></button>
-                </li>
-              ))}
-            </ul>
           )}
           {tab === "Notes" && (
             <div>

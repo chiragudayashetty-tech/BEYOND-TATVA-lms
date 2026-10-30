@@ -3,7 +3,7 @@ import { Avatar } from "@/components/ui";
 import { isPreview, requireRole } from "@/lib/supabase/server";
 import PreviewSwitcher from "./PreviewSwitcher";
 import { nav } from "@/lib/nav";
-import { me } from "@/lib/demo";
+import { getStudentStats } from "@/lib/data";
 import { MobileTabs, SidebarLinks } from "./NavLinks";
 import TopBar from "./TopBar";
 
@@ -16,6 +16,7 @@ const greet = () => {
 export default async function Shell({ roles, children, greeting = false }) {
   const { profile, hasAccess } = await requireRole(roles);
   const items = nav[profile.role] ?? nav.student;
+  const stats = profile.role === "student" ? await getStudentStats() : null;
 
   return (
     <div className="min-h-screen lg:pl-64">
@@ -42,7 +43,7 @@ export default async function Shell({ roles, children, greeting = false }) {
       <TopBar
         name={profile.full_name}
         role={profile.role}
-        streak={profile.role === "student" ? me.streak : null}
+        streak={stats ? stats.streak : null}
         greeting={greeting ? { top: `${greet()},`, name: profile.full_name } : null}
       />
       <main className="mx-auto w-full max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12">{children}</main>
