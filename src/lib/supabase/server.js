@@ -26,11 +26,25 @@ const PREVIEW = process.env.NODE_ENV === "development" ? process.env.DEV_PREVIEW
 
 export const getSession = cache(async () => {
   if (PREVIEW) {
-    return {
-      user: { id: "preview", email: "ananya@example.com" },
-      profile: { id: "preview", role: PREVIEW, full_name: PREVIEW === "student" ? "Ananya Rao" : PREVIEW === "parent" ? "Lakshmi Rao" : PREVIEW === "teacher" ? "Meera D'Souza" : "Chirag Shetty", grade: PREVIEW === "student" ? 9 : null, invite_code: "C6C02F", guardian_consent_at: null },
-    };
+    const picked = (await cookies()).get("preview_role")?.value;
+    const role = ["student", "parent", "teacher", "admin"].includes(picked) ? picked : PREVIEW;
+    return previewSession(role);
   }
+  return realSession();
+});
+
+export const isPreview = Boolean(PREVIEW);
+
+const previewNames = { student: "Ananya Rao", parent: "Lakshmi Rao", teacher: "Meera D'Souza", admin: "Chirag Shetty" };
+
+function previewSession(role) {
+  return {
+    user: { id: "preview", email: "preview@example.com" },
+    profile: { id: "preview", role, full_name: previewNames[role], grade: role === "student" ? 9 : null, invite_code: "C6C02F", guardian_consent_at: null },
+  };
+}
+
+async function realSession() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { user: null, profile: null };
@@ -40,7 +54,7 @@ export const getSession = cache(async () => {
     .eq("id", user.id)
     .maybeSingle();
   return { user, profile };
-});
+}
 
 // For pages that belong to some roles only. Admins can open everything.
 export async function requireRole(roles) {

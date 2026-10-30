@@ -1,6 +1,7 @@
 import Logo from "@/components/Logo";
 import { Avatar } from "@/components/ui";
-import { requireRole } from "@/lib/supabase/server";
+import { isPreview, requireRole } from "@/lib/supabase/server";
+import PreviewSwitcher from "./PreviewSwitcher";
 import { nav } from "@/lib/nav";
 import { me } from "@/lib/demo";
 import { MobileTabs, SidebarLinks } from "./NavLinks";
@@ -46,6 +47,7 @@ export default async function Shell({ roles, children, greeting = false }) {
       />
       <main className="mx-auto w-full max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12">{children}</main>
       <MobileTabs items={items.mobile} />
+      {isPreview && <PreviewSwitcher role={profile.role} />}
     </div>
   );
 }
