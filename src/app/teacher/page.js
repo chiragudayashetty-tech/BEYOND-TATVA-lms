@@ -1,8 +1,8 @@
 import { AlertTriangle, Clock, Download, Target, TrendingUp, Users } from "lucide-react";
 import Shell from "@/components/shell/Shell";
-import { Avatar, Badge, Card, PageTitle, Progress, StatCard } from "@/components/ui";
-import { CourseRow } from "@/components/course";
-import { courses } from "@/lib/catalog";
+import { Avatar, Badge, Card, IconTile, PageTitle, Progress, StatCard } from "@/components/ui";
+import { iconFor } from "@/components/course";
+import { course, fmtPremiere, isReleased } from "@/lib/catalog";
 import { students } from "@/lib/demo";
 
 export const metadata = { title: "Teacher · Beyond Tatva" };
@@ -59,8 +59,8 @@ export default function TeacherPage() {
             </tbody>
           </table>
         </div>
-        <Card title="Courses for this class">
-          <div className="-mx-2 space-y-1">{courses.slice(0, 6).map((c) => <CourseRow key={c.id} course={c} />)}</div>
+        <Card title="AI for Students: modules">
+          <ul className="space-y-3">{course.modules.map((m) => (<li key={m.id} className="flex items-center gap-3"><IconTile icon={iconFor(m)} size="sm" tone={isReleased(m) ? "primary" : "neutral"} /><div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold">Module {m.n}: {m.title}</div><div className="text-xs text-muted">{isReleased(m) ? `${m.lessons.length} lessons · live` : fmtPremiere(m.release)}</div></div></li>))}</ul>
         </Card>
       </div>
     </Shell>

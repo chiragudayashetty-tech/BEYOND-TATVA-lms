@@ -1,10 +1,14 @@
 import Link from "next/link";
-import { ArrowRight, BarChart3, CirclePlay, Flame, MessageSquareText, Plug, ShieldCheck, Smartphone, Sparkles, Trophy, Users, Zap } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarClock, Check, CirclePlay, Flame, Gift, MessageSquareText, Plug, School, ShieldCheck, Smartphone, Sparkles, Trophy, Users, Zap } from "lucide-react";
 import Logo from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
 import { IconTile } from "@/components/ui";
-import { CourseCard } from "@/components/course";
-import { courses } from "@/lib/catalog";
+import { ModuleCard } from "@/components/course";
+import Countdown from "@/components/Countdown";
+import { PRICE_INR, course, fmtPremiere, nextPremiere } from "@/lib/catalog";
+
+// Rebuild every 5 minutes so the next premiere and module states roll over on Sundays.
+export const revalidate = 300;
 
 export const metadata = { title: "Beyond Tatva · AI education for Grades 8–10" };
 
@@ -12,15 +16,7 @@ const stats = [
   ["300+", "Students learning"],
   ["4", "Partner schools"],
   ["92%", "Weekly attendance"],
-  ["8", "Courses and growing"],
-];
-
-const roadmap = [
-  ["Understand", "What AI is and how to talk to it"],
-  ["Study smarter", "Summaries, flashcards, practice tests"],
-  ["Create", "Design, writing and music with AI"],
-  ["Think", "Fact-checking, ethics and safety"],
-  ["Build", "Your own chatbot, presented to class"],
+  ["6", "Weekly modules"],
 ];
 
 const audiences = [
@@ -42,14 +38,15 @@ const audiences = [
 ];
 
 export default function Home() {
+  const next = nextPremiere();
   return (
     <div className="min-h-screen bg-bg">
       <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-8 px-4 py-4 sm:px-6">
           <Logo />
           <nav className="hidden gap-7 text-sm font-medium text-muted md:flex">
-            <a href="#courses" className="hover:text-fg">Courses</a>
-            <a href="#roadmap" className="hover:text-fg">Roadmap</a>
+            <a href="#modules" className="hover:text-fg">Modules</a>
+            <a href="#pricing" className="hover:text-fg">Pricing</a>
             <a href="#who" className="hover:text-fg">For schools</a>
             <a href="#who" className="hover:text-fg">For parents</a>
           </nav>
@@ -63,16 +60,16 @@ export default function Home() {
 
       <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-12 sm:px-6 lg:grid-cols-[1fr_1.05fr] lg:pt-20">
         <div>
-          <span className="chip border border-border bg-surface text-muted"><Sparkles className="h-3.5 w-3.5 text-primary" /> AI education for Grades 8–10</span>
+          <span className="chip border border-border bg-surface text-muted"><CalendarClock className="h-3.5 w-3.5 text-primary" /> New module every Sunday, 6 PM</span>
           <h1 className="mt-5 text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
             Learn AI.<br />Study smarter.<br /><span className="text-primary">Build the future.</span>
           </h1>
           <p className="mt-6 max-w-lg text-lg text-muted">
-            Short video lessons, real projects and progress that parents and teachers can actually see. Made in Udupi for students across India.
+            AI for Students is a 6-week course for Grades 8–10. One module premieres every Sunday. Module 1 is free, so start today.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/login" className="btn-primary px-6 py-3 text-base">Start learning <ArrowRight className="h-4 w-4" /></Link>
-            <a href="#courses" className="btn-secondary px-6 py-3 text-base"><CirclePlay className="h-4 w-4" /> Explore courses</a>
+            <Link href="/login" className="btn-primary px-6 py-3 text-base">Watch Module 1 free <ArrowRight className="h-4 w-4" /></Link>
+            <a href="#modules" className="btn-secondary px-6 py-3 text-base"><CirclePlay className="h-4 w-4" /> See all 6 modules</a>
           </div>
           <div className="mt-8 flex items-center gap-3 text-sm text-muted">
             <Users className="h-4 w-4" /> Trusted by 4 schools and 300+ students
@@ -111,38 +108,45 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="courses" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-20 sm:px-6">
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <section id="modules" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-20 sm:px-6">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-6">
           <div>
-            <h2 className="text-3xl font-semibold">Top courses</h2>
-            <p className="mt-2 text-muted">Bite-sized, practical and built for school students.</p>
+            <h2 className="text-3xl font-semibold">Six modules. One every Sunday.</h2>
+            <p className="mt-2 text-muted">Watch each premiere at 6 PM, or catch up any time that week.</p>
           </div>
-          <Link href="/login" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">View all courses <ArrowRight className="h-4 w-4" /></Link>
+          {next && (
+            <div className="rounded-2xl bg-[#0f172a] p-4 text-white">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/70">Module {next.n} premieres {fmtPremiere(next.release)}</div>
+              <Countdown to={next.release} />
+            </div>
+          )}
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {courses.slice(0, 4).map((c) => <CourseCard key={c.id} course={c} />)}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {course.modules.map((m) => <ModuleCard key={m.id} module={m} hasAccess={false} />)}
         </div>
       </section>
 
-      <section id="roadmap" className="scroll-mt-20 border-y border-border bg-surface">
+      <section id="pricing" className="scroll-mt-20 border-y border-border bg-surface">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
-          <h2 className="text-3xl font-semibold">The learning roadmap</h2>
-          <p className="mt-2 text-muted">A clear path from first prompt to first project.</p>
-          <ol className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
-            {roadmap.map(([t, d], i) => (
-              <li key={t} className="relative">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-soft font-semibold text-primary">{i + 1}</span>
-                  <span className="hidden h-px flex-1 bg-border lg:block" />
-                </div>
-                <div className="mt-4 font-semibold">{t}</div>
-                <div className="mt-1 text-sm text-muted">{d}</div>
-              </li>
+          <h2 className="text-3xl font-semibold">Simple pricing</h2>
+          <p className="mt-2 text-muted">Try the first module free. Unlock the rest when you&apos;re ready.</p>
+          <div className="mt-10 grid gap-4 lg:grid-cols-3">
+            {[
+              { icon: Gift, name: "Free", price: "₹0", note: "Free account", points: ["Module 1: Study smarter with AI", "Quick checks and XP", "Parent dashboard"], cta: "Start free", primary: false },
+              { icon: Sparkles, name: "Full course", price: `₹${PRICE_INR}`, note: "One time", points: ["All 6 modules as they premiere", "Weekly live doubt class", "Quizzes, project feedback, certificate"], cta: "Get full access", primary: true },
+              { icon: School, name: "Schools", price: "Per student", note: "Invoiced to the school", points: ["Access keys for every student", "Teacher dashboard and reports", "On-campus workshop option"], cta: "Talk to us", primary: false },
+            ].map((t) => (
+              <div key={t.name} className={`card flex flex-col p-6 ${t.primary ? "border-primary ring-4 ring-primary/10" : ""}`}>
+                <div className="flex items-center justify-between"><IconTile icon={t.icon} tone={t.primary ? "primary" : "neutral"} />{t.primary && <span className="chip bg-primary text-primary-fg">Most popular</span>}</div>
+                <div className="mt-4 font-semibold">{t.name}</div>
+                <div className="mt-2 flex items-baseline gap-1.5"><span className="font-display text-3xl font-semibold">{t.price}</span><span className="text-sm text-muted">{t.note}</span></div>
+                <ul className="mt-5 flex-1 space-y-2.5 text-sm">{t.points.map((p) => <li key={p} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />{p}</li>)}</ul>
+                <Link href="/login" className={`${t.primary ? "btn-primary" : "btn-secondary"} mt-6 w-full`}>{t.cta}</Link>
+              </div>
             ))}
-          </ol>
+          </div>
         </div>
       </section>
-
       <section id="who" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-20 sm:px-6">
         <h2 className="text-3xl font-semibold">One platform, three views</h2>
         <p className="mt-2 text-muted">Everyone sees exactly what they need, and nothing they shouldn&apos;t.</p>

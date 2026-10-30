@@ -1,7 +1,7 @@
-import { Download, Lock, Share2 } from "lucide-react";
+import { Check, Download, Lock, Share2 } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { PageTitle, Progress } from "@/components/ui";
-import { courses } from "@/lib/catalog";
+import { course } from "@/lib/catalog";
 import { getSession } from "@/lib/supabase/server";
 
 export const metadata = { title: "Certificates · Beyond Tatva" };
@@ -34,32 +34,33 @@ function Certificate({ name, course }) {
 
 export default async function CertificatesPage() {
   const { profile } = await getSession();
-  const done = courses.filter((c) => c.progress === 100);
-  const next = courses.filter((c) => c.progress > 0 && c.progress < 100);
+  const earned = course.progress === 100;
   return (
     <Shell roles={["student"]}>
-      <PageTitle title="Certificates" subtitle="Verified certificates you can share with your school and family." />
+      <PageTitle title="Certificate" subtitle="Finish all 6 modules and their quizzes to earn a certificate your school can verify." />
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        {done.map((c) => (
-          <div key={c.id} className="card p-4 sm:p-5">
-            <Certificate name={profile?.full_name ?? "Student"} course={c} />
-            <div className="mt-4 flex gap-2">
-              <button className="btn-primary flex-1"><Download className="h-4 w-4" /> Download PDF</button>
-              <button className="btn-secondary flex-1"><Share2 className="h-4 w-4" /> Share</button>
-            </div>
+        <div className="card p-4 sm:p-5">
+          <div className={earned ? "" : "pointer-events-none select-none opacity-50 blur-[1px]"}>
+            <Certificate name={profile?.full_name ?? "Student"} course={course} />
           </div>
-        ))}
+          <div className="mt-4 flex gap-2">
+            <button disabled={!earned} className="btn-primary flex-1"><Download className="h-4 w-4" /> Download PDF</button>
+            <button disabled={!earned} className="btn-secondary flex-1"><Share2 className="h-4 w-4" /> Share</button>
+          </div>
+        </div>
         <div className="space-y-3">
-          <h2 className="font-semibold">Almost there</h2>
-          {next.map((c) => (
-            <div key={c.id} className="card flex items-center gap-4 p-4">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-surface-2 text-subtle"><Lock className="h-4 w-4" /></span>
+          <h2 className="font-semibold">{earned ? "Earned" : `${course.progress}% of the way there`}</h2>
+          {course.modules.map((m) => (
+            <div key={m.id} className="card flex items-center gap-4 p-4">
+              <span className={`grid h-10 w-10 place-items-center rounded-xl ${m.progress === 100 ? "bg-success-soft text-success" : "bg-surface-2 text-subtle"}`}>
+                {m.progress === 100 ? <Check className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+              </span>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold">{c.title}</div>
-                <Progress value={c.progress} className="mt-2 h-1.5" />
+                <div className="text-sm font-semibold">Module {m.n}: {m.title}</div>
+                <Progress value={m.progress} className="mt-2 h-1.5" />
               </div>
-              <span className="text-sm font-semibold">{c.progress}%</span>
+              <span className="text-sm font-semibold">{m.progress}%</span>
             </div>
           ))}
         </div>

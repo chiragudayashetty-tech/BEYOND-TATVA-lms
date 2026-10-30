@@ -2,7 +2,7 @@ import { Bell, CalendarDays, Clock, PlayCircle, Radio, Video } from "lucide-reac
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, PageTitle } from "@/components/ui";
 import { Thumb } from "@/components/course";
-import { getCourse } from "@/lib/catalog";
+import { getModule } from "@/lib/catalog";
 import { recordings, upcomingLive } from "@/lib/demo";
 
 export const metadata = { title: "Live Classes · Beyond Tatva" };
@@ -14,7 +14,7 @@ export default function LivePage() {
       <PageTitle title="Live Classes" subtitle="Join live, ask questions, and catch the recording if you miss one." />
 
       <div className="card grid overflow-hidden md:grid-cols-[1.2fr_1fr]">
-        <Thumb course={getCourse(now.courseId)} className="aspect-video md:aspect-auto md:min-h-64">
+        <Thumb module={getModule(now.module)} className="aspect-video md:aspect-auto md:min-h-64">
           <span className="chip absolute left-4 top-4 bg-danger text-white"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> Live today</span>
         </Thumb>
         <div className="flex flex-col justify-center p-6">
@@ -49,7 +49,7 @@ export default function LivePage() {
           <ul className="space-y-2">
             {recordings.map((r) => (
               <li key={r.title} className="flex items-center gap-3 rounded-xl p-2 hover:bg-surface-2">
-                <Thumb course={getCourse(r.courseId)} i={2} className="aspect-video w-28 shrink-0 rounded-lg">
+                <Thumb module={getModule(r.module)} i={2} className="aspect-video w-28 shrink-0 rounded-lg">
                   <span className="absolute inset-0 grid place-items-center bg-black/25"><PlayCircle className="h-6 w-6 text-white" /></span>
                 </Thumb>
                 <div className="min-w-0">

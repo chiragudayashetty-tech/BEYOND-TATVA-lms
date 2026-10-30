@@ -14,7 +14,7 @@ const greet = () => {
 
 // App frame for every signed-in page. `roles` limits who may open the page (admins can open all).
 export default async function Shell({ roles, children, greeting = false }) {
-  const { profile } = await requireRole(roles);
+  const { profile, hasAccess } = await requireRole(roles);
   const items = nav[profile.role] ?? nav.student;
 
   return (
@@ -47,7 +47,7 @@ export default async function Shell({ roles, children, greeting = false }) {
       />
       <main className="mx-auto w-full max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12">{children}</main>
       <MobileTabs items={items.mobile} />
-      {isPreview && <PreviewSwitcher role={profile.role} />}
+      {isPreview && <PreviewSwitcher role={profile.role} hasAccess={hasAccess} />}
     </div>
   );
 }

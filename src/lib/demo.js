@@ -12,39 +12,39 @@ export const me = {
 };
 
 export const notifications = [
-  { title: "New lesson in Exam Mode: Structure a 5-mark answer", time: "10 min ago", unread: true },
+  { title: "Module 2: Exam mode premieres Sunday at 6 PM", time: "10 min ago", unread: true },
   { title: "Live class starts at 5:00 PM today", time: "1 hour ago", unread: true },
-  { title: "Your Prompt Power assignment was graded: 18/20", time: "Yesterday", unread: true },
+  { title: "Your Module 1 assignment was graded: 18/20", time: "Yesterday", unread: true },
   { title: "You unlocked the Week Warrior badge", time: "2 days ago", unread: false },
 ];
 
 // live_sessions
 export const schedule = [
-  { time: "4:00 PM", end: "4:30 PM", title: "AI Study Hacks: Flashcards", host: "Chirag Shetty", kind: "Live class", courseId: "ai-study-hacks" },
-  { time: "5:00 PM", end: "5:45 PM", title: "Ask Me Anything: AI careers", host: "Chirag Shetty", kind: "Live class", courseId: "ai-and-me" },
-  { time: "6:30 PM", end: "7:00 PM", title: "Exam Mode practice round", host: "Self study", kind: "Study block", courseId: "exam-mode" },
+  { time: "4:00 PM", end: "4:30 PM", title: "AI Study Hacks: Flashcards", host: "Chirag Shetty", kind: "Live class", module: 1 },
+  { time: "5:00 PM", end: "5:45 PM", title: "Ask Me Anything: AI careers", host: "Chirag Shetty", kind: "Live class", module: 1 },
+  { time: "6:30 PM", end: "7:00 PM", title: "Exam Mode practice round", host: "Self study", kind: "Study block", module: 2 },
 ];
 
 export const upcomingLive = [
-  { day: "Today", time: "5:00 PM", title: "Ask Me Anything: AI careers", host: "Chirag Shetty", courseId: "ai-and-me", live: true },
-  { day: "Thu", time: "4:30 PM", title: "Build-along: Poster design with AI", host: "Beyond Tatva", courseId: "ai-for-creativity" },
-  { day: "Sat", time: "11:00 AM", title: "Exam prep with AI: Science", host: "Beyond Tatva", courseId: "exam-mode" },
+  { day: "Today", time: "5:00 PM", title: "Ask Me Anything: AI careers", host: "Chirag Shetty", module: 1, live: true },
+  { day: "Thu", time: "4:30 PM", title: "Build-along: Poster design with AI", host: "Beyond Tatva", module: 5 },
+  { day: "Sat", time: "11:00 AM", title: "Exam prep with AI: Science", host: "Beyond Tatva", module: 2 },
 ];
 
 export const recordings = [
-  { title: "How to check AI answers for mistakes", date: "24 Oct", mins: 42, courseId: "ai-study-hacks" },
-  { title: "Prompting 101: roles and examples", date: "21 Oct", mins: 38, courseId: "prompt-power" },
-  { title: "Deepfakes: how to spot them", date: "17 Oct", mins: 35, courseId: "ai-and-me" },
+  { title: "How to check AI answers for mistakes", date: "24 Oct", mins: 42, module: 1 },
+  { title: "Prompting 101: roles and examples", date: "21 Oct", mins: 38, module: 4 },
+  { title: "Deepfakes: how to spot them", date: "17 Oct", mins: 35, module: 1 },
 ];
 
 // assignments, submissions
 export const assignments = [
-  { id: "a1", title: "Summarise a Science chapter with AI", courseId: "ai-study-hacks", due: "1 Nov", status: "pending", priority: "High", progress: 60 },
-  { id: "a2", title: "Write a 5-mark answer and self-grade", courseId: "exam-mode", due: "3 Nov", status: "pending", priority: "Medium", progress: 20 },
-  { id: "a3", title: "Design a poster for Science Day", courseId: "ai-for-creativity", due: "6 Nov", status: "pending", priority: "Low", progress: 0 },
-  { id: "a4", title: "Five prompts, five roles", courseId: "prompt-power", due: "25 Oct", status: "graded", score: "18/20", feedback: "Strong role prompts. Add an example to prompt 4." },
-  { id: "a5", title: "Spot the deepfake worksheet", courseId: "ai-and-me", due: "20 Oct", status: "graded", score: "19/20", feedback: "Excellent reasoning on clue 3." },
-  { id: "a6", title: "Flashcards from your notes", courseId: "ai-study-hacks", due: "28 Oct", status: "submitted" },
+  { id: "a1", title: "Summarise a Science chapter with AI", module: 1, due: "1 Nov", status: "pending", priority: "High", progress: 60 },
+  { id: "a2", title: "Write a 5-mark answer and self-grade", module: 2, due: "3 Nov", status: "pending", priority: "Medium", progress: 20 },
+  { id: "a3", title: "Design a poster for Science Day", module: 5, due: "6 Nov", status: "pending", priority: "Low", progress: 0 },
+  { id: "a4", title: "Five prompts, five roles", module: 4, due: "25 Oct", status: "graded", score: "18/20", feedback: "Strong role prompts. Add an example to prompt 4." },
+  { id: "a5", title: "Spot the deepfake worksheet", module: 1, due: "20 Oct", status: "graded", score: "19/20", feedback: "Excellent reasoning on clue 3." },
+  { id: "a6", title: "Flashcards from your notes", module: 1, due: "28 Oct", status: "submitted" },
 ];
 
 // challenges, challenge_entries
@@ -106,9 +106,9 @@ export const planner = {
 };
 
 export const goals = [
-  { title: "Finish AI Study Hacks", target: "Target: 15 Nov", value: 64 },
+  { title: "Finish Module 1 before Sunday", target: "2 lessons left", value: 50 },
   { title: "Learn 30 minutes a day", target: "This week: 4 of 7 days", value: 57 },
-  { title: "Score 90% in Exam Mode quizzes", target: "Current average: 85%", value: 85 },
+  { title: "Score 90% in module quizzes", target: "Current average: 85%", value: 85 },
 ];
 
 // parent view

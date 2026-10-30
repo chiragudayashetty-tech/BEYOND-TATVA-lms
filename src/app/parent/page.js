@@ -2,7 +2,7 @@ import { Award, BookOpen, CalendarCheck, Clock, Info, Smartphone, Target } from 
 import Shell from "@/components/shell/Shell";
 import { Avatar, Badge, Bars, Card, IconTile, Progress, StatCard } from "@/components/ui";
 import { iconFor } from "@/components/course";
-import { courses } from "@/lib/catalog";
+import { course, isReleased } from "@/lib/catalog";
 import { child, me, week } from "@/lib/demo";
 
 export const metadata = { title: "Parent · Beyond Tatva" };
@@ -12,7 +12,7 @@ const hm = (m) => `${Math.floor(m / 60)}h ${m % 60}m`;
 export default function ParentPage() {
   const learn = week.reduce((a, d) => a + d.value, 0);
   const device = week.reduce((a, d) => a + d.device, 0);
-  const started = courses.filter((c) => c.progress > 0);
+  const started = course.modules.filter((m) => isReleased(m));
 
   return (
     <Shell roles={["parent"]} greeting>
@@ -45,14 +45,14 @@ export default function ParentPage() {
           </p>
         </Card>
 
-        <Card title="Course progress">
+        <Card title="AI for Students: modules">
           <div id="courses" className="scroll-mt-24" />
           <ul className="space-y-4">
             {started.map((c) => (
               <li key={c.id} className="flex items-center gap-3">
                 <IconTile icon={iconFor(c)} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <div className="flex justify-between gap-3 text-sm"><span className="font-medium">{c.title}</span><span className="font-semibold">{c.progress}%</span></div>
+                  <div className="flex justify-between gap-3 text-sm"><span className="font-medium">Module {c.n}: {c.title}</span><span className="font-semibold">{c.progress}%</span></div>
                   <Progress value={c.progress} tone={c.progress === 100 ? "success" : "primary"} className="mt-2 h-1.5" />
                 </div>
               </li>
@@ -60,7 +60,7 @@ export default function ParentPage() {
           </ul>
           <div className="mt-6 flex items-center gap-3 rounded-xl border border-border p-3">
             <IconTile icon={Award} tone="warning" size="sm" />
-            <div className="text-sm"><span className="font-semibold">Certificate earned:</span> AI &amp; Me</div>
+            <div className="text-sm"><span className="font-semibold">Next premiere:</span> a new module every Sunday, 6 PM</div>
           </div>
           <div className="mt-3 flex items-center gap-3 rounded-xl border border-border p-3">
             <IconTile icon={BookOpen} size="sm" />

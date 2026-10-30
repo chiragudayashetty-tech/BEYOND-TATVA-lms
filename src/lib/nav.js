@@ -4,7 +4,7 @@ export const nav = {
   student: {
     main: [
       { href: "/browse", label: "Dashboard", icon: "LayoutDashboard" },
-      { href: "/courses", label: "My Courses", icon: "BookOpen" },
+      { href: "/course", label: "Course", icon: "BookOpen" },
       { href: "/live", label: "Live Classes", icon: "Radio" },
       { href: "/planner", label: "Study Planner", icon: "CalendarDays" },
       { href: "/assignments", label: "Assignments", icon: "ClipboardList" },
@@ -18,7 +18,7 @@ export const nav = {
     ],
     mobile: [
       { href: "/browse", label: "Home", icon: "House" },
-      { href: "/courses", label: "Courses", icon: "BookOpen" },
+      { href: "/course", label: "Course", icon: "BookOpen" },
       { href: "/planner", label: "Planner", icon: "CalendarDays" },
       { href: "/progress", label: "Progress", icon: "ChartLine" },
       { href: "/profile", label: "Profile", icon: "User" },
@@ -28,7 +28,7 @@ export const nav = {
     main: [
       { href: "/parent", label: "Overview", icon: "LayoutDashboard" },
       { href: "/parent#screen-time", label: "Screen time", icon: "Smartphone" },
-      { href: "/parent#courses", label: "Courses", icon: "BookOpen" },
+      { href: "/parent#courses", label: "Modules", icon: "BookOpen" },
     ],
     more: [],
     mobile: [
@@ -39,13 +39,13 @@ export const nav = {
   teacher: {
     main: [
       { href: "/teacher", label: "My Class", icon: "Users" },
-      { href: "/courses", label: "Courses", icon: "BookOpen" },
+      { href: "/course", label: "Course", icon: "BookOpen" },
       { href: "/live", label: "Live Classes", icon: "Radio" },
     ],
     more: [],
     mobile: [
       { href: "/teacher", label: "Class", icon: "Users" },
-      { href: "/courses", label: "Courses", icon: "BookOpen" },
+      { href: "/course", label: "Course", icon: "BookOpen" },
       { href: "/profile", label: "Profile", icon: "User" },
     ],
   },

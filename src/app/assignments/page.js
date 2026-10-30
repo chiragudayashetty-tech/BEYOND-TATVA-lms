@@ -3,7 +3,7 @@ import { CalendarClock, CircleCheck, ClipboardList, MessageSquareText, Sparkles,
 import Shell from "@/components/shell/Shell";
 import { Badge, Empty, IconTile, PageTitle, Progress } from "@/components/ui";
 import { iconFor } from "@/components/course";
-import { getCourse } from "@/lib/catalog";
+import { getModule } from "@/lib/catalog";
 import { assignments } from "@/lib/demo";
 
 export const metadata = { title: "Assignments · Beyond Tatva" };
@@ -37,14 +37,14 @@ export default async function AssignmentsPage({ searchParams }) {
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {list.map((a) => {
-            const course = getCourse(a.courseId);
+            const course = getModule(a.module);
             return (
               <article key={a.id} className="card flex flex-col p-5">
                 <div className="flex items-start gap-3">
                   <IconTile icon={iconFor(course)} />
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold leading-snug">{a.title}</h3>
-                    <div className="mt-0.5 text-sm text-muted">{course.title}</div>
+                    <div className="mt-0.5 text-sm text-muted">Module {course.n}: {course.title}</div>
                   </div>
                   {a.status === "pending" && <Badge tone={prio[a.priority]}>{a.priority}</Badge>}
                   {a.status === "graded" && <Badge tone="success">{a.score}</Badge>}

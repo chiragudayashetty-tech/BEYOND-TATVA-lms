@@ -2,7 +2,7 @@ import { CalendarCheck, Clock, Target, Zap } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Bars, Card, IconTile, LineChart, PageTitle, Progress, StatCard } from "@/components/ui";
 import { iconFor } from "@/components/course";
-import { courses } from "@/lib/catalog";
+import { course, isReleased } from "@/lib/catalog";
 import { me, scoreTrend, week } from "@/lib/demo";
 
 export const metadata = { title: "Progress · Beyond Tatva" };
@@ -11,7 +11,7 @@ const hm = (m) => `${Math.floor(m / 60)}h ${m % 60}m`;
 
 export default function ProgressPage() {
   const total = week.reduce((a, d) => a + d.value, 0);
-  const started = courses.filter((c) => c.progress > 0);
+  const started = course.modules.filter((m) => isReleased(m));
   return (
     <Shell roles={["student"]}>
       <PageTitle title="Your progress" subtitle="How you're learning, week by week." />
@@ -32,13 +32,13 @@ export default function ProgressPage() {
         </Card>
       </div>
 
-      <Card title="By course" className="mt-6">
+      <Card title="By module" className="mt-6">
         <ul className="space-y-4">
           {started.map((c) => (
             <li key={c.id} className="flex items-center gap-4">
               <IconTile icon={iconFor(c)} size="sm" />
               <div className="min-w-0 flex-1">
-                <div className="flex justify-between gap-3 text-sm"><span className="font-medium">{c.title}</span><span className="font-semibold">{c.progress}%</span></div>
+                <div className="flex justify-between gap-3 text-sm"><span className="font-medium">Module {c.n}: {c.title}</span><span className="font-semibold">{c.progress}%</span></div>
                 <Progress value={c.progress} tone={c.progress === 100 ? "success" : "primary"} className="mt-2 h-1.5" />
               </div>
             </li>

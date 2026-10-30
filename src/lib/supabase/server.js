@@ -28,7 +28,8 @@ export const getSession = cache(async () => {
   if (PREVIEW) {
     const picked = (await cookies()).get("preview_role")?.value;
     const role = ["student", "parent", "teacher", "admin"].includes(picked) ? picked : PREVIEW;
-    return previewSession(role);
+    const unlocked = (await cookies()).get("preview_access")?.value === "1";
+    return { ...previewSession(role), hasAccess: role !== "student" || unlocked };
   }
   return realSession();
 });
@@ -53,7 +54,12 @@ async function realSession() {
     .select("id, role, full_name, avatar, grade, invite_code, guardian_consent_at, school_id")
     .eq("id", user.id)
     .maybeSingle();
-  return { user, profile };
+  let hasAccess = Boolean(profile && profile.role !== "student");
+  if (profile?.role === "student") {
+    const { data } = await supabase.from("course_access").select("course_id").eq("student_id", user.id).maybeSingle();
+    hasAccess = Boolean(data);
+  }
+  return { user, profile, hasAccess };
 }
 
 // For pages that belong to some roles only. Admins can open everything.

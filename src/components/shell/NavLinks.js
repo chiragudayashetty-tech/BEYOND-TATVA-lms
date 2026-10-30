@@ -15,7 +15,7 @@ const Icons = {
 const isActive = (pathname, href) => {
   const path = href.split("#")[0];
   if (href.includes("#")) return false;
-  return pathname === path || (path !== "/browse" && pathname.startsWith(`${path}/`)) || (path === "/courses" && pathname.startsWith("/title/"));
+  return pathname === path || (path !== "/browse" && pathname.startsWith(`${path}/`)) || (path === "/course" && (pathname.startsWith("/watch/") || pathname === "/unlock"));
 };
 
 export function SidebarLinks({ items }) {
