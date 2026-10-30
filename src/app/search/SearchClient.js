@@ -12,7 +12,7 @@ const topics = ["Study", "Exam", "ChatGPT", "Prompt", "Poster", "Chatbot"];
 export default function SearchClient({ initial = "" }) {
   const [q, setQ] = useState(initial);
   const term = q.trim().toLowerCase();
-  const rows = course.lessons.map((l) => ({ ...l, m: course.modules[l.module - 1] }));
+  const rows = course.lessons.map((l) => ({ ...l, m: course.modules.find((m) => m.n === l.module) }));
   const results = term ? rows.filter((l) => `${l.title} ${l.m.title} ${l.m.blurb}`.toLowerCase().includes(term)) : rows;
   const now = Date.now();
 

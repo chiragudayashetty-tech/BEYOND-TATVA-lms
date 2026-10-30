@@ -4,7 +4,7 @@ import Shell from "@/components/shell/Shell";
 import { Badge, Card, IconTile, LineChart, Progress, StatCard, ViewAll } from "@/components/ui";
 import { ContinueHero, ModuleCard, PremiereCard, iconFor } from "@/components/course";
 import Countdown from "@/components/Countdown";
-import { course, getModule, isReleased, nextPremiere } from "@/lib/catalog";
+import { canWatch, course, getModule, isReleased, nextPremiere } from "@/lib/catalog";
 import { assignments, goals, me, schedule, scoreTrend } from "@/lib/demo";
 import { getSession } from "@/lib/supabase/server";
 
@@ -14,7 +14,7 @@ export default async function Dashboard() {
   const { hasAccess } = await getSession();
   const next = nextPremiere();
   const released = course.modules.filter((m) => isReleased(m)).length;
-  const current = course.modules.find((m) => m.progress > 0 && m.progress < 100) ?? course.modules[0];
+  const current = course.modules.find((m) => m.progress < 100 && canWatch(m, hasAccess)) ?? course.modules[0];
   const done = course.lessons.filter((l) => l.done).length;
   const due = assignments.filter((a) => a.status === "pending");
 
@@ -24,15 +24,15 @@ export default async function Dashboard() {
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 lg:mb-6">
           <IconTile icon={Gift} />
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold">You&apos;re watching Module 1 for free</div>
-            <div className="text-sm text-muted">Unlock all 6 modules with your school&apos;s access key or a one-time payment.</div>
+            <div className="text-sm font-semibold">You&apos;re on the free plan: AI 101 is yours</div>
+            <div className="text-sm text-muted">Unlock modules 1–6 with your school&apos;s access key or a one-time payment.</div>
           </div>
           <Link href="/unlock" className="btn-primary"><KeyRound className="h-4 w-4" /> Unlock course</Link>
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatCard label="Modules out" value={`${released} / 6`} hint="One more every Sunday" icon={CalendarClock} />
+        <StatCard label="Modules out" value={`${released} / ${course.modules.length}`} hint="One more every Sunday" icon={CalendarClock} />
         <StatCard label="Lessons done" value={`${done} / ${course.lessonCount}`} hint={`${course.progress}% of the course`} icon={CheckCircle2} tone="success" />
         <StatCard label="Assignments due" value={due.length} hint="1 due tomorrow" icon={ClipboardList} tone="warning" />
         <StatCard label="Level" value={me.level} hint={`${me.xp} / ${me.nextLevelXp} XP`} icon={Zap} />
@@ -84,7 +84,7 @@ export default async function Dashboard() {
             ))}
           </div>
           <p className="mt-4 text-xs text-white/80">
-            {next ? <>Finish Module {next.n - 1} before the next premiere in <Countdown to={next.release} compact />.</> : "Keep going to finish the course."}
+            {next ? <>Catch up before the next premiere in <Countdown to={next.release} compact />.</> : "Keep going to finish the course."}
           </p>
         </div>
       </div>

@@ -65,11 +65,11 @@ export default function Home() {
             Learn AI.<br />Study smarter.<br /><span className="text-primary">Build the future.</span>
           </h1>
           <p className="mt-6 max-w-lg text-lg text-muted">
-            AI for Students is a 6-week course for Grades 8–10. One module premieres every Sunday. Module 1 is free, so start today.
+            AI for Students is a 6-week course for Grades 8–10. One module premieres every Sunday. Start today with AI 101, free.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/login" className="btn-primary px-6 py-3 text-base">Watch Module 1 free <ArrowRight className="h-4 w-4" /></Link>
-            <a href="#modules" className="btn-secondary px-6 py-3 text-base"><CirclePlay className="h-4 w-4" /> See all 6 modules</a>
+            <Link href="/login" className="btn-primary px-6 py-3 text-base">Start AI 101 free <ArrowRight className="h-4 w-4" /></Link>
+            <a href="#modules" className="btn-secondary px-6 py-3 text-base"><CirclePlay className="h-4 w-4" /> See all modules</a>
           </div>
           <div className="mt-8 flex items-center gap-3 text-sm text-muted">
             <Users className="h-4 w-4" /> Trusted by 4 schools and 300+ students
@@ -111,7 +111,7 @@ export default function Home() {
       <section id="modules" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-20 sm:px-6">
         <div className="mb-8 flex flex-wrap items-end justify-between gap-6">
           <div>
-            <h2 className="text-3xl font-semibold">Six modules. One every Sunday.</h2>
+            <h2 className="text-3xl font-semibold">AI 101 free. Then a new module every Sunday.</h2>
             <p className="mt-2 text-muted">Watch each premiere at 6 PM, or catch up any time that week.</p>
           </div>
           {next && (
@@ -132,8 +132,8 @@ export default function Home() {
           <p className="mt-2 text-muted">Try the first module free. Unlock the rest when you&apos;re ready.</p>
           <div className="mt-10 grid gap-4 lg:grid-cols-3">
             {[
-              { icon: Gift, name: "Free", price: "₹0", note: "Free account", points: ["Module 1: Study smarter with AI", "Quick checks and XP", "Parent dashboard"], cta: "Start free", primary: false },
-              { icon: Sparkles, name: "Full course", price: `₹${PRICE_INR}`, note: "One time", points: ["All 6 modules as they premiere", "Weekly live doubt class", "Quizzes, project feedback, certificate"], cta: "Get full access", primary: true },
+              { icon: Gift, name: "Free", price: "₹0", note: "Free account", points: ["Module 0: AI 101", "Quick checks and XP", "Parent dashboard"], cta: "Start free", primary: false },
+              { icon: Sparkles, name: "Full course", price: `₹${PRICE_INR}`, note: "One time", points: ["Modules 1–6 as they premiere", "Weekly live doubt class", "Quizzes, project feedback, certificate"], cta: "Get full access", primary: true },
               { icon: School, name: "Schools", price: "Per student", note: "Invoiced to the school", points: ["Access keys for every student", "Teacher dashboard and reports", "On-campus workshop option"], cta: "Talk to us", primary: false },
             ].map((t) => (
               <div key={t.name} className={`card flex flex-col p-6 ${t.primary ? "border-primary ring-4 ring-primary/10" : ""}`}>

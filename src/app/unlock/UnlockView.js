@@ -59,13 +59,13 @@ export default function UnlockView({ price, hasAccess, preview }) {
       <section className="card p-6">
         <IconTile icon={CreditCard} tone="success" />
         <h2 className="mt-4 text-lg font-semibold">Pay online</h2>
-        <p className="mt-1 text-sm text-muted">One payment unlocks all 6 modules, including the ones still to premiere.</p>
+        <p className="mt-1 text-sm text-muted">One payment unlocks modules 1–6, including the ones still to premiere.</p>
         <div className="mt-5 flex items-baseline gap-1.5">
           <span className="font-display text-4xl font-semibold">₹{price}</span>
           <span className="text-sm text-muted">one time · incl. GST</span>
         </div>
         <ul className="mt-4 space-y-2 text-sm">
-          {["All 6 modules and 24 lessons", "Weekly live doubt-clearing class", "Quizzes, project feedback and certificate"].map((t) => (
+          {["Modules 1–6 and 24 lessons", "Weekly live doubt-clearing class", "Quizzes, project feedback and certificate"].map((t) => (
             <li key={t} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />{t}</li>
           ))}
         </ul>

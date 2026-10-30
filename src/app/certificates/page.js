@@ -37,7 +37,7 @@ export default async function CertificatesPage() {
   const earned = course.progress === 100;
   return (
     <Shell roles={["student"]}>
-      <PageTitle title="Certificate" subtitle="Finish all 6 modules and their quizzes to earn a certificate your school can verify." />
+      <PageTitle title="Certificate" subtitle="Finish all modules and their quizzes to earn a certificate your school can verify." />
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
         <div className="card p-4 sm:p-5">

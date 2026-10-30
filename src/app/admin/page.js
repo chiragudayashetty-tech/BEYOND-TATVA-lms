@@ -44,7 +44,7 @@ export default function AdminPage() {
         </Card>
 
         <Card title="Access keys for schools">
-          <p className="-mt-2 mb-4 text-sm text-muted">Create one key per student. Each key unlocks all 6 modules once, for one student.</p>
+          <p className="-mt-2 mb-4 text-sm text-muted">Create one key per student. Each key unlocks modules 1–6 for one student.</p>
           <KeyGenerator courseId={course.id} preview={isPreview} />
         </Card>
       </div>

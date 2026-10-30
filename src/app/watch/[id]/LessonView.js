@@ -29,9 +29,9 @@ export default function LessonView({ course, lesson, hasAccess }) {
   }, [notes, saved, noteKey]);
 
   const prev = course.lessons.find((l) => l.n === lesson.n - 1);
-  const module = course.modules[lesson.module - 1];
+  const module = course.modules.find((m) => m.n === lesson.module);
   const nextRaw = course.lessons.find((l) => l.n === lesson.n + 1);
-  const next = nextRaw && canWatch(course.modules[nextRaw.module - 1], hasAccess) ? nextRaw : null;
+  const next = nextRaw && canWatch(course.modules.find((m) => m.n === nextRaw.module), hasAccess) ? nextRaw : null;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
@@ -41,7 +41,7 @@ export default function LessonView({ course, lesson, hasAccess }) {
 
         <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="text-sm font-medium text-primary">Module {module.n} · {module.title} · Lesson {lesson.n - (module.n - 1) * 4} of {module.lessons.length}</div>
+            <div className="text-sm font-medium text-primary">Module {module.n} · {module.title} · Lesson {lesson.idx} of {module.lessons.length}</div>
             <h1 className="mt-1 text-2xl font-semibold">{lesson.title}</h1>
             <div className="mt-3 flex items-center gap-3">
               <Avatar name="Chirag Shetty" size="h-8 w-8 text-xs" />

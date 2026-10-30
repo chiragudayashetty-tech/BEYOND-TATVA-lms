@@ -1,5 +1,5 @@
-// The course catalogue: one course, six modules that premiere weekly on Sundays at 6 PM IST.
-// Module 1 is free for every signed-up user; modules 2–6 need an access key or a payment.
+// The course catalogue: one course. Module 0 (AI 101) is free for every signed-up user;
+// modules 1–6 premiere weekly on Sundays at 6 PM IST and need an access key or a payment.
 // Placeholder titles until the real module list is set in admin.
 
 export const PRICE_INR = 999; // placeholder price for full access
@@ -9,15 +9,29 @@ const raw = {
   title: "AI for Students",
   tagline: "Six weeks to learn, study and create with AI.",
   description:
-    "A six-module course for Grades 8–10. A new module premieres every Sunday at 6 PM. Short video lessons, quick checks inside every video, a weekly quiz and a project at the end.",
+    "Start free with AI 101, then six modules for Grades 8–10, one premiering every Sunday at 6 PM. Short video lessons, quick checks inside every video, a weekly quiz and a project at the end.",
   grade: "Grades 8–10",
   tags: ["AI basics", "Study skills", "Projects"],
   modules: [
     {
+      title: "AI 101",
+      blurb: "What AI is, the two free tools you'll use, and how to talk to them.",
+      release: "2026-10-18T18:00:00+05:30",
+      free: true,
+      frames: ["v3-0", "v3-2", "v3-4", "v3-1", "v3-3", "v3-5"],
+      hero: "/media/hero3.mp4",
+      progress: 100,
+      lessons: [
+        ["What is AI, really?", 6],
+        ["Meet ChatGPT and Gemini", 7],
+        ["Free is enough", 5],
+        ["Your first conversation with AI", 8],
+      ],
+    },
+    {
       title: "Study smarter with AI",
       blurb: "Understand any chapter faster and check what AI tells you.",
       release: "2026-10-25T18:00:00+05:30",
-      free: true,
       frames: ["v1-1", "v1-0", "v1-4", "v1-3", "v1-5", "v1-7", "v1-9", "v1-11", "v1-2", "v1-6"],
       hero: "/media/hero1.mp4",
       video: "/media/lesson1.mp4",
@@ -46,11 +60,10 @@ const raw = {
       title: "Your AI toolkit",
       blurb: "ChatGPT, Gemini and the free tools that do most of the work.",
       release: "2026-11-08T18:00:00+05:30",
-      frames: ["v3-2", "v3-0", "v3-4", "v3-1", "v3-3", "v3-5", "v3-6", "v3-7"],
-      hero: "/media/hero3.mp4",
+      frames: ["v3-6", "v3-7", "v3-8", "v3-9"],
       lessons: [
-        ["Your two tools for this course", 6],
-        ["Free is enough", 7],
+        ["Beyond chat: AI apps that help", 6],
+        ["Research with AI, safely", 7],
         ["Talking to AI with your voice", 8],
         ["Images from words", 9],
       ],
@@ -105,14 +118,15 @@ const modules = raw.modules.map((m, mi) => {
       id: `${raw.id}-${n}`,
       title,
       mins,
-      module: mi + 1,
+      module: mi,
+      idx: li + 1,
       done: li < doneCount,
       current: progress > 0 && progress < 100 && li === doneCount,
     };
   });
   return {
-    n: mi + 1,
-    id: `m${mi + 1}`,
+    n: mi,
+    id: `m${mi}`,
     title: m.title,
     blurb: m.blurb,
     release: m.release,
@@ -142,7 +156,7 @@ export const course = {
 export const courses = [course];
 export const getCourse = (id) => (id === course.id ? course : null);
 export const getModule = (n) => modules.find((m) => m.n === Number(n));
-export const moduleOfLesson = (lesson) => modules[lesson.module - 1];
+export const moduleOfLesson = (lesson) => modules.find((m) => m.n === lesson.module);
 
 // Release state of a module at time `now`: "live" or "upcoming". Access is separate (see canWatch).
 export const isReleased = (m, now = Date.now()) => new Date(m.release).getTime() <= now;

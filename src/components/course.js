@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { Bot, Brain, CalendarClock, Gift, Lock, MessageSquareText, Palette, PenLine, PlayCircle, Wrench } from "lucide-react";
+import { Bot, Brain, CalendarClock, Gift, Lock, MessageSquareText, Palette, PenLine, PlayCircle, Sparkles, Wrench } from "lucide-react";
 import Countdown from "./Countdown";
 import { Badge, IconTile, Progress } from "./ui";
 import { canWatch, fmtPremiere, isReleased } from "@/lib/catalog";
 
-const moduleIcons = [Brain, PenLine, Wrench, MessageSquareText, Palette, Bot];
-export const iconFor = (m) => moduleIcons[(m?.n ?? 1) - 1] ?? Brain;
+const moduleIcons = [Sparkles, Brain, PenLine, Wrench, MessageSquareText, Palette, Bot];
+export const iconFor = (m) => moduleIcons[m?.n ?? 0] ?? Brain;
 
 // What a viewer can do with a module right now.
 export function moduleState(m, hasAccess, now = Date.now()) {
@@ -25,7 +25,7 @@ export function frameSrc(m, i = 0) {
 export function Thumb({ module: m, i = 0, className = "", dim = false, children }) {
   const src = frameSrc(m, i);
   return (
-    <div className={`relative overflow-hidden bg-surface-2 ${className}`}>
+    <div className={`${/\babsolute\b/.test(className) ? "" : "relative"} overflow-hidden bg-surface-2 ${className}`}>
       {src ? <img src={src} alt="" loading="lazy" className={`h-full w-full object-cover ${dim ? "grayscale-[60%] opacity-60" : ""}`} />
         : <div className="grid h-full w-full place-items-center"><IconTile icon={iconFor(m)} size="lg" /></div>}
       {children}
@@ -111,7 +111,7 @@ export function ContinueHero({ course, module: m }) {
       <div className="flex flex-col justify-center p-5 sm:p-6">
         <div className="text-xs font-semibold uppercase tracking-wider text-primary">Continue · Module {m.n}</div>
         <h2 className="mt-2 text-xl font-semibold">{next.title}</h2>
-        <p className="mt-1 text-sm text-muted">{m.title} · Lesson {next.n - (m.n - 1) * 4} of {m.lessons.length}</p>
+        <p className="mt-1 text-sm text-muted">{m.title} · Lesson {next.idx} of {m.lessons.length}</p>
         <div className="mt-5 flex items-center gap-3 text-sm"><Progress value={m.progress} /><span className="shrink-0 font-semibold">{m.progress}%</span></div>
         <div className="mt-5 flex flex-wrap gap-2">
           <Link href={`/watch/${course.id}?l=${next.n}`} className="btn-primary">Resume lesson</Link>

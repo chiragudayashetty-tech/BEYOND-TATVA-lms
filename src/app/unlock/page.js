@@ -10,7 +10,7 @@ export default async function UnlockPage() {
   const { hasAccess } = await getSession();
   return (
     <Shell roles={["student"]}>
-      <PageTitle title="Unlock AI for Students" subtitle="Module 1 is free. Unlock modules 2–6 with a school key or a one-time payment." />
+      <PageTitle title="Unlock AI for Students" subtitle="Module 0 (AI 101) is free. Unlock modules 1–6 with a school key or a one-time payment." />
       <UnlockView price={PRICE_INR} hasAccess={hasAccess} preview={isPreview} />
     </Shell>
   );

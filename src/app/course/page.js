@@ -33,7 +33,7 @@ export default async function CoursePage() {
                 <h1 className="mt-3 text-3xl font-semibold">{course.title}</h1>
                 <p className="mt-2 text-muted">{course.description}</p>
                 <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-                  {[["6", "Modules"], [String(course.lessonCount), "Lessons"], ["Sun", "6 PM weekly"]].map(([v, l]) => (
+                  {[["0–6", "Modules"], [String(course.lessonCount), "Lessons"], ["Sun", "6 PM weekly"]].map(([v, l]) => (
                     <div key={l} className="rounded-xl bg-surface-2 py-3">
                       <div className="font-display text-xl font-semibold">{v}</div>
                       <div className="text-xs text-muted">{l}</div>
@@ -49,7 +49,7 @@ export default async function CoursePage() {
 
           {next && <PremiereCard module={next} hasAccess={hasAccess} />}
 
-          <Card title="Modules" action={<span className="text-sm text-muted">{released} of 6 out</span>}>
+          <Card title="Modules" action={<span className="text-sm text-muted">{released} of {course.modules.length} out</span>}>
             <ol className="relative">
               {course.modules.map((m, i) => {
                 const state = moduleState(m, hasAccess);
@@ -57,7 +57,7 @@ export default async function CoursePage() {
                 const Icon = iconFor(m);
                 return (
                   <li key={m.id} id={`m${m.n}`} className="relative flex scroll-mt-24 gap-4 pb-6 last:pb-0">
-                    {i < 5 && <span className="absolute left-5 top-12 h-[calc(100%-3rem)] w-px bg-border" />}
+                    {i < course.modules.length - 1 && <span className="absolute left-5 top-12 h-[calc(100%-3rem)] w-px bg-border" />}
                     <span className={`relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
                       state === "done" ? "bg-success text-white" : playable ? "bg-primary text-primary-fg" : "bg-surface-2 text-subtle"}`}>
                       {state === "done" ? <Check className="h-5 w-5" /> : state === "locked" ? <Lock className="h-4 w-4" /> : state === "upcoming" ? <CalendarClock className="h-4 w-4" /> : <Icon className="h-5 w-5" />}
@@ -124,8 +124,8 @@ export default async function CoursePage() {
             ) : (
               <>
                 <IconTile icon={Gift} tone="success" />
-                <h2 className="mt-3 font-semibold">Module 1 is free</h2>
-                <p className="mt-1 text-sm text-muted">Unlock all 6 modules with a key from your school, or pay once online.</p>
+                <h2 className="mt-3 font-semibold">AI 101 is free</h2>
+                <p className="mt-1 text-sm text-muted">Unlock modules 1–6 with a key from your school, or pay once online.</p>
                 <div className="mt-4 flex items-baseline gap-1"><span className="font-display text-3xl font-semibold">₹{PRICE_INR}</span><span className="text-sm text-muted">one time</span></div>
                 <Link href="/unlock" className="btn-primary mt-4 w-full">Unlock full course</Link>
                 <Link href="/unlock#key" className="btn-ghost mt-1 w-full">I have an access key</Link>
@@ -153,7 +153,7 @@ export default async function CoursePage() {
             <IconTile icon={Award} tone="warning" />
             <div>
               <div className="font-semibold">Certificate</div>
-              <p className="mt-1 text-sm text-muted">Finish all 6 modules and their quizzes to earn it.</p>
+              <p className="mt-1 text-sm text-muted">Finish every module and its quiz to earn it.</p>
             </div>
           </div>
         </aside>
