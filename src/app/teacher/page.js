@@ -1,61 +1,68 @@
-import AppShell, { Bar, SectionTitle, Stat } from "@/components/AppShell";
-import { CourseCard } from "@/components/ott/Cards";
+import { AlertTriangle, Clock, Download, Target, TrendingUp, Users } from "lucide-react";
+import Shell from "@/components/shell/Shell";
+import { Avatar, Badge, Card, PageTitle, Progress, StatCard } from "@/components/ui";
+import { CourseRow } from "@/components/course";
 import { courses } from "@/lib/catalog";
-import { modules, students } from "@/lib/mock";
-import { teacherNav } from "@/lib/nav";
+import { students } from "@/lib/demo";
+
+export const metadata = { title: "Teacher · Beyond Tatva" };
 
 const hm = (m) => `${Math.floor(m / 60)}h ${m % 60}m`;
+const status = { active: ["success", "Active"], slipping: ["warning", "Slipping"], inactive: ["danger", "Inactive"] };
 
 export default function TeacherPage() {
   const avg = (k) => Math.round(students.reduce((a, s) => a + s[k], 0) / students.length);
+  const atRisk = students.filter((s) => s.status !== "active");
   return (
-    <AppShell role="teacher" name="Mrs. D'Souza" nav={teacherNav}>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm text-teal">St. Mary&apos;s School, Udupi</p>
-          <h1 className="text-2xl font-bold">Grade 9 · Section A</h1>
+    <Shell roles={["teacher"]} greeting>
+      <PageTitle title="Grade 9 · Section A" subtitle="St. Mary's School, Udupi">
+        <button className="btn-secondary"><Download className="h-4 w-4" /> Export to Google Sheets</button>
+      </PageTitle>
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <StatCard label="Students" value={students.length} icon={Users} />
+        <StatCard label="Average progress" value={`${avg("progress")}%`} icon={TrendingUp} tone="success" />
+        <StatCard label="Average quiz score" value={`${avg("quiz")}%`} icon={Target} tone="warning" />
+        <StatCard label="Learning per week" value={hm(avg("week"))} hint="Average per student" icon={Clock} />
+      </div>
+
+      {atRisk.length > 0 && (
+        <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-warning/30 bg-warning-soft p-4 text-sm">
+          <AlertTriangle className="h-5 w-5 text-warning" />
+          <span className="flex-1"><span className="font-semibold">{atRisk.length} students need a nudge:</span> {atRisk.map((s) => s.name).join(", ")}</span>
+          <button className="btn-secondary py-2">Send reminder</button>
         </div>
-        <button className="btn-ghost">⬇ Export to Google Sheets</button>
-      </div>
+      )}
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Students" value={students.length} />
-        <Stat label="Avg progress" value={`${avg("progress")}%`} tone="text-teal" />
-        <Stat label="Avg quiz score" value={`${avg("quiz")}%`} tone="text-yellow" />
-        <Stat label="Avg learning / week" value={hm(avg("week"))} />
-      </div>
-
-      <div className="card mb-10 overflow-x-auto p-0">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead className="text-left font-ui text-muted">
-            <tr className="border-b border-border">
-              <th className="p-4 font-medium">Student</th>
-              <th className="p-4 font-medium">Progress</th>
-              <th className="p-4 font-medium">Quiz avg</th>
-              <th className="p-4 font-medium">Time this week</th>
-              <th className="p-4 font-medium">Last active</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((s) => (
-              <tr key={s.name} className="border-b border-border/50 last:border-0 hover:bg-surface-2/50">
-                <td className="p-4 font-medium">{s.name}</td>
-                <td className="p-4"><div className="flex items-center gap-3"><div className="w-28"><Bar value={s.progress} /></div>{s.progress}%</div></td>
-                <td className="p-4">{s.quiz}%</td>
-                <td className="p-4">{hm(s.week)}</td>
-                <td className="p-4">
-                  <span className={`chip ${s.last.includes("week") || s.last.includes("4") ? "bg-coral/15 text-coral" : "bg-teal/15 text-teal"}`}>{s.last}</span>
-                </td>
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_340px]">
+        <div className="card overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-subtle">
+                <th className="px-5 py-3 font-medium">Student</th>
+                <th className="px-5 py-3 font-medium">Progress</th>
+                <th className="px-5 py-3 font-medium">Quiz avg</th>
+                <th className="px-5 py-3 font-medium">This week</th>
+                <th className="px-5 py-3 font-medium">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {students.map((s) => (
+                <tr key={s.name} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                  <td className="px-5 py-3"><div className="flex items-center gap-3"><Avatar name={s.name} size="h-8 w-8 text-xs" /><div><div className="font-medium">{s.name}</div><div className="text-xs text-muted">Last active {s.last.toLowerCase()}</div></div></div></td>
+                  <td className="px-5 py-3"><div className="flex items-center gap-3"><Progress value={s.progress} className="h-1.5 w-24" /><span className="font-medium">{s.progress}%</span></div></td>
+                  <td className="px-5 py-3 font-medium">{s.quiz}%</td>
+                  <td className="px-5 py-3">{hm(s.week)}</td>
+                  <td className="px-5 py-3"><Badge tone={status[s.status][0]}>{status[s.status][1]}</Badge></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <Card title="Courses for this class">
+          <div className="-mx-2 space-y-1">{courses.slice(0, 6).map((c) => <CourseRow key={c.id} course={c} />)}</div>
+        </Card>
       </div>
-
-      <SectionTitle>Courses for your class</SectionTitle>
-      <div className="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-4">
-        {courses.map((c) => <CourseCard key={c.id} course={c} />)}
-      </div>
-    </AppShell>
+    </Shell>
   );
 }

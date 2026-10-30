@@ -1,0 +1,37 @@
+"use client";
+
+import { Moon, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
+
+export function useTheme() {
+  const [dark, setDark] = useState(false);
+  useEffect(() => setDark(document.documentElement.classList.contains("dark")), []);
+  const toggle = () => {
+    const next = !document.documentElement.classList.contains("dark");
+    document.documentElement.classList.toggle("dark", next);
+    try { localStorage.setItem("theme", next ? "dark" : "light"); } catch {}
+    setDark(next);
+  };
+  return [dark, toggle];
+}
+
+export default function ThemeToggle({ className = "" }) {
+  const [dark, toggle] = useTheme();
+  return (
+    <button onClick={toggle} aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+      className={`grid h-10 w-10 place-items-center rounded-xl border border-border bg-surface text-muted transition hover:text-fg ${className}`}>
+      {dark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+    </button>
+  );
+}
+
+// Labelled switch for settings pages.
+export function ThemeSwitch() {
+  const [dark, toggle] = useTheme();
+  return (
+    <button role="switch" aria-checked={dark} onClick={toggle}
+      className={`relative h-6 w-11 rounded-full transition ${dark ? "bg-primary" : "bg-border"}`}>
+      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${dark ? "left-[22px]" : "left-0.5"}`} />
+    </button>
+  );
+}

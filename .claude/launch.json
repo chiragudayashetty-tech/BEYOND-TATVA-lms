@@ -6,6 +6,13 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "preview-student",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "-p", "3100"],
+      "env": { "DEV_PREVIEW_ROLE": "student" },
+      "port": 3100
     }
   ]
 }

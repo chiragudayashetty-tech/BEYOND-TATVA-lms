@@ -83,19 +83,26 @@ const raw = [
     color: "#E11D48",
     color2: "#FB7185",
     art: "waves",
-    grade: "Grade 8",
-    tags: ["Everyday AI"],
+    grade: "Grade 9",
+    tags: ["Exam prep", "Writing"],
     progress: 0,
     top: 3,
     isNew: true,
     chapters: [
       {
-        title: "AI at home",
+        title: "Think like an examiner",
         lessons: [
-          ["Plan a family trip", 8],
-          ["Budget like a pro", 9],
-          ["Recipes from your fridge", 7],
-          ["Your week, organised", 8],
+          ["Knowing vs getting marks", 7],
+          ["Same facts, different marks", 8],
+          ["What the examiner checks", 9],
+        ],
+      },
+      {
+        title: "Write for full marks",
+        lessons: [
+          ["Structure a 5-mark answer", 10],
+          ["Your full-marks checklist", 8],
+          ["Practise with AI as examiner", 11],
         ],
       },
     ],

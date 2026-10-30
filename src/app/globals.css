@@ -1,97 +1,116 @@
 @import "tailwindcss";
 
-/* Bright pop theme. Brand: Indigo #4F46E5, Teal #14B8A6, Navy #0F172A, Yellow #FACC15, Soft white #F8FAFC */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Beyond Tatva design system. Brand: Indigo #4F46E5, Teal #14B8A6, Navy #0F172A, Yellow #FACC15, Soft white #F8FAFC */
 :root {
-  --background: #f8fafc;
+  --bg: #f6f7fb;
   --surface: #ffffff;
-  --surface-2: #f1f5f9;
-  --border: #e2e8f0;
-  --foreground: #0f172a;
+  --surface-2: #f2f3f8;
+  --border: #e6e8f0;
+  --fg: #0f172a;
   --muted: #64748b;
-  --brand: #4f46e5;
-  --teal: #0d9488;
-  --yellow: #facc15;
-  --coral: #f43f5e;
-  --sky: #93c5fd;
-  --lilac: #a78bfa;
-  --pink: #fb7185;
-  --mint: #5eead4;
+  --subtle: #94a3b8;
+  --primary: #4f46e5;
+  --primary-fg: #ffffff;
+  --primary-soft: #eef0ff;
+  --success: #0d9488;
+  --success-soft: #e6f7f5;
+  --warning: #d97706;
+  --warning-soft: #fef5e6;
+  --danger: #e11d48;
+  --danger-soft: #fdecf0;
+  --accent: #facc15;
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #0b0d14;
+  --surface: #12151f;
+  --surface-2: #191d2a;
+  --border: #242a3a;
+  --fg: #e9ebf3;
+  --muted: #8c94a8;
+  --subtle: #5d6578;
+  --primary: #6d67f0;
+  --primary-fg: #ffffff;
+  --primary-soft: #1f1f3d;
+  --success: #2dd4bf;
+  --success-soft: #0f2a29;
+  --warning: #fbbf24;
+  --warning-soft: #2c2412;
+  --danger: #fb7185;
+  --danger-soft: #2e1720;
+  --accent: #facc15;
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
+  --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-border: var(--border);
-  --color-foreground: var(--foreground);
+  --color-fg: var(--fg);
   --color-muted: var(--muted);
-  --color-brand: var(--brand);
-  --color-teal: var(--teal);
-  --color-yellow: var(--yellow);
-  --color-coral: var(--coral);
-  --color-sky: var(--sky);
-  --color-lilac: var(--lilac);
-  --color-pink: var(--pink);
-  --color-mint: var(--mint);
+  --color-subtle: var(--subtle);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-accent: var(--accent);
   --font-sans: var(--font-inter);
   --font-display: var(--font-poppins);
-  --font-ui: var(--font-outfit);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg);
+  color: var(--fg);
+  transition: background-color 0.2s ease;
 }
 
-h1, h2, h3 {
+h1, h2, h3, h4 {
   font-family: var(--font-poppins);
+  letter-spacing: -0.01em;
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition active:scale-[0.97] disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
 }
 @utility btn-primary {
-  @apply btn bg-foreground text-white hover:bg-brand;
+  @apply btn bg-primary text-primary-fg hover:brightness-110;
 }
-@utility btn-yellow {
-  @apply btn bg-yellow text-foreground shadow-[0_4px_0_#ca8a04] hover:brightness-105 active:translate-y-[2px] active:shadow-[0_2px_0_#ca8a04];
+@utility btn-secondary {
+  @apply btn border border-border bg-surface text-fg hover:bg-surface-2;
 }
 @utility btn-ghost {
-  @apply btn border-2 border-border bg-surface hover:border-foreground;
+  @apply btn text-muted hover:bg-surface-2 hover:text-fg;
 }
 @utility input {
-  @apply w-full rounded-2xl border-2 border-border bg-surface px-4 py-3 text-sm outline-none placeholder:text-muted focus:border-brand;
+  @apply w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-fg outline-none placeholder:text-subtle focus:border-primary focus:ring-4 focus:ring-primary/15;
 }
 @utility card {
-  @apply rounded-3xl border border-border bg-surface p-5 shadow-[0_2px_0_#e2e8f0];
+  @apply rounded-2xl border border-border bg-surface;
 }
 @utility chip {
-  @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold;
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+}
+@utility label {
+  @apply mb-1.5 block text-sm font-medium text-fg;
 }
 
-@keyframes kenburns {
-  from { transform: scale(1.12) translate(2%, 1%); }
-  to { transform: scale(1) translate(0, 0); }
-}
-@keyframes fadeup {
-  from { opacity: 0; transform: translateY(16px); }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes pop {
-  from { opacity: 0; transform: scale(0.92); }
+  from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: none; }
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0) rotate(-3deg); }
-  50% { transform: translateY(-10px) rotate(3deg); }
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
-
-.glow {
-  background:
-    radial-gradient(600px 300px at 10% 0%, rgb(250 204 21 / 0.25), transparent 70%),
-    radial-gradient(500px 300px at 90% 10%, rgb(167 139 250 / 0.25), transparent 70%),
-    var(--background);
-}

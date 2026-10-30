@@ -1,17 +1,19 @@
 import { notFound } from "next/navigation";
-import Player from "@/components/ott/Player";
-import { courses, getCourse } from "@/lib/catalog";
+import Shell from "@/components/shell/Shell";
+import { getCourse } from "@/lib/catalog";
+import LessonView from "./LessonView";
 
-export function generateStaticParams() {
-  return courses.map((c) => ({ id: c.id }));
-}
-
-export const metadata = { title: "Watching · Beyond Tatva" };
+export const metadata = { title: "Lesson · Beyond Tatva" };
 
 export default async function WatchPage({ params, searchParams }) {
   const { id } = await params;
   const { l } = await searchParams;
   const course = getCourse(id);
   if (!course) notFound();
-  return <Player key={l ?? "current"} course={course} lessonN={l ? Number(l) : undefined} />;
+  const lesson = course.lessons.find((x) => x.n === Number(l)) ?? course.lessons.find((x) => x.current) ?? course.lessons[0];
+  return (
+    <Shell roles={["student", "teacher"]}>
+      <LessonView key={lesson.id} course={course} lesson={lesson} />
+    </Shell>
+  );
 }

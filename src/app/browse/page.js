@@ -1,81 +1,149 @@
 import Link from "next/link";
-import Billboard from "@/components/ott/Billboard";
-import Row from "@/components/ott/Row";
-import StudentFrame from "@/components/ott/StudentFrame";
-import { ContinueCard, CourseCard, PosterCard, Top10Card } from "@/components/ott/Cards";
-import Art from "@/components/ott/Art";
-import { continueWatching, courses, featured, getCourse, liveSessions, newReleases, top10 } from "@/lib/catalog";
+import { BookOpen, ClipboardList, Flame, Radio, Target, Zap } from "lucide-react";
+import Shell from "@/components/shell/Shell";
+import { Badge, Card, IconTile, LineChart, Progress, Ring, StatCard, ViewAll } from "@/components/ui";
+import { ContinueHero, CourseCard, iconFor } from "@/components/course";
+import { continueWatching, courses, getCourse } from "@/lib/catalog";
+import { assignments, goals, me, schedule, scoreTrend } from "@/lib/demo";
 
-export const metadata = { title: "Home · Beyond Tatva" };
+export const metadata = { title: "Dashboard · Beyond Tatva" };
 
-const goals = [
-  { label: "Today's goal", value: "20 / 30 min", pct: 66, bg: "bg-yellow" },
-  { label: "Quizzes this week", value: "4 of 5", pct: 80, bg: "bg-mint" },
-  { label: "Class rank", value: "#3 of 42", pct: 92, bg: "bg-lilac" },
-];
+export default function Dashboard() {
+  const due = assignments.filter((a) => a.status === "pending");
+  const lessons = courses.flatMap((c) => c.lessons);
+  const done = lessons.filter((l) => l.done).length;
+  const inProgress = lessons.filter((l) => l.current).length;
+  const pct = (n) => Math.round((n / lessons.length) * 100);
 
-export default function Browse() {
   return (
-    <StudentFrame>
-      <div className="px-4 pt-6 sm:px-8 lg:px-12">
-        <h1 className="font-display text-2xl font-bold sm:text-3xl">Hey Ananya 👋</h1>
-        <p className="text-muted">Ready for today&apos;s 20 minutes of AI?</p>
+    <Shell roles={["student"]} greeting>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <StatCard label="Courses in progress" value={continueWatching.length} hint={`${courses.length} available`} icon={BookOpen} />
+        <StatCard label="Classes today" value={schedule.length} hint="Next at 4:00 PM" icon={Radio} tone="success" />
+        <StatCard label="Assignments due" value={due.length} hint="1 due tomorrow" icon={ClipboardList} tone="warning" />
+        <StatCard label="Level" value={me.level} hint={`${me.xp} / ${me.nextLevelXp} XP`} icon={Zap} tone="primary" />
       </div>
 
-      <Billboard items={featured} />
+      <div className="mt-4 grid gap-4 lg:mt-6 lg:gap-6 xl:grid-cols-[1.6fr_1fr]">
+        <ContinueHero course={continueWatching[0]} />
 
-      <div className="grid grid-cols-3 gap-2 px-4 pt-4 sm:gap-4 sm:px-8 lg:px-12">
-        {goals.map((g) => (
-          <div key={g.label} className={`rounded-3xl ${g.bg} p-3 sm:p-5`}>
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-foreground/70 sm:text-xs">{g.label}</div>
-            <div className="mt-1 font-display text-base font-bold sm:text-2xl">{g.value}</div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/60"><div className="h-full rounded-full bg-foreground" style={{ width: `${g.pct}%` }} /></div>
+        <Card title="Learning progress" action={<Badge>All courses</Badge>}>
+          <div className="flex items-center gap-6">
+            <Ring value={pct(done)} size={132}>
+              <div>
+                <div className="font-display text-3xl font-semibold">{pct(done)}%</div>
+                <div className="text-xs text-muted">Completed</div>
+              </div>
+            </Ring>
+            <ul className="flex-1 space-y-3 text-sm">
+              {[
+                ["Completed", pct(done), "bg-primary"],
+                ["In progress", pct(inProgress), "bg-warning"],
+                ["Not started", 100 - pct(done) - pct(inProgress), "bg-border"],
+              ].map(([l, v, c]) => (
+                <li key={l} className="flex items-center gap-2.5">
+                  <span className={`h-2.5 w-2.5 rounded-full ${c}`} />
+                  <span className="flex-1 text-muted">{l}</span>
+                  <span className="font-semibold">{v}%</span>
+                </li>
+              ))}
+            </ul>
           </div>
-        ))}
+        </Card>
       </div>
 
-      <div className="pt-8">
-        <Row title="Continue learning" emoji="▶️">
-          {continueWatching.map((c) => <ContinueCard key={c.id} course={c} />)}
-        </Row>
+      <div className="mt-4 grid gap-4 lg:mt-6 lg:gap-6 xl:grid-cols-3">
+        <Card title="Today's schedule" action={<ViewAll href="/planner" />} className="xl:col-span-2">
+          <ul className="divide-y divide-border">
+            {schedule.map((s) => {
+              const I = iconFor(getCourse(s.courseId));
+              return (
+                <li key={s.title} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
+                  <div className="w-16 shrink-0 text-sm">
+                    <div className="font-semibold">{s.time}</div>
+                    <div className="text-xs text-muted">{s.end}</div>
+                  </div>
+                  <span className="h-10 w-0.5 rounded-full bg-primary/30" />
+                  <IconTile icon={I} size="sm" tone={s.kind === "Live class" ? "primary" : "neutral"} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">{s.title}</div>
+                    <div className="text-xs text-muted">{s.host}</div>
+                  </div>
+                  <Badge tone={s.kind === "Live class" ? "success" : "neutral"}>{s.kind}</Badge>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
 
-        <Row title="Top 10 at St. Mary's this week" emoji="🏆">
-          {top10.map((c, i) => <Top10Card key={c.id} course={c} rank={i + 1} />)}
-        </Row>
-
-        <Row title="Fresh drops" emoji="✨" subtitle="New courses added this month">
-          {[...newReleases, ...courses.filter((c) => !c.isNew)].map((c) => <CourseCard key={c.id} course={c} />)}
-        </Row>
-
-        <section className="mb-8 px-4 sm:px-8 lg:px-12">
-          <h2 className="mb-4 flex items-center gap-2 font-display text-xl font-bold sm:text-2xl">
-            <span className="relative flex h-3 w-3"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-coral opacity-75" /><span className="relative inline-flex h-3 w-3 rounded-full bg-coral" /></span>
-            Live classes
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
-            {liveSessions.map((s, i) => (
-              <Link href="/live" key={s.title} className="group flex items-center gap-4 rounded-3xl border border-border bg-surface p-3 shadow-[0_4px_0_#e2e8f0] transition hover:-translate-y-1">
-                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl">
-                  <Art course={getCourse(s.courseId)} seed={`live${i}`} />
-                </div>
-                <div>
-                  {i === 0 && <span className="mb-1 inline-block rounded-full bg-coral px-2 py-0.5 text-[10px] font-extrabold uppercase text-white">Live today</span>}
-                  <div className="font-display font-semibold leading-snug">{s.title}</div>
-                  <div className="text-xs text-muted">{s.when}</div>
-                </div>
-              </Link>
+        <div className="flex flex-col justify-between rounded-2xl bg-primary p-5 text-white">
+          <div className="flex items-center gap-2 text-sm font-medium text-white/80"><Flame className="h-4 w-4" /> Current streak</div>
+          <div className="my-4">
+            <div className="font-display text-5xl font-semibold">{me.streak}</div>
+            <div className="text-sm text-white/80">days in a row</div>
+          </div>
+          <div className="flex gap-1.5">
+            {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+              <div key={i} className="flex flex-1 flex-col items-center gap-1">
+                <span className={`h-7 w-full rounded-md ${i < 4 ? "bg-white" : "bg-white/20"}`} />
+                <span className="text-[10px] text-white/70">{d}</span>
+              </div>
             ))}
           </div>
-        </section>
-
-        <Row title="Made for Grade 9" emoji="🎒">
-          {courses.filter((c) => c.grade === "Grade 9" || c.grade === "All grades").map((c) => <PosterCard key={c.id} course={c} />)}
-        </Row>
-
-        <Row title="Build something cool" emoji="🛠️">
-          {courses.filter((c) => c.tags.some((t) => ["Project", "Build", "Design", "Data"].includes(t))).map((c) => <CourseCard key={c.id} course={c} />)}
-        </Row>
+          <p className="mt-4 text-xs text-white/80">Learn for 10 minutes today to keep it going.</p>
+        </div>
       </div>
-    </StudentFrame>
+
+      <div className="mt-4 grid gap-4 lg:mt-6 lg:gap-6 xl:grid-cols-3">
+        <Card title="Study goals" action={<Target className="h-4 w-4 text-muted" />}>
+          <ul className="space-y-5">
+            {goals.map((g) => (
+              <li key={g.title}>
+                <div className="flex justify-between gap-3 text-sm">
+                  <span className="font-medium">{g.title}</span>
+                  <span className="font-semibold">{g.value}%</span>
+                </div>
+                <Progress value={g.value} className="mt-2 h-1.5" />
+                <div className="mt-1.5 text-xs text-muted">{g.target}</div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+
+        <Card title="Quiz performance" action={<Badge tone="success">+12% this month</Badge>} className="xl:col-span-2">
+          <LineChart points={scoreTrend.points} labels={scoreTrend.labels} />
+        </Card>
+      </div>
+
+      <section className="mt-8">
+        <div className="mb-4 flex items-end justify-between">
+          <h2 className="text-lg font-semibold">Recommended for you</h2>
+          <ViewAll href="/courses">All courses</ViewAll>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {courses.filter((c) => c.progress === 0).slice(0, 4).map((c) => <CourseCard key={c.id} course={c} />)}
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <div className="mb-4 flex items-end justify-between">
+          <h2 className="text-lg font-semibold">Due soon</h2>
+          <ViewAll href="/assignments" />
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {due.map((a) => (
+            <Link key={a.id} href="/assignments" className="card p-4 transition hover:border-primary/40">
+              <div className="flex items-center justify-between">
+                <Badge tone={a.priority === "High" ? "danger" : a.priority === "Medium" ? "warning" : "neutral"}>{a.priority} priority</Badge>
+                <span className="text-xs text-muted">Due {a.due}</span>
+              </div>
+              <div className="mt-3 text-sm font-semibold">{a.title}</div>
+              <div className="mt-1 text-xs text-muted">{getCourse(a.courseId).title}</div>
+              <Progress value={a.progress} className="mt-3 h-1.5" />
+            </Link>
+          ))}
+        </div>
+      </section>
+    </Shell>
   );
 }

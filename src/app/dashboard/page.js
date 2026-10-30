@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
+import { getSession, homeFor } from "@/lib/supabase/server";
 
-// Demo mode: send everyone to the profile picker. With auth this will route by role.
-export default function Dashboard() {
-  redirect("/profiles");
+// Sends each person to their own home based on their role.
+export default async function Dashboard() {
+  const { user, profile } = await getSession();
+  if (!user) redirect("/login");
+  redirect(profile ? homeFor(profile.role) : "/onboarding");
 }

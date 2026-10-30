@@ -1,88 +1,94 @@
-import AppShell, { SectionTitle, Stat } from "@/components/AppShell";
-import { automations, integrations, modules } from "@/lib/mock";
-import { adminNav } from "@/lib/nav";
+import { Building2, Clock, Film, GraduationCap, MessageCircle, Plus, School, Sheet, UploadCloud, Users, Webhook, Zap } from "lucide-react";
+import Shell from "@/components/shell/Shell";
+import { Badge, Card, IconTile, PageTitle, StatCard } from "@/components/ui";
+import { iconFor } from "@/components/course";
+import { courses } from "@/lib/catalog";
+import { automations, integrations } from "@/lib/demo";
+
+export const metadata = { title: "Admin · Beyond Tatva" };
+
+const icons = { Sheet, Zap, Building2, MessageCircle, Webhook, School };
 
 export default function AdminPage() {
   return (
-    <AppShell role="admin" name="Chirag" nav={adminNav}>
-      <h1 className="mb-6 text-2xl font-bold">Good morning, Chirag ☀️</h1>
-
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Schools" value="4" hint="+1 this month" />
-        <Stat label="Active students" value="312" tone="text-teal" />
-        <Stat label="Learning hours this week" value="486" tone="text-yellow" />
-        <Stat label="Courses" value={modules.length} />
+    <Shell roles={["admin"]} greeting>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <StatCard label="Schools" value="4" hint="+1 this month" icon={Building2} />
+        <StatCard label="Active students" value="312" hint="This week" icon={Users} tone="success" />
+        <StatCard label="Learning hours" value="486" hint="This week" icon={Clock} tone="warning" />
+        <StatCard label="Courses" value={courses.length} hint={`${courses.reduce((a, c) => a + c.lessonCount, 0)} lessons`} icon={GraduationCap} />
       </div>
 
-      <div className="mb-10 grid gap-6 lg:grid-cols-[1fr_1.3fr]">
-        <div className="card">
-          <SectionTitle>Upload a lesson</SectionTitle>
-          <label className="grid cursor-pointer place-items-center rounded-2xl border-2 border-dashed border-border p-10 text-center transition hover:border-teal hover:bg-teal/5">
-            <span className="text-4xl">🎬</span>
-            <span className="mt-2 font-semibold">Drop a video here</span>
-            <span className="text-sm text-muted">MP4 up to 5 GB · streamed in HD with no buffering</span>
+      <div id="content" className="mt-6 grid scroll-mt-24 gap-6 xl:grid-cols-[1fr_1.3fr]">
+        <Card title="Upload a lesson">
+          <label className="flex cursor-pointer flex-col items-center rounded-xl border-2 border-dashed border-border px-6 py-10 text-center transition hover:border-primary hover:bg-primary-soft/40">
+            <IconTile icon={UploadCloud} size="lg" />
+            <span className="mt-3 font-semibold">Drop a video here, or browse</span>
+            <span className="mt-1 text-sm text-muted">MP4 up to 5 GB. Streamed in HD without buffering.</span>
             <input type="file" accept="video/*" className="hidden" />
           </label>
           <div className="mt-4 space-y-3">
-            <input className="input" placeholder="Lesson title" />
-            <select className="input" defaultValue="">
-              <option value="" disabled>Add to course…</option>
-              {modules.map((m) => <option key={m.id}>{m.title}</option>)}
-            </select>
-            <button className="btn-primary w-full">Save lesson</button>
+            <div><label className="label" htmlFor="lt">Lesson title</label><input id="lt" className="input" placeholder="Summarise any chapter in 2 minutes" /></div>
+            <div><label className="label" htmlFor="lc">Course</label>
+              <select id="lc" className="input" defaultValue="">
+                <option value="" disabled>Choose a course</option>
+                {courses.map((c) => <option key={c.id}>{c.title}</option>)}
+              </select>
+            </div>
+            <button className="btn-primary w-full"><Film className="h-4 w-4" /> Save lesson</button>
           </div>
-        </div>
+        </Card>
 
-        <div className="card">
-          <SectionTitle action={<button className="btn-ghost py-1.5">+ New course</button>}>Courses</SectionTitle>
+        <Card title="Courses" action={<button className="btn-secondary px-3 py-2"><Plus className="h-4 w-4" /> New course</button>}>
           <ul className="divide-y divide-border">
-            {modules.map((m) => (
-              <li key={m.id} className="flex items-center gap-4 py-3">
-                <span className="grid h-11 w-11 place-items-center rounded-xl text-xl" style={{ background: `${m.color}33` }}>{m.emoji}</span>
-                <div className="flex-1">
-                  <div className="font-medium">{m.title}</div>
-                  <div className="text-xs text-muted">{m.lessons} lessons · {m.level}</div>
+            {courses.map((c) => (
+              <li key={c.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                <IconTile icon={iconFor(c)} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold">{c.title}</div>
+                  <div className="text-xs text-muted">{c.lessonCount} lessons · {c.grade}</div>
                 </div>
-                <span className="chip bg-teal/15 text-teal">Published</span>
+                <Badge tone="success">Published</Badge>
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       </div>
 
-      <section className="mb-10">
-        <SectionTitle>Integrations</SectionTitle>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <section id="integrations" className="mt-8 scroll-mt-24">
+        <PageTitle title="Integrations" subtitle="Connect Beyond Tatva to the tools you already use." />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {integrations.map((i) => (
-            <div key={i.name} className="card flex items-center justify-between gap-4">
-              <div>
-                <div className="font-semibold">{i.name}</div>
-                <div className="text-sm text-muted">{i.desc}</div>
+            <div key={i.name} className="card flex items-center gap-4 p-4">
+              <IconTile icon={icons[i.icon] ?? Zap} tone={i.connected ? "success" : "neutral"} />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold">{i.name}</div>
+                <div className="text-xs text-muted">{i.desc}</div>
               </div>
-              {i.connected
-                ? <span className="chip bg-teal/15 text-teal">Connected</span>
-                : <button className="btn-ghost py-1.5">Connect</button>}
+              {i.connected ? <Badge tone="success">Connected</Badge> : <button className="btn-secondary px-3 py-1.5 text-xs">Connect</button>}
             </div>
           ))}
         </div>
       </section>
 
-      <section>
-        <SectionTitle action={<button className="btn-yellow py-1.5">+ New automation</button>}>Automations</SectionTitle>
+      <section id="automations" className="mt-8 scroll-mt-24">
+        <PageTitle title="Automations" subtitle="Rules that run on their own.">
+          <button className="btn-primary"><Plus className="h-4 w-4" /> New automation</button>
+        </PageTitle>
         <div className="space-y-3">
           {automations.map((a) => (
-            <div key={a.when} className="card flex flex-wrap items-center gap-3">
-              <span className="chip bg-lilac/30 text-brand">When</span>
-              <span className="font-medium">{a.when}</span>
-              <span className="text-muted">→</span>
+            <div key={a.when} className="card flex flex-wrap items-center gap-3 p-4">
+              <Badge tone="primary">When</Badge>
+              <span className="text-sm font-semibold">{a.when}</span>
+              <Badge>Then</Badge>
               <span className="flex-1 text-sm text-muted">{a.then}</span>
-              <span className={`relative h-6 w-11 rounded-full ${a.on ? "bg-teal" : "bg-surface-2"}`}>
-                <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${a.on ? "left-6" : "left-1"}`} />
+              <span role="switch" aria-checked={a.on} className={`relative h-6 w-11 rounded-full ${a.on ? "bg-primary" : "bg-border"}`}>
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${a.on ? "left-[22px]" : "left-0.5"}`} />
               </span>
             </div>
           ))}
         </div>
       </section>
-    </AppShell>
+    </Shell>
   );
 }
