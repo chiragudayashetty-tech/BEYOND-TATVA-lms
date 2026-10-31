@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
 
+// Phone/WhatsApp codes need DLT registration in India; the tab appears once NEXT_PUBLIC_PHONE_LOGIN=1 is set.
+const PHONE_LOGIN = process.env.NEXT_PUBLIC_PHONE_LOGIN === "1";
+
 const friendly = (msg = "") => {
   if (/phone|sms/i.test(msg)) return "Phone login isn't switched on yet. Use email or Google for now.";
   if (/provider is not enabled|Unsupported provider/i.test(msg)) return "Google sign-in isn't switched on yet. Use email for now.";
@@ -72,17 +75,17 @@ function LoginForm() {
       </button>
 
       <div className="my-6 flex items-center gap-3 text-xs text-muted">
-        <div className="h-px flex-1 bg-border" /> or get a code <div className="h-px flex-1 bg-border" />
+        <div className="h-px flex-1 bg-border" /> or get a code by email <div className="h-px flex-1 bg-border" />
       </div>
 
-      <div className="mb-4 grid grid-cols-2 rounded-xl bg-surface-2 p-1 text-sm font-medium">
+      {PHONE_LOGIN && <div className="mb-4 grid grid-cols-2 rounded-xl bg-surface-2 p-1 text-sm font-medium">
         {["email", "phone"].map((m) => (
           <button key={m} onClick={() => { setMethod(m); setSent(false); setError(""); setContact(""); }}
             className={`rounded-lg py-2 capitalize transition ${method === m ? "bg-surface text-fg shadow-sm" : "text-muted"}`}>
             {m}
           </button>
         ))}
-      </div>
+      </div>}
 
       {!sent ? (
         <form onSubmit={sendCode} className="space-y-3">
