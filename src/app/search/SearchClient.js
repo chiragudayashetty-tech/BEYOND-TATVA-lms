@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { CalendarClock, PlayCircle, Search, SearchX } from "lucide-react";
 import { Empty } from "@/components/ui";
+import { isReleased } from "@/lib/catalog";
 
 const topics = ["Study", "Exam", "ChatGPT", "Prompt", "Poster", "Chatbot"];
 
@@ -13,7 +14,6 @@ export default function SearchClient({ initial = "", course }) {
   const term = q.trim().toLowerCase();
   const rows = course.lessons.map((l) => ({ ...l, m: course.modules.find((m) => m.n === l.module) }));
   const results = term ? rows.filter((l) => `${l.title} ${l.m.title} ${l.m.blurb}`.toLowerCase().includes(term)) : rows;
-  const now = Date.now();
 
   return (
     <div>
@@ -33,7 +33,7 @@ export default function SearchClient({ initial = "", course }) {
       {results.length ? (
         <ul className="card divide-y divide-border overflow-hidden">
           {results.map((l) => {
-            const out = !l.m.release || new Date(l.m.release).getTime() <= now;
+            const out = isReleased(l.m);
             return (
               <li key={l.id}>
                 <Link href={out ? `/watch/${course.id}?l=${l.n}` : `/course#m${l.m.n}`} className="flex items-center gap-3 px-4 py-3 transition hover:bg-surface-2">

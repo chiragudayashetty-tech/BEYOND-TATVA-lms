@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CalendarClock, Check, CircleCheck, Lock, PlayCircle, Zap } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
 import { Avatar, Badge } from "@/components/ui";
 import { canWatch, isReleased } from "@/lib/catalog";
+import { parseVideo, tracksProgress } from "@/lib/video";
 import { createClient } from "@/lib/supabase/client";
 
 const tabs = ["Overview", "Notes"];
-
+const COMPLETE_AT = 0.9; // a lesson counts as watched at 90%
 
 export default function LessonView({ course, lesson, hasAccess, video, canSave }) {
   const [tab, setTab] = useState("Overview");
@@ -18,18 +19,47 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave }
   const [saveError, setSaveError] = useState("");
 
   // Progress and answers are saved to Supabase; RLS lets students write only their own rows.
-  async function toggleDone() {
-    const next = !done;
-    setDone(next);
-    if (!canSave) return;
+  const saveProgress = useCallback(async (fields) => {
+    if (!canSave) return { error: null };
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("lesson_progress").upsert(
-      { student_id: user.id, lesson_id: lesson.id, completed_at: next ? new Date().toISOString() : null, updated_at: new Date().toISOString() },
+    if (!user) return { error: new Error("signed out") };
+    return supabase.from("lesson_progress").upsert(
+      { student_id: user.id, lesson_id: lesson.id, updated_at: new Date().toISOString(), ...fields },
       { onConflict: "student_id,lesson_id" },
     );
+  }, [canSave, lesson.id]);
+
+  async function markDone(next) {
+    setDone(next);
+    setSaveError("");
+    const { error } = await saveProgress({ completed_at: next ? new Date().toISOString() : null });
     if (error) { setDone(!next); setSaveError("Couldn't save. Check your connection and try again."); }
   }
+
+  // Watch time from players that report it (MP4, YouTube). Saved every 15 s of new viewing;
+  // the lesson completes itself once 90% has been watched.
+  const watched = useRef({ max: 0, saved: 0, autoDone: false });
+  const doneRef = useRef(done);
+  useEffect(() => { doneRef.current = done; }, [done]);
+  const onProgress = useCallback((seconds, duration) => {
+    const w = watched.current;
+    w.max = Math.max(w.max, Math.floor(seconds));
+    const reached = duration > 0 && seconds / duration >= COMPLETE_AT;
+    if (reached && !doneRef.current && !w.autoDone) {
+      w.autoDone = true;
+      w.saved = w.max;
+      doneRef.current = true;
+      setDone(true);
+      saveProgress({ seconds_watched: w.max, completed_at: new Date().toISOString() }).then(({ error }) => {
+        if (error) { w.autoDone = false; doneRef.current = false; setDone(false); }
+      });
+    } else if (w.max - w.saved >= 15) {
+      w.saved = w.max;
+      saveProgress({ seconds_watched: w.max });
+    }
+  }, [saveProgress]);
+  const autoTracked = tracksProgress(parseVideo(video));
 
   async function saveAnswer(question, correct) {
     if (correct) setXp((x) => x + 10);
@@ -39,12 +69,11 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave }
     await supabase.from("checkpoint_answers").insert({ student_id: user.id, lesson_id: lesson.id, question, correct });
   }
   const noteKey = `notes:${lesson.id}`;
-  const [notes, setNotes] = useState("");
+  // The Notes tab is never server-rendered (Overview opens first), so reading storage here is safe.
+  const [notes, setNotes] = useState(() => {
+    try { return typeof window === "undefined" ? "" : localStorage.getItem(noteKey) ?? ""; } catch { return ""; }
+  });
   const [saved, setSaved] = useState(true);
-
-  useEffect(() => {
-    try { setNotes(localStorage.getItem(noteKey) ?? ""); } catch {}
-  }, [noteKey]);
 
   useEffect(() => {
     if (saved) return;
@@ -53,7 +82,7 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave }
   }, [notes, saved, noteKey]);
 
   const prev = course.lessons.find((l) => l.n === lesson.n - 1);
-  const module = course.modules.find((m) => m.n === lesson.module);
+  const mod = course.modules.find((m) => m.n === lesson.module);
   const nextRaw = course.lessons.find((l) => l.n === lesson.n + 1);
   const next = nextRaw && canWatch(course.modules.find((m) => m.n === nextRaw.module), hasAccess) ? nextRaw : null;
 
@@ -61,11 +90,11 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave }
     <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
       <div className="min-w-0">
         <Link href="/course" className="btn-ghost -ml-3 mb-3"><ArrowLeft className="h-4 w-4" /> {course.title}</Link>
-        <VideoPlayer src={video} onAnswer={saveAnswer} />
+        <VideoPlayer src={video} title={lesson.title} onAnswer={saveAnswer} onProgress={onProgress} />
 
         <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="text-sm font-medium text-primary">Module {module.n} · {module.title} · Lesson {lesson.idx} of {module.lessons.length}</div>
+            <div className="text-sm font-medium text-primary">Module {mod.n} · {mod.title} · Lesson {lesson.idx} of {mod.lessons.length}</div>
             <h1 className="mt-1 text-2xl font-semibold">{lesson.title}</h1>
             <div className="mt-3 flex items-center gap-3">
               <Avatar name="Chirag Shetty" size="h-8 w-8 text-xs" />
@@ -76,7 +105,7 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave }
               {xp > 0 && <Badge tone="warning"><Zap className="h-3 w-3" /> +{xp} XP earned</Badge>}
             </div>
           </div>
-          <button onClick={toggleDone} className={done ? "btn-secondary text-success" : "btn-primary"}>
+          <button onClick={() => markDone(!done)} className={done ? "btn-secondary text-success" : "btn-primary"}>
             {done ? <><CircleCheck className="h-4 w-4" /> Completed</> : <><Check className="h-4 w-4" /> Mark as complete</>}
           </button>
           {saveError && <p role="alert" className="w-full text-sm text-danger">{saveError}</p>}
@@ -96,8 +125,9 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave }
           {tab === "Overview" && (
             <div className="max-w-2xl space-y-3 text-sm leading-relaxed text-muted">
               {lesson.description && <p>{lesson.description}</p>}
-              <p>Watch for the <span className="font-medium text-fg">yellow markers</span> on the progress bar. The video pauses there for a quick question, and each correct answer earns 10 XP.</p>
-              <p className="text-xs">Keyboard: Space to play or pause, ← and → to skip 10 seconds.</p>
+              {autoTracked
+                ? <p>This lesson marks itself complete once you&apos;ve watched most of it. Quick questions inside the video earn 10 XP each.</p>
+                : <p>When you finish the video, tap <span className="font-medium text-fg">Mark as complete</span> to save your progress.</p>}
             </div>
           )}
           {tab === "Notes" && (

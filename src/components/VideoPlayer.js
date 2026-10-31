@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Maximize, Pause, Play, RotateCcw, RotateCw, Volume2, VolumeX, Zap } from "lucide-react";
+import { Maximize, Pause, Play, RotateCcw, RotateCw, TriangleAlert, Volume2, VolumeX, Zap } from "lucide-react";
+import { parseVideo } from "@/lib/video";
 
 // In-video questions for the demo footage. Admin-authored checkpoints per lesson come later.
 const DEMO_VIDEO = "/media/lesson1.mp4";
@@ -25,7 +26,7 @@ const DEMO_CHECKPOINTS = [
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const SPEEDS = [1, 1.25, 1.5, 0.75];
 
-export default function VideoPlayer({ src, onAnswer }) {
+function NativePlayer({ src, onAnswer, onProgress }) {
   const CHECKPOINTS = src === DEMO_VIDEO ? DEMO_CHECKPOINTS : [];
   const video = useRef(null);
   const box = useRef(null);
@@ -37,10 +38,7 @@ export default function VideoPlayer({ src, onAnswer }) {
   const [question, setQuestion] = useState(null);
   const [picked, setPicked] = useState(null);
   const [answered, setAnswered] = useState([]);
-
-  useEffect(() => {
-    if (video.current?.duration) setDur(video.current.duration);
-  }, []);
+  const [failed, setFailed] = useState(false);
 
   const toggle = useCallback(() => {
     const v = video.current;
@@ -64,6 +62,7 @@ export default function VideoPlayer({ src, onAnswer }) {
   const onTime = () => {
     const v = video.current;
     setT(v.currentTime);
+    if (v.duration) onProgress?.(v.currentTime, v.duration);
     const cp = CHECKPOINTS.find((c) => v.currentTime >= c.at && v.currentTime < c.at + 1 && !answered.includes(c.at));
     if (cp) { v.pause(); setQuestion(cp); setPicked(null); }
   };
@@ -72,17 +71,7 @@ export default function VideoPlayer({ src, onAnswer }) {
   const resume = () => { setAnswered((a) => [...a, question.at]); setQuestion(null); video.current?.play(); };
   const cycleSpeed = () => { const n = (speed + 1) % SPEEDS.length; setSpeed(n); if (video.current) video.current.playbackRate = SPEEDS[n]; };
 
-  if (!src) {
-    return (
-      <div className="grid aspect-video place-items-center rounded-2xl bg-[#0f172a] text-center text-white">
-        <div>
-          <Play className="mx-auto h-8 w-8 opacity-60" />
-          <p className="mt-3 font-semibold">Video coming soon</p>
-          <p className="mt-1 text-sm text-white/60">This lesson&apos;s video hasn&apos;t been uploaded yet.</p>
-        </div>
-      </div>
-    );
-  }
+  if (failed) return <Notice title="This video won't play" body="Check your internet and reload. If it keeps happening, tell your teacher which lesson it is." />;
 
   return (
     <div ref={box} className="group relative aspect-video overflow-hidden rounded-2xl bg-black">
@@ -98,6 +87,8 @@ export default function VideoPlayer({ src, onAnswer }) {
         onPause={() => setPlaying(false)}
         onTimeUpdate={onTime}
         onDurationChange={(e) => setDur(e.currentTarget.duration)}
+        onLoadedMetadata={(e) => setDur(e.currentTarget.duration)}
+        onError={() => setFailed(true)}
         className="h-full w-full object-contain"
       />
 
@@ -135,7 +126,7 @@ export default function VideoPlayer({ src, onAnswer }) {
         </div>
       )}
 
-      <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pb-2 pt-10 text-white transition sm:px-4 ${playing ? "opacity-0 group-hover:opacity-100" : "opacity-100"}`}>
+      <div className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pb-2 pt-10 text-white transition sm:px-4 [&>*]:pointer-events-auto ${playing ? "opacity-0 group-hover:opacity-100" : "opacity-100"}`}>
         <div className="relative h-5 cursor-pointer" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); seek(((e.clientX - r.left) / r.width) * dur); }}>
           <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-white/30">
             <div className="h-full rounded-full bg-primary" style={{ width: dur ? `${(t / dur) * 100}%` : 0 }} />
@@ -156,4 +147,106 @@ export default function VideoPlayer({ src, onAnswer }) {
       </div>
     </div>
   );
+}
+
+function Notice({ title, body, icon: Icon = Play }) {
+  return (
+    <div className="grid aspect-video place-items-center rounded-2xl bg-[#0f172a] p-6 text-center text-white">
+      <div>
+        <Icon className="mx-auto h-8 w-8 opacity-60" />
+        <p className="mt-3 font-semibold">{title}</p>
+        <p className="mt-1 text-sm text-white/60">{body}</p>
+      </div>
+    </div>
+  );
+}
+
+// ── YouTube (IFrame Player API, so we know how much was watched) ─────────────
+
+let ytReady;
+function loadYouTube() {
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+  ytReady ??= new Promise((resolve, reject) => {
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { prev?.(); resolve(window.YT); };
+    const s = document.createElement("script");
+    s.src = "https://www.youtube.com/iframe_api";
+    s.onerror = () => { ytReady = undefined; reject(new Error("YouTube failed to load")); };
+    document.head.appendChild(s);
+  });
+  return ytReady;
+}
+
+function YouTubePlayer({ id, start, onProgress }) {
+  const mount = useRef(null);
+  const progress = useRef(onProgress);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { progress.current = onProgress; }, [onProgress]);
+
+  useEffect(() => {
+    let player;
+    let timer;
+    let gone = false;
+    loadYouTube().then((YT) => {
+      if (gone || !mount.current) return;
+      player = new YT.Player(mount.current, {
+        videoId: id,
+        host: "https://www.youtube-nocookie.com",
+        playerVars: { rel: 0, playsinline: 1, modestbranding: 1, start: start || undefined },
+        events: {
+          onError: () => setFailed(true),
+          onStateChange: (e) => {
+            clearInterval(timer);
+            if (e.data === YT.PlayerState.PLAYING) {
+              timer = setInterval(() => {
+                const d = player.getDuration?.();
+                if (d) progress.current?.(player.getCurrentTime(), d);
+              }, 1000);
+            }
+            if (e.data === YT.PlayerState.ENDED) {
+              const d = player.getDuration?.();
+              if (d) progress.current?.(d, d);
+            }
+          },
+        },
+      });
+    }).catch(() => !gone && setFailed(true));
+    return () => { gone = true; clearInterval(timer); player?.destroy?.(); };
+  }, [id, start]);
+
+  if (failed) return <Notice icon={TriangleAlert} title="This video won't play" body="It may be private or removed. Tell your teacher which lesson it is." />;
+  return (
+    <div className="relative aspect-video overflow-hidden rounded-2xl bg-black">
+      <div className="absolute inset-0 [&>iframe]:h-full [&>iframe]:w-full"><div ref={mount} /></div>
+    </div>
+  );
+}
+
+// ── Drive, Vimeo, Bunny Stream: their own players in an iframe ───────────────
+
+function EmbedPlayer({ embed, title }) {
+  return (
+    <div className="relative aspect-video overflow-hidden rounded-2xl bg-black">
+      <iframe
+        src={embed}
+        title={title}
+        className="absolute inset-0 h-full w-full border-0"
+        allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+        allowFullScreen
+        referrerPolicy="strict-origin-when-cross-origin"
+        loading="lazy"
+      />
+    </div>
+  );
+}
+
+// Picks the right player for whatever link the admin pasted.
+// onProgress(seconds, duration) is called while playing, for players that can report it.
+export default function VideoPlayer({ src, title = "Lesson video", onAnswer, onProgress }) {
+  if (!src) return <Notice title="Video coming soon" body="This lesson's video hasn't been uploaded yet." />;
+  const v = parseVideo(src);
+  if (!v) return <Notice icon={TriangleAlert} title="This video link isn't supported" body="Tell your teacher which lesson it is so they can fix the link." />;
+  if (v.kind === "file") return <NativePlayer key={v.src} src={v.src} onAnswer={onAnswer} onProgress={onProgress} />;
+  if (v.kind === "youtube") return <YouTubePlayer key={v.id} id={v.id} start={v.start} onProgress={onProgress} />;
+  return <EmbedPlayer key={v.embed} embed={v.embed} title={title} />;
 }

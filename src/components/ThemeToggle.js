@@ -1,16 +1,22 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+// The theme lives on <html class="dark"> (set before first paint in layout.js); watch it there.
+const watchTheme = (cb) => {
+  const mo = new MutationObserver(cb);
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  return () => mo.disconnect();
+};
+const isDark = () => document.documentElement.classList.contains("dark");
 
 export function useTheme() {
-  const [dark, setDark] = useState(false);
-  useEffect(() => setDark(document.documentElement.classList.contains("dark")), []);
+  const dark = useSyncExternalStore(watchTheme, isDark, () => false);
   const toggle = () => {
-    const next = !document.documentElement.classList.contains("dark");
+    const next = !isDark();
     document.documentElement.classList.toggle("dark", next);
     try { localStorage.setItem("theme", next ? "dark" : "light"); } catch {}
-    setDark(next);
   };
   return [dark, toggle];
 }
