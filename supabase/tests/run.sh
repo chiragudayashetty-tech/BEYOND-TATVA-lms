@@ -9,7 +9,7 @@ $P -d postgres -c "create database $DB" >/dev/null
 trap '$P -d postgres -c "drop database if exists $DB" >/dev/null' EXIT
 $P -d "$DB" -f supabase/tests/supabase_stub.sql
 for f in supabase/migrations/*.sql; do $P -d "$DB" -1 -f "$f"; done
-out=$($P -d "$DB" -t -A -F ' | ' -f supabase/tests/payments_test.sql 2>&1)
-echo "$out" | grep -E '^T[0-9]+|NOTICE' | sed 's/^psql:[^ ]* //'
-if echo "$out" | grep -qE '^T[0-9]+[a-z]? .* \| f$|FAIL|ERROR'; then echo "SQL TESTS FAILED"; exit 1; fi
+out=$($P -d "$DB" -t -A -F ' | ' -f supabase/tests/studio_test.sql 2>&1)
+echo "$out" | grep -E '^[A-Z][0-9]+|NOTICE' | sed 's/^psql:[^ ]* //'
+if echo "$out" | grep -qE '^[A-Z][0-9]+[a-z]? .* \| f$|FAIL|ERROR'; then echo "SQL TESTS FAILED"; exit 1; fi
 echo "All SQL tests passed"

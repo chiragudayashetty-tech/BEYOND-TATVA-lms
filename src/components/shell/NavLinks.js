@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BadgeCheck, BookOpen, CalendarDays, ChartLine, Circle, Clapperboard, Contact, GraduationCap,
-  House, KeyRound, LayoutDashboard, User, Users, Workflow,
+  BadgeCheck, BookOpen, CalendarDays, ChartLine, Circle, Clapperboard, ClipboardCheck, ClipboardList, Contact, GraduationCap,
+  House, KeyRound, LayoutDashboard, ListChecks, User, UserCheck, Users, Workflow,
 } from "lucide-react";
 
 const Icons = {
-  BadgeCheck, BookOpen, CalendarDays, ChartLine, Circle, Clapperboard, Contact, GraduationCap,
-  House, KeyRound, LayoutDashboard, User, Users, Workflow,
+  BadgeCheck, BookOpen, CalendarDays, ChartLine, Circle, Clapperboard, ClipboardCheck, ClipboardList, Contact, GraduationCap,
+  House, KeyRound, LayoutDashboard, ListChecks, User, UserCheck, Users, Workflow,
 };
 
 const isActive = (pathname, href) => {

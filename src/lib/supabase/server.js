@@ -45,20 +45,31 @@ function previewSession(role) {
   };
 }
 
+const PROFILE_FIELDS = "id, role, full_name, avatar, grade, invite_code, guardian_consent_at, school_id, guardian_phone";
+
 async function realSession() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { user: null, profile: null };
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, role, full_name, avatar, grade, invite_code, guardian_consent_at, school_id, guardian_phone")
-    .eq("id", user.id)
-    .maybeSingle();
+  const loadProfile = () => supabase.from("profiles").select(PROFILE_FIELDS).eq("id", user.id).maybeSingle();
+  let { data: profile } = await loadProfile();
+
+  // First sign-in of an email on the Studio allowlist: becomes admin, skipping student onboarding.
+  if (!profile) {
+    const { data: madeAdmin } = await supabase.rpc("claim_studio_admin");
+    if (madeAdmin) ({ data: profile } = await loadProfile());
+  }
+
   // Teachers and admins can watch everything (has_course_access in the database); parents only follow progress.
   let hasAccess = Boolean(profile && (profile.role === "teacher" || profile.role === "admin"));
   if (profile?.role === "student") {
     const { data } = await supabase.from("course_access").select("course_id").eq("student_id", user.id).maybeSingle();
     hasAccess = Boolean(data);
+    // Paid on the website with this account's email or parent phone? Unlock now.
+    if (!hasAccess) {
+      const { data: claimed } = await supabase.rpc("claim_purchases");
+      hasAccess = claimed > 0;
+    }
   }
   return { user, profile, hasAccess };
 }

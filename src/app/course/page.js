@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Award, CalendarClock, Check, ChevronDown, CircleCheck, Gift, KeyRound, Lock, PlayCircle, Sparkles } from "lucide-react";
+import { Award, CalendarClock, Check, ChevronDown, CircleCheck, ClipboardList, Gift, KeyRound, Lock, PlayCircle, Sparkles } from "lucide-react";
+import { quizBadge, submissionBadge } from "@/components/activity";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, IconTile, Progress } from "@/components/ui";
 import { PremiereCard, Thumb, iconFor, moduleState } from "@/components/course";
 import Countdown from "@/components/Countdown";
 import { fmtPremiere, isReleased, nextPremiere } from "@/lib/catalog";
-import { getCourse } from "@/lib/data";
+import { getActivities, getCourse } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 
 export const metadata = { title: "Course · Beyond Tatva" };
@@ -20,7 +21,8 @@ const stateLabel = {
 
 export default async function CoursePage({ searchParams }) {
   const { welcome } = await searchParams;
-  const [{ hasAccess }, course] = await Promise.all([getSession(), getCourse()]);
+  const [{ hasAccess }, course, activities] = await Promise.all([getSession(), getCourse(), getActivities()]);
+  const quizByChapter = Object.fromEntries(activities.quizzes.map((q) => [q.chapter_id, q]));
   const next = nextPremiere(course);
   const released = course.modules.filter((m) => isReleased(m)).length;
 
@@ -122,9 +124,22 @@ export default async function CoursePage({ searchParams }) {
                                 </li>
                               );
                             })}
-                            <li className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${playable ? "text-muted" : "text-subtle"}`}>
-                              <Sparkles className="h-4 w-4" /><span className="flex-1">Module {m.n} quiz</span><span className="text-xs font-medium text-warning">+100 XP</span>
+                          {quizByChapter[m.id] && (
+                            <li>
+                              <Link href={`/quiz/${quizByChapter[m.id].id}`} className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-surface-2">
+                                <Sparkles className="h-4 w-4 text-warning" /><span className="flex-1 font-medium">{quizByChapter[m.id].title}</span>
+                                {quizBadge(activities.best[quizByChapter[m.id].id])}
+                              </Link>
                             </li>
+                          )}
+                          {activities.assignments.filter((a) => a.chapter_id === m.id).map((a) => (
+                            <li key={a.id}>
+                              <Link href={`/assignments/${a.id}`} className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-surface-2">
+                                <ClipboardList className="h-4 w-4 text-primary" /><span className="flex-1 font-medium">{a.title}</span>
+                                {submissionBadge(activities.submissions[a.id], a)}
+                              </Link>
+                            </li>
+                          ))}
                           </ul>
                         );
                         // Locked and upcoming modules fold their lessons away to keep the page short on phones.
@@ -179,7 +194,7 @@ export default async function CoursePage({ searchParams }) {
 
           <Card title="What you'll get">
             <ul className="space-y-2.5 text-sm">
-              {[`${course.lessonCount} short video lessons with quick checks`, "A quiz at the end of every module", "A final project: your own chatbot", "A certificate your school can verify"].map((t) => (
+              {[`${course.lessonCount} short video lessons with quick checks`, "A quiz and an assignment in every module", "A final project: your own chatbot", "A certificate your school can verify"].map((t) => (
                 <li key={t} className="flex gap-2.5"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />{t}</li>
               ))}
             </ul>
