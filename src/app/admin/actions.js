@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { COURSE_ID } from "@/lib/catalog";
+import { VIDEO_HELP, parseVideo } from "@/lib/video";
 
 // Admin writes. Row-level security rejects every one of these unless the caller is an admin.
 
@@ -61,6 +62,7 @@ export async function saveLesson(_, fd) {
   const row = { title: str(fd, "title"), minutes: num(fd, "minutes"), description: str(fd, "description") };
   if (!row.title) return { ok: false, error: "Give the lesson a title." };
   const video = str(fd, "video");
+  if (video && !parseVideo(video)) return { ok: false, error: `That video link won't play. ${VIDEO_HELP}` };
   return run(async (s) => {
     let lessonId = id;
     if (id) {

@@ -1,5 +1,7 @@
 "use client";
 
+import { parseVideo, tracksProgress } from "@/lib/video";
+
 import { useActionState, useState, useTransition } from "react";
 import { CalendarClock, ChevronDown, CircleCheck, Film, Gift, Plus, Save, Trash2, Video } from "lucide-react";
 import { Badge } from "@/components/ui";
@@ -53,6 +55,9 @@ function LessonForm({ lesson, chapterId, video, onDone }) {
     return r;
   }, null);
   const [deleting, startDelete] = useTransition();
+  const [link, setLink] = useState(video ?? "");
+  const kind = parseVideo(link);
+  const kindName = { file: "Video file", youtube: "YouTube", drive: "Google Drive", vimeo: "Vimeo", bunny: "Bunny Stream" }[kind?.kind];
   return (
     <form action={action} className="grid gap-3 rounded-xl border border-border bg-surface p-3 sm:grid-cols-[1fr_90px]">
       {lesson && <input type="hidden" name="id" value={lesson.id} />}
@@ -62,8 +67,13 @@ function LessonForm({ lesson, chapterId, video, onDone }) {
       <div className="sm:col-span-2">
         <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3">
           <Video className="h-4 w-4 shrink-0 text-subtle" />
-          <input name="video" className="w-full bg-transparent py-2.5 text-sm outline-none placeholder:text-subtle" defaultValue={video ?? ""} placeholder="Video URL (Bunny Stream, YouTube unlisted or MP4 link)" aria-label="Video URL" />
+          <input name="video" className="w-full bg-transparent py-2.5 text-sm outline-none placeholder:text-subtle" value={link} onChange={(e) => setLink(e.target.value)} placeholder="Video link: YouTube, Google Drive, Vimeo, Bunny Stream or .mp4" aria-label="Video URL" />
         </div>
+        {link.trim() && (
+          <p className={`mt-1 text-xs ${kind ? "text-muted" : "text-danger"}`}>
+            {kind ? `${kindName} · ${tracksProgress(kind) ? "tracks watch time" : "students mark complete themselves"}` : "Can't play this link. Use a YouTube, Google Drive, Vimeo, Bunny Stream or .mp4 link."}
+          </p>
+        )}
       </div>
       <textarea name="description" rows={2} className="input sm:col-span-2" defaultValue={lesson?.description ?? ""} placeholder="What students will learn (shown under the video)" aria-label="Description" />
       <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
@@ -162,7 +172,9 @@ export default function ContentEditor({ course, videos }) {
         <CourseForm course={course} />
         <div className="card p-5 text-sm">
           <h2 className="font-semibold">About videos</h2>
-          <p className="mt-2 text-muted">Paste a video link into each lesson for now. Direct upload with smooth, no-buffer streaming arrives once Bunny Stream is connected.</p>
+          <p className="mt-2 text-muted">Paste a link into each lesson. YouTube (unlisted) and .mp4 links track watch time and complete the lesson automatically at 90%. Google Drive, Vimeo and Bunny links play, and students tap &quot;Mark as complete&quot;.</p>
+          <p className="mt-2 text-muted">Google Drive: set sharing to &quot;Anyone with the link&quot;. Drive limits how many people can stream a file, so use it for testing, not launch.</p>
+          <p className="mt-2 text-muted">Unlisted YouTube and Drive links can be shared outside the app. For paid modules, Bunny Stream with signed links is the safer choice.</p>
           <p className="mt-2 text-muted">Students only ever receive a lesson&apos;s video after its module premieres and they have access.</p>
         </div>
       </div>
