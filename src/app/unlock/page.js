@@ -6,13 +6,12 @@ import UnlockView from "./UnlockView";
 
 export const metadata = { title: "Unlock the course · Beyond Tatva" };
 
-export default async function UnlockPage({ searchParams }) {
-  const { coupon } = await searchParams;
-  const [{ hasAccess }, course] = await Promise.all([getSession(), getCourse()]);
+export default async function UnlockPage() {
+  const [{ user, hasAccess }, course] = await Promise.all([getSession(), getCourse()]);
   return (
     <Shell roles={["student"]}>
-      <PageTitle title={`Unlock ${course.title}`} subtitle="Module 0 (AI 101) is free. Unlock modules 1–6 with a school key or a one-time payment." />
-      <UnlockView price={course.price} hasAccess={hasAccess} preview={isPreview} initialCoupon={typeof coupon === "string" ? coupon.slice(0, 32) : ""} />
+      <PageTitle title={`Unlock ${course.title}`} subtitle="Module 0 (AI 101) is free. Unlock modules 1–6 with a school key, or enroll on our website." />
+      <UnlockView price={course.price} hasAccess={hasAccess} preview={isPreview} enrollUrl={process.env.NEXT_PUBLIC_ENROLL_URL || "https://www.beyondtatva.in"} signedInAs={user?.email || user?.phone || ""} />
     </Shell>
   );
 }

@@ -8,19 +8,17 @@ export const metadata = { title: "Schools and people · Admin · Beyond Tatva" }
 
 export default async function PeoplePage() {
   const supabase = await createClient();
-  const [{ data: schools }, { data: classes }, { data: people }, { data: access }, { data: orders }] = await Promise.all([
+  const [{ data: schools }, { data: classes }, { data: people }, { data: access }] = await Promise.all([
     supabase.rpc("admin_schools"),
     supabase.from("classes").select("id, name, grade, school_id, teacher_id"),
     supabase.from("profiles").select("id, role, full_name, grade, school_id, school_name, guardian_phone, guardian_consent_at, created_at").order("created_at", { ascending: false }),
     supabase.from("course_access").select("student_id, source"),
-    supabase.from("payment_orders").select("id, student_id, amount_paise, coupon_code, status, payment_id, created_at").order("created_at", { ascending: false }).limit(50),
   ]);
   const schoolName = Object.fromEntries((schools ?? []).map((s) => [s.id, s.name]));
   const teachers = (people ?? []).filter((p) => p.role === "teacher");
   const teacherName = Object.fromEntries(teachers.map((t) => [t.id, t.full_name]));
   const accessBy = Object.fromEntries((access ?? []).map((a) => [a.student_id, a.source]));
   const students = (people ?? []).filter((p) => p.role === "student");
-  const studentName = Object.fromEntries(students.map((s) => [s.id, s.full_name]));
 
   return (
     <Shell roles={["admin"]}>
@@ -83,25 +81,10 @@ export default async function PeoplePage() {
         )}
       </Card>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-2">
+      <div className="mt-6">
         <Card title="Move access between accounts">
           <p className="mb-4 text-sm text-muted">If a student signed up twice, move their access (and payments) to the account they actually use.</p>
           {students.length ? <MoveAccess students={students.map((s) => ({ id: s.id, full_name: s.full_name, access: accessBy[s.id] ?? null }))} /> : <p className="text-sm text-muted">No students yet.</p>}
-        </Card>
-        <Card title="Recent payments" pad={false}>
-          {orders?.length ? (
-            <div className="max-h-80 overflow-y-auto">
-              <table className="w-full text-sm"><tbody>
-                {orders.map((o) => (
-                  <tr key={o.id} className="border-t border-border">
-                    <td className="px-5 py-2.5"><div className="font-medium">{studentName[o.student_id] ?? "Deleted account"}</div><div className="font-mono text-xs text-muted">{o.payment_id ?? o.id}</div></td>
-                    <td className="px-5 py-2.5 text-right">₹{(o.amount_paise / 100).toLocaleString("en-IN")}{o.coupon_code && <div className="text-xs text-muted">{o.coupon_code}</div>}</td>
-                    <td className="px-5 py-2.5 text-right"><Badge tone={{ paid: "success", refunded: "warning", failed: "danger" }[o.status] ?? "neutral"}>{o.status}</Badge></td>
-                  </tr>
-                ))}
-              </tbody></table>
-            </div>
-          ) : <p className="px-5 pb-5 text-sm text-muted">No online payments yet.</p>}
         </Card>
       </div>
 

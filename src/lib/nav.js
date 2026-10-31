@@ -5,6 +5,7 @@ export const nav = {
     main: [
       { href: "/browse", label: "Dashboard", icon: "LayoutDashboard" },
       { href: "/course", label: "Course", icon: "BookOpen" },
+      { href: "/assignments", label: "Assignments", icon: "ClipboardList" },
       { href: "/planner", label: "Study Planner", icon: "CalendarDays" },
       { href: "/progress", label: "Progress", icon: "ChartLine" },
       { href: "/certificates", label: "Certificate", icon: "BadgeCheck" },
@@ -38,10 +39,14 @@ export const nav = {
       { href: "/profile", label: "Profile", icon: "User" },
     ],
   },
+  // Studio: only accounts on the studio_admins allowlist ever get this role.
   admin: {
     main: [
-      { href: "/admin", label: "Overview", icon: "LayoutDashboard" },
+      { href: "/admin", label: "Studio", icon: "LayoutDashboard" },
       { href: "/admin/content", label: "Content", icon: "Clapperboard" },
+      { href: "/admin/quizzes", label: "Quizzes", icon: "ListChecks" },
+      { href: "/admin/assignments", label: "Assignments", icon: "ClipboardCheck" },
+      { href: "/admin/enrollments", label: "Enrollments", icon: "UserCheck" },
       { href: "/admin/access", label: "Access keys", icon: "KeyRound" },
       { href: "/admin/people", label: "Schools & people", icon: "Users" },
       { href: "/admin/crm", label: "CRM", icon: "Contact" },
@@ -52,9 +57,10 @@ export const nav = {
       { href: "/course", label: "Course page", icon: "BookOpen" },
     ],
     mobile: [
-      { href: "/admin", label: "Overview", icon: "LayoutDashboard" },
+      { href: "/admin", label: "Studio", icon: "LayoutDashboard" },
       { href: "/admin/content", label: "Content", icon: "Clapperboard" },
-      { href: "/admin/access", label: "Keys", icon: "KeyRound" },
+      { href: "/admin/assignments", label: "Review", icon: "ClipboardCheck" },
+      { href: "/admin/enrollments", label: "Enrolled", icon: "UserCheck" },
       { href: "/profile", label: "Profile", icon: "User" },
     ],
   },

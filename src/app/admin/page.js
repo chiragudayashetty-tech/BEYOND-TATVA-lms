@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, Clapperboard, Contact, Film, GraduationCap, KeyRound, School, Users, Workflow } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, Clapperboard, ClipboardCheck, Contact, Film, GraduationCap, KeyRound, ListChecks, School, UserCheck, Users, Workflow } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, IconTile, StatCard } from "@/components/ui";
 import { iconFor } from "@/components/course";
@@ -7,10 +7,13 @@ import { fmtPremiere, isReleased, nextPremiere } from "@/lib/catalog";
 import { getCourse } from "@/lib/data";
 import { createClient, isPreview } from "@/lib/supabase/server";
 
-export const metadata = { title: "Admin · Beyond Tatva" };
+export const metadata = { title: "Studio · Beyond Tatva" };
 
 const sections = [
   { href: "/admin/content", icon: Clapperboard, title: "Content", body: "Course, modules, lessons, videos and premiere dates" },
+  { href: "/admin/quizzes", icon: ListChecks, title: "Quizzes", body: "One quiz per module: questions, pass mark, XP" },
+  { href: "/admin/assignments", icon: ClipboardCheck, title: "Assignments", body: "Set work per module and mark what students hand in" },
+  { href: "/admin/enrollments", icon: UserCheck, title: "Enrollments", body: "Website payments, manual enrollments and refunds" },
   { href: "/admin/access", icon: KeyRound, title: "Access keys", body: "Create keys for schools and see who redeemed them" },
   { href: "/admin/people", icon: School, title: "Schools and people", body: "Schools, join codes, classes, teachers and students" },
   { href: "/admin/crm", icon: Contact, title: "CRM", body: "Leads, schools in the pipeline, follow-ups" },
@@ -30,15 +33,15 @@ export default async function AdminPage() {
     <Shell roles={["admin"]} greeting>
       {isPreview && (
         <div className="mb-4 flex items-center gap-3 rounded-2xl border border-warning/30 bg-warning-soft p-4 text-sm">
-          <AlertTriangle className="h-5 w-5 shrink-0 text-warning" /> Local preview: numbers show as 0 and changes won&apos;t save. Sign in with your admin account to manage real data.
+          <AlertTriangle className="h-5 w-5 shrink-0 text-warning" /> Local preview: numbers show as 0 and changes won&apos;t save. Sign in with your Studio account to manage real data.
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Students" value={stats.students ?? 0} hint={`${stats.parents ?? 0} parents · ${stats.teachers ?? 0} teachers`} icon={Users} />
-        <StatCard label="Full access" value={stats.unlocked ?? 0} hint={`${stats.keys_used ?? 0} of ${stats.keys_total ?? 0} keys used`} icon={KeyRound} tone="success" />
+        <StatCard label="Full access" value={stats.unlocked ?? 0} hint={`${stats.enrollments_claimed ?? 0} paid · ${stats.keys_used ?? 0} keys`} icon={KeyRound} tone="success" />
         <StatCard label="Lessons completed" value={stats.lessons_completed ?? 0} hint="All students, all time" icon={CheckCircle2} tone="warning" />
-        <StatCard label="Schools" value={stats.schools ?? 0} icon={GraduationCap} />
+        <StatCard label="To mark" value={stats.to_review ?? 0} hint={`${stats.enrollments_pending ?? 0} paid, not signed in yet`} icon={ClipboardCheck} />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.3fr_1fr]">
