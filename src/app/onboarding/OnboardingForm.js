@@ -14,16 +14,17 @@ const roles = [
 ];
 
 const codeLabel = {
-  student: "School code (from your teacher)",
+  student: "School code (only if your school gave you one)",
   teacher: "Teacher code (from Beyond Tatva)",
   parent: "Your child's code (in their app)",
 };
 
-export default function OnboardingForm({ defaultName }) {
+export default function OnboardingForm({ defaultName, next }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [role, setRole] = useState(null);
-  const [form, setForm] = useState({ name: defaultName, code: "", grade: "", gName: "", gPhone: "", consent: false });
+  const [form, setForm] = useState({ name: defaultName, code: "", school: "", grade: "", gName: "", gPhone: "", consent: false });
+  const done = () => { router.replace(next ?? "/dashboard"); router.refresh(); };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [inviteCode, setInviteCode] = useState(null);
@@ -41,6 +42,7 @@ export default function OnboardingForm({ defaultName }) {
       p_grade: role === "student" ? Number(form.grade) : null,
       p_guardian_name: role === "student" ? form.gName : null,
       p_guardian_phone: role === "student" ? form.gPhone : null,
+      p_school_name: role === "student" ? form.school : null,
     });
     if (error) {
       setBusy(false);
@@ -51,8 +53,7 @@ export default function OnboardingForm({ defaultName }) {
       setBusy(false);
       return setInviteCode(data?.invite_code ?? "");
     }
-    router.replace("/dashboard");
-    router.refresh();
+    done();
   }
 
   return (
@@ -69,12 +70,12 @@ export default function OnboardingForm({ defaultName }) {
           {inviteCode !== null ? (
             <div className="text-center">
               <div className="flex justify-center"><IconTile icon={CircleCheck} tone="success" size="lg" /></div>
-              <h1 className="mt-3 mt-4 text-2xl font-semibold">You&apos;re in!</h1>
+              <h1 className="mt-4 text-2xl font-semibold">You&apos;re in!</h1>
               <p className="mt-2 text-muted">Give this code to your parent. They sign in, pick &quot;Parent&quot; and enter it to see your progress and give consent.</p>
               <div className="mx-auto mt-6 w-fit rounded-2xl border border-dashed border-primary bg-primary-soft px-8 py-4 font-mono text-3xl font-semibold tracking-[0.3em] text-primary">
                 {inviteCode}
               </div>
-              <button onClick={() => { router.replace("/dashboard"); router.refresh(); }} className="btn-primary mt-8 w-full py-3">Start learning</button>
+              <button onClick={done} className="btn-primary mt-8 w-full py-3">Start learning</button>
             </div>
           ) : step === 1 ? (
             <>
@@ -101,9 +102,15 @@ export default function OnboardingForm({ defaultName }) {
                 <span className="label">Your full name</span>
                 <input className="input" value={form.name} onChange={set("name")} maxLength={80} required />
               </label>
+              {role === "student" && (
+                <label className="block">
+                  <span className="label">Your school&apos;s name</span>
+                  <input className="input" value={form.school} onChange={set("school")} maxLength={120} placeholder="e.g. Vidyodaya Public School, Udupi" />
+                </label>
+              )}
               <label className="block">
                 <span className="label">{codeLabel[role]}</span>
-                <input className="input uppercase tracking-wider" value={form.code} onChange={set("code")} placeholder={role === "parent" ? "A1B2C3" : role === "teacher" ? "SCHOOL-TEACH-XXX" : "SCHOOL-CITY"} required />
+                <input className="input uppercase tracking-wider" value={form.code} onChange={set("code")} placeholder={role === "parent" ? "A1B2C3" : role === "teacher" ? "SCHOOL-TEACH-XXX" : "Leave empty if you joined on your own"} required={role !== "student"} />
               </label>
               {role === "student" && (
                 <>
@@ -120,10 +127,10 @@ export default function OnboardingForm({ defaultName }) {
                   </label>
                   <div className="rounded-xl border border-border bg-surface-2 p-4">
                     <p className="font-semibold">Parent or guardian</p>
-                    <p className="text-xs text-muted">We only use this to ask for their permission and share your progress.</p>
+                    <p className="text-xs text-muted">We use this to ask for their permission and send course updates on WhatsApp.</p>
                     <div className="mt-3 space-y-3">
                       <input className="input" value={form.gName} onChange={set("gName")} placeholder="Guardian's name" required />
-                      <input className="input" type="tel" value={form.gPhone} onChange={set("gPhone")} placeholder="Guardian's phone number" required />
+                      <input className="input" type="tel" inputMode="numeric" value={form.gPhone} onChange={set("gPhone")} placeholder="Guardian's 10-digit mobile (WhatsApp)" required />
                     </div>
                   </div>
                   <label className="flex items-start gap-3 text-sm">

@@ -101,3 +101,11 @@ export async function createClass(_, fd) {
 export async function grantAccess(studentId) {
   return run((s) => s.from("course_access").upsert({ student_id: studentId, course_id: COURSE_ID, source: "admin" }));
 }
+
+// Moves every course a duplicate account has (paid, key or admin) to the student's real account.
+export async function moveAccess(_, fd) {
+  const from = str(fd, "from");
+  const to = str(fd, "to");
+  if (!from || !to) return { ok: false, error: "Pick both accounts." };
+  return run((s) => s.rpc("admin_move_access", { p_from: from, p_to: to }));
+}

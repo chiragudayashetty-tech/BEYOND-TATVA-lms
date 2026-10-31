@@ -18,7 +18,8 @@ const stateLabel = {
   upcoming: ["primary", "Upcoming"],
 };
 
-export default async function CoursePage() {
+export default async function CoursePage({ searchParams }) {
+  const { welcome } = await searchParams;
   const [{ hasAccess }, course] = await Promise.all([getSession(), getCourse()]);
   const next = nextPremiere(course);
   const released = course.modules.filter((m) => isReleased(m)).length;
@@ -27,6 +28,15 @@ export default async function CoursePage() {
     <Shell roles={["student", "teacher"]}>
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
         <div className="min-w-0 space-y-6">
+          {welcome && hasAccess && (
+            <div role="status" className="card flex items-start gap-4 border-success/40 bg-success-soft p-5">
+              <IconTile icon={CircleCheck} tone="success" />
+              <div>
+                <h2 className="font-semibold">Payment successful. The full course is yours.</h2>
+                <p className="mt-1 text-sm text-muted">Every module unlocks on this account as it premieres, every Sunday at 6 PM. Sign in with this same account on any device.</p>
+              </div>
+            </div>
+          )}
           <div className="card overflow-hidden">
             <div className="grid md:grid-cols-[1fr_1fr]">
               <div className="p-6">
