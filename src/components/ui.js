@@ -36,7 +36,7 @@ export function Card({ title, action, children, className = "", pad = true }) {
 
 export function ViewAll({ href, children = "View all" }) {
   return (
-    <Link href={href} className="inline-flex items-center gap-0.5 text-sm font-medium text-primary hover:underline">
+    <Link href={href} className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-sm font-medium text-primary hover:underline">
       {children} <ChevronRight className="h-4 w-4" />
     </Link>
   );
@@ -48,7 +48,7 @@ export function StatCard({ label, value, hint, icon, tone = "primary" }) {
       <div className="min-w-0">
         <div className="text-xs text-muted sm:text-sm">{label}</div>
         <div className="mt-1 font-display text-2xl font-semibold tracking-tight sm:mt-1.5 sm:text-3xl">{value}</div>
-        {hint && <div className="mt-1 truncate text-xs text-muted">{hint}</div>}
+        {hint && <div className="mt-1 line-clamp-2 text-xs text-muted sm:line-clamp-1">{hint}</div>}
       </div>
       {icon && <span className="hidden sm:block"><IconTile icon={icon} tone={tone} /></span>}
     </div>

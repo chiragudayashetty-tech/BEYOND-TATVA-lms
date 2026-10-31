@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Award, CalendarClock, Check, CircleCheck, Gift, KeyRound, Lock, PlayCircle, Sparkles } from "lucide-react";
+import { Award, CalendarClock, Check, ChevronDown, CircleCheck, Gift, KeyRound, Lock, PlayCircle, Sparkles } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, IconTile, Progress } from "@/components/ui";
 import { PremiereCard, Thumb, iconFor, moduleState } from "@/components/course";
@@ -48,6 +48,18 @@ export default async function CoursePage() {
             </div>
           </div>
 
+          {!hasAccess && (
+            // Phones: the sidebar sits below every module, so surface the offer near the top too.
+            <div className="card flex items-center gap-3 p-4 xl:hidden">
+              <IconTile icon={Gift} tone="success" />
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold">AI 101 is free</div>
+                <div className="text-sm text-muted">Modules 1–6 for ₹{course.price}, one time</div>
+              </div>
+              <Link href="/unlock" className="btn-primary shrink-0 px-4">Unlock</Link>
+            </div>
+          )}
+
           {next && <PremiereCard module={next} hasAccess={hasAccess} />}
 
           <Card title="Modules" action={<span className="text-sm text-muted">{released} of {course.modules.length} out</span>}>
@@ -83,25 +95,38 @@ export default async function CoursePage() {
                         </div>
                       </div>
 
-                      <ul className="mt-3 space-y-1">
-                        {m.lessons.map((l, li) => {
-                          const Row = playable ? Link : "div";
-                          return (
-                            <li key={l.id}>
-                              <Row {...(playable ? { href: `/watch/${course.id}?l=${l.n}` } : {})}
-                                className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${playable ? "hover:bg-surface-2" : "text-subtle"} ${l.current ? "bg-primary-soft" : ""}`}>
-                                {l.done ? <CircleCheck className="h-4 w-4 text-success" /> : playable ? <PlayCircle className="h-4 w-4 text-primary" /> : <Lock className="h-3.5 w-3.5" />}
-                                <span className="flex-1 font-medium">{li + 1}. {l.title}</span>
-                                {l.current && <Badge tone="primary">Up next</Badge>}
-                                <span className="text-xs text-muted">{l.mins} min</span>
-                              </Row>
+                      {(() => {
+                        const list = (
+                          <ul className="mt-3 space-y-1">
+                            {m.lessons.map((l, li) => {
+                              const Row = playable ? Link : "div";
+                              return (
+                                <li key={l.id}>
+                                  <Row {...(playable ? { href: `/watch/${course.id}?l=${l.n}` } : {})}
+                                    className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${playable ? "hover:bg-surface-2" : "text-subtle"} ${l.current ? "bg-primary-soft" : ""}`}>
+                                    {l.done ? <CircleCheck className="h-4 w-4 text-success" /> : playable ? <PlayCircle className="h-4 w-4 text-primary" /> : <Lock className="h-3.5 w-3.5" />}
+                                    <span className="flex-1 font-medium">{li + 1}. {l.title}</span>
+                                    {l.current && <Badge tone="primary">Up next</Badge>}
+                                    <span className="text-xs text-muted">{l.mins} min</span>
+                                  </Row>
+                                </li>
+                              );
+                            })}
+                            <li className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${playable ? "text-muted" : "text-subtle"}`}>
+                              <Sparkles className="h-4 w-4" /><span className="flex-1">Module {m.n} quiz</span><span className="text-xs font-medium text-warning">+100 XP</span>
                             </li>
-                          );
-                        })}
-                        <li className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${playable ? "text-muted" : "text-subtle"}`}>
-                          <Sparkles className="h-4 w-4" /><span className="flex-1">Module {m.n} quiz</span><span className="text-xs font-medium text-warning">+100 XP</span>
-                        </li>
-                      </ul>
+                          </ul>
+                        );
+                        // Locked and upcoming modules fold their lessons away to keep the page short on phones.
+                        return playable ? list : (
+                          <details className="group mt-2">
+                            <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-muted hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
+                              <ChevronDown className="h-4 w-4 transition group-open:rotate-180" /> See what&apos;s inside ({m.lessons.length} lessons)
+                            </summary>
+                            {list}
+                          </details>
+                        );
+                      })()}
 
                       {state === "locked" && (
                         <Link href="/unlock" className="btn-secondary mt-3"><KeyRound className="h-4 w-4" /> Unlock module {m.n}</Link>
@@ -115,7 +140,7 @@ export default async function CoursePage() {
         </div>
 
         <aside className="space-y-4">
-          <Card>
+          <Card className={hasAccess ? "" : "hidden xl:block"}>
             {hasAccess ? (
               <>
                 <IconTile icon={CircleCheck} tone="success" />

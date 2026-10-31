@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useNow } from "@/lib/hooks";
 
 const parts = (ms) => {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -10,13 +11,7 @@ const parts = (ms) => {
 // Ticking countdown to a premiere. `compact` renders inline text like "2d 4h 10m".
 export default function Countdown({ to, compact = false, onDone }) {
   const target = new Date(to).getTime();
-  const [now, setNow] = useState(null);
-
-  useEffect(() => {
-    setNow(Date.now());
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
+  const now = useNow();
 
   useEffect(() => {
     if (now != null && now >= target) onDone?.();

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useIsClient } from "@/lib/hooks";
 import { BookOpen, CalendarPlus, Check, ChevronLeft, ChevronRight, Plus, RotateCcw, Target, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui";
 
@@ -16,23 +17,21 @@ const startOfWeek = (d) => addDays(d, -((d.getDay() + 6) % 7)); // Monday
 
 // Study blocks are stored per day on this device. Syncing to the account comes with the planner table.
 export default function PlannerView() {
-  const [today, setToday] = useState(null);
-  const [selected, setSelected] = useState(null);
-  const [month, setMonth] = useState(null);
-  const [plan, setPlan] = useState({});
+  // Dates and the saved plan come from this device, so render only once in the browser.
+  const isClient = useIsClient();
+  const [today] = useState(() => new Date());
+  const [selected, setSelected] = useState(today);
+  const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [plan, setPlan] = useState(() => {
+    try { return typeof window === "undefined" ? {} : JSON.parse(localStorage.getItem("planner:v2") ?? "{}"); } catch { return {}; }
+  });
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ title: "", time: "7:00 PM", kind: "Lesson" });
-
-  useEffect(() => {
-    const t = new Date();
-    setToday(t); setSelected(t); setMonth(new Date(t.getFullYear(), t.getMonth(), 1));
-    try { setPlan(JSON.parse(localStorage.getItem("planner:v2") ?? "{}")); } catch {}
-  }, []);
 
   const save = (next) => { setPlan(next); try { localStorage.setItem("planner:v2", JSON.stringify(next)); } catch {} };
   const week = useMemo(() => (selected ? Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(selected), i)) : []), [selected]);
 
-  if (!today) return <div className="card h-96 animate-pulse" />;
+  if (!isClient) return <div className="card h-96 animate-pulse" />;
 
   const dayKey = key(selected);
   const items = plan[dayKey] ?? [];
