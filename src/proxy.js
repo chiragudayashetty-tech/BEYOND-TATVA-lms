@@ -26,7 +26,9 @@ export async function proxy(request) {
     },
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // Verifies the session token locally (and refreshes it when expired) instead of a network round trip.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub ? data.claims : null;
   // API routes answer for themselves (401 JSON, or Razorpay's webhook which has no session).
   const isPublic = PUBLIC.includes(pathname) || pathname.startsWith("/auth/") || pathname.startsWith("/api/");
 

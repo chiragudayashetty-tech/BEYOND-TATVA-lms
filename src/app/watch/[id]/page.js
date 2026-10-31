@@ -54,7 +54,7 @@ export default async function WatchPage({ params, searchParams }) {
   return (
     <Shell roles={["student", "teacher"]}>
       {allowed
-        ? <LessonView key={lesson.id} course={course} lesson={lesson} hasAccess={hasAccess} video={video} canSave={Boolean(user) && user.id !== "preview"} />
+        ? <LessonView key={lesson.id} course={course} lesson={lesson} hasAccess={hasAccess} video={video} canSave={Boolean(user) && user.id !== "preview"} userId={user?.id} />
         : <LockScreen module={m} price={course.price} />}
     </Shell>
   );

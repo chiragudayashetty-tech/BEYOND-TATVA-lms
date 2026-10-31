@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 const tabs = ["Overview", "Notes"];
 const COMPLETE_AT = 0.9; // a lesson counts as watched at 90%
 
-export default function LessonView({ course, lesson, hasAccess, video, canSave }) {
+export default function LessonView({ course, lesson, hasAccess, video, canSave, userId }) {
   const [tab, setTab] = useState("Overview");
   const [xp, setXp] = useState(0);
   const [done, setDone] = useState(lesson.done);
@@ -20,15 +20,13 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave }
 
   // Progress and answers are saved to Supabase; RLS lets students write only their own rows.
   const saveProgress = useCallback(async (fields) => {
-    if (!canSave) return { error: null };
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: new Error("signed out") };
-    return supabase.from("lesson_progress").upsert(
-      { student_id: user.id, lesson_id: lesson.id, updated_at: new Date().toISOString(), ...fields },
+    if (!canSave || !userId) return { error: null };
+    // userId comes from the server; RLS still checks it matches the session.
+    return createClient().from("lesson_progress").upsert(
+      { student_id: userId, lesson_id: lesson.id, updated_at: new Date().toISOString(), ...fields },
       { onConflict: "student_id,lesson_id" },
     );
-  }, [canSave, lesson.id]);
+  }, [canSave, userId, lesson.id]);
 
   async function markDone(next) {
     setDone(next);
@@ -63,10 +61,8 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave }
 
   async function saveAnswer(question, correct) {
     if (correct) setXp((x) => x + 10);
-    if (!canSave) return;
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from("checkpoint_answers").insert({ student_id: user.id, lesson_id: lesson.id, question, correct });
+    if (!canSave || !userId) return;
+    await createClient().from("checkpoint_answers").insert({ student_id: userId, lesson_id: lesson.id, question, correct });
   }
   const noteKey = `notes:${lesson.id}`;
   // The Notes tab is never server-rendered (Overview opens first), so reading storage here is safe.
