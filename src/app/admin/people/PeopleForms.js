@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useTransition } from "react";
-import { CircleCheck, KeyRound, Plus } from "lucide-react";
-import { createClass, createSchool, grantAccess } from "../actions";
+import { ArrowRight, CircleCheck, KeyRound, Plus } from "lucide-react";
+import { createClass, createSchool, grantAccess, moveAccess } from "../actions";
 
 function Status({ state }) {
   if (!state) return null;
@@ -60,5 +60,30 @@ export function GrantButton({ studentId }) {
     <button disabled={pending} onClick={() => start(() => grantAccess(studentId))} className="btn-secondary px-3 py-1.5 text-xs">
       <KeyRound className="h-3.5 w-3.5" /> {pending ? "Granting…" : "Give access"}
     </button>
+  );
+}
+
+// For students who signed up twice (e.g. Google and email): access lives on one account only.
+export function MoveAccess({ students }) {
+  const [state, action, pending] = useActionState(moveAccess, null);
+  const label = (s) => `${s.full_name}${s.email ? ` · ${s.email}` : ""} · ${s.id.slice(0, 6)}`;
+  return (
+    <form action={action} className="grid gap-3 sm:grid-cols-[1fr_auto_1fr_auto] sm:items-end">
+      <label><span className="label">From (has access)</span>
+        <select name="from" className="input" required defaultValue="">
+          <option value="" disabled>Choose account</option>
+          {students.filter((s) => s.access).map((s) => <option key={s.id} value={s.id}>{label(s)} · {s.access}</option>)}
+        </select>
+      </label>
+      <ArrowRight className="mx-auto mb-3 hidden h-4 w-4 text-muted sm:block" />
+      <label><span className="label">To (student&apos;s real account)</span>
+        <select name="to" className="input" required defaultValue="">
+          <option value="" disabled>Choose account</option>
+          {students.map((s) => <option key={s.id} value={s.id}>{label(s)}</option>)}
+        </select>
+      </label>
+      <button disabled={pending} className="btn-primary">{pending ? "Moving…" : "Move access"}</button>
+      <div className="sm:col-span-4"><Status state={state} /></div>
+    </form>
   );
 }

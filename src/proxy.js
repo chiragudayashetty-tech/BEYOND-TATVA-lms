@@ -5,37 +5,47 @@ import { NextResponse } from "next/server";
 const PUBLIC = ["/", "/login"];
 
 // Refreshes the Supabase session cookie and sends logged-out visitors to /login.
+// Also passes the requested path to Server Components (x-pathname) so onboarding can send people back.
 export async function proxy(request) {
-  let response = NextResponse.next({ request });
-  if (process.env.NODE_ENV === "development" && process.env.DEV_PREVIEW_ROLE) return response;
+  const { pathname, search } = request.nextUrl;
+  const withPath = () => {
+    const headers = new Headers(request.headers);
+    headers.set("x-pathname", pathname + search);
+    return NextResponse.next({ request: { headers } });
+  };
+  if (process.env.NODE_ENV === "development" && process.env.DEV_PREVIEW_ROLE) return withPath();
 
+  let refreshed = [];
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_KEY, {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        refreshed = cookiesToSet;
       },
     },
   });
 
   const { data: { user } } = await supabase.auth.getUser();
-  const { pathname } = request.nextUrl;
-  const isPublic = PUBLIC.includes(pathname) || pathname.startsWith("/auth/");
+  // API routes answer for themselves (401 JSON, or Razorpay's webhook which has no session).
+  const isPublic = PUBLIC.includes(pathname) || pathname.startsWith("/auth/") || pathname.startsWith("/api/");
 
+  let response;
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.search = `?next=${encodeURIComponent(pathname)}`;
-    return NextResponse.redirect(url);
-  }
-  if (user && pathname === "/login") {
+    url.search = `?next=${encodeURIComponent(pathname + search)}`;
+    response = NextResponse.redirect(url);
+  } else if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    url.search = "";
-    return NextResponse.redirect(url);
+    const next = request.nextUrl.searchParams.get("next");
+    url.pathname = next?.startsWith("/") && !next.startsWith("//") ? next.split("?")[0] : "/dashboard";
+    url.search = next?.includes("?") ? next.slice(next.indexOf("?")) : "";
+    response = NextResponse.redirect(url);
+  } else {
+    response = withPath();
   }
+  refreshed.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
   return response;
 }
 
