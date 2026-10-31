@@ -51,10 +51,11 @@ async function realSession() {
   if (!user) return { user: null, profile: null };
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, role, full_name, avatar, grade, invite_code, guardian_consent_at, school_id")
+    .select("id, role, full_name, avatar, grade, invite_code, guardian_consent_at, school_id, guardian_phone")
     .eq("id", user.id)
     .maybeSingle();
-  let hasAccess = Boolean(profile && profile.role !== "student");
+  // Teachers and admins can watch everything (has_course_access in the database); parents only follow progress.
+  let hasAccess = Boolean(profile && (profile.role === "teacher" || profile.role === "admin"));
   if (profile?.role === "student") {
     const { data } = await supabase.from("course_access").select("course_id").eq("student_id", user.id).maybeSingle();
     hasAccess = Boolean(data);
@@ -67,9 +68,14 @@ export async function requireRole(roles) {
   const { redirect } = await import("next/navigation");
   const session = await getSession();
   if (!session.user) redirect("/login");
-  if (!session.profile) redirect("/onboarding");
+  if (!session.profile) {
+    // Come back to the page they asked for (e.g. /unlock or a lesson) once their account is set up.
+    const { headers } = await import("next/headers");
+    const path = (await headers()).get("x-pathname");
+    redirect(path && path.startsWith("/") && !path.startsWith("//") ? `/onboarding?next=${encodeURIComponent(path)}` : "/onboarding");
+  }
   if (!roles.includes(session.profile.role) && session.profile.role !== "admin") redirect(homeFor(session.profile.role));
   return session;
 }
 
-export const homeFor =(role) => ({ student: "/browse", parent: "/parent", teacher: "/teacher", admin: "/admin" })[role] ?? "/onboarding";
+export const homeFor = (role) => ({ student: "/browse", parent: "/parent", teacher: "/teacher", admin: "/admin" })[role] ?? "/onboarding";
