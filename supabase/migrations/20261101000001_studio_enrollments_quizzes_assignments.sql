@@ -38,25 +38,45 @@ language sql stable security definer set search_path = '' as $$
 $$;
 
 -- ── 1b. Studio admins ────────────────────────────────────────────────────────
--- The only way to become an admin: an email on this list signs in. There are no policies, so the app
--- can't read or change it; rows are added from the Supabase dashboard (SQL editor) only.
+-- The only way to be an admin. Each entry is a full email ('name@gmail.com') or a whole domain
+-- ('@beyondtatva.in'). There are no policies, so the app can't read or change it; rows are added
+-- from the Supabase dashboard (SQL editor) only. Removing an entry removes Studio access at once.
 create table public.studio_admins (
-  email text primary key check (email = lower(email)),
+  entry text primary key check (entry = lower(entry) and entry ~ '^([^@\s]+)?@[a-z0-9.-]+\.[a-z]{2,}$'),
   added_at timestamptz not null default now()
 );
 alter table public.studio_admins enable row level security;
 revoke all on public.studio_admins from anon, authenticated;
 
--- Called after sign-in when the account has no profile yet: listed emails become admin directly
--- (no student/parent/teacher onboarding). Returns true when an admin profile was created.
+-- Is this verified email on the list (exactly, or by its domain)?
+create function public.on_studio_list(p_email text) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select p_email is not null and exists (
+    select 1 from public.studio_admins
+    where entry = lower(p_email) or entry = '@' || split_part(lower(p_email), '@', 2)
+  );
+$$;
+
+-- Admin = admin profile AND a verified login email that is still on the list.
+create or replace function public.is_admin() returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from public.profiles p join auth.users u on u.id = p.id
+    where p.id = (select auth.uid()) and p.role = 'admin'
+      and u.email_confirmed_at is not null and public.on_studio_list(u.email)
+  );
+$$;
+
+-- Called after sign-in when the account has no profile yet: listed, verified emails become admin
+-- directly (no student/parent/teacher onboarding). Returns true when an admin profile was created.
 create function public.claim_studio_admin() returns boolean
 language plpgsql security definer set search_path = '' as $$
 declare v_uid uuid := (select auth.uid()); v_email text; v_name text;
 begin
   if v_uid is null or exists (select 1 from public.profiles where id = v_uid) then return false; end if;
   select lower(email), coalesce(raw_user_meta_data ->> 'full_name', split_part(email, '@', 1)) into v_email, v_name
-  from auth.users where id = v_uid;
-  if v_email is null or not exists (select 1 from public.studio_admins where email = v_email) then return false; end if;
+  from auth.users where id = v_uid and email_confirmed_at is not null;
+  if not public.on_studio_list(v_email) then return false; end if;
   insert into public.profiles (id, role, full_name) values (v_uid, 'admin', left(v_name, 80));
   return true;
 end;
@@ -526,6 +546,7 @@ revoke execute on function public._grant_purchase, public._record_purchase, publ
   from public, anon, authenticated;
 grant execute on function public.record_purchase, public.revoke_purchase to service_role;
 
+revoke execute on function public.on_studio_list from public, anon, authenticated;
 revoke execute on function public.claim_studio_admin, public.claim_purchases, public.admin_record_purchase, public.admin_revoke_purchase,
   public.admin_assign_purchase, public.studio_quiz_questions, public.submit_quiz, public.submit_assignment,
   public.grade_submission, public.can_open_chapter from public, anon;

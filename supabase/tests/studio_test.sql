@@ -14,7 +14,11 @@ insert into auth.users (id, email, phone, raw_user_meta_data) values
  ('88888888-8888-8888-8888-888888888888', null, '919900011223', '{}'),
  ('99999999-9999-9999-9999-999999999999', 'intruder@x.in', null, '{}');
 insert into public.schools (name, code, teacher_code) values ('St Test', 'TEST-ABC', 'TEST-T-XYZ');
-insert into public.studio_admins (email) values ('chirag@x.in');
+insert into public.studio_admins (entry) values ('chirag@x.in'), ('@team.in');
+insert into auth.users (id, email, email_confirmed_at) values
+ ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'intern@Team.in', now()),
+ ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'fake@team.in', null),
+ ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'someone@notteam.in', now());
 
 create function pg_temp.as_user(u text) returns void language sql as $$ select set_config('request.jwt.claim.sub', u, false) $$;
 create function pg_temp.chapter(pos int) returns uuid language sql as $$ select id from public.chapters where course_id = 'ai-for-students' and position = pos $$;
@@ -28,7 +32,22 @@ select 'S2 second claim is a no-op' t, public.claim_studio_admin() = false as pa
 select pg_temp.as_user('99999999-9999-9999-9999-999999999999');
 select 'S3 other emails do not' t, public.claim_studio_admin() = false and not public.is_admin() as pass;
 do $$ begin perform 1 from public.studio_admins; raise exception 'S4 FAIL'; exception when insufficient_privilege then raise notice 'S4 pass: allowlist unreadable'; end $$;
-do $$ begin insert into public.studio_admins values ('intruder@x.in'); raise exception 'S5 FAIL'; exception when insufficient_privilege then raise notice 'S5 pass: allowlist unwritable'; end $$;
+do $$ begin insert into public.studio_admins (entry) values ('intruder@x.in'); raise exception 'S5 FAIL'; exception when insufficient_privilege then raise notice 'S5 pass: allowlist unwritable'; end $$;
+select pg_temp.as_user('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
+select 'S7a any email on a listed domain' t, public.claim_studio_admin() as pass;
+select 'S7b is admin' t, public.is_admin() as pass;
+select pg_temp.as_user('cccccccc-cccc-cccc-cccc-cccccccccccc');
+select 'S8 unverified email on the domain is refused' t, public.claim_studio_admin() = false as pass;
+select pg_temp.as_user('dddddddd-dddd-dddd-dddd-dddddddddddd');
+select 'S9 look-alike domain is refused' t, public.claim_studio_admin() = false as pass;
+reset role;
+delete from public.studio_admins where entry = '@team.in';
+set role authenticated; select pg_temp.as_user('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
+select 'S10 removed from the list = Studio gone at once' t, not public.is_admin() as pass;
+select 'S11 and cannot read admin data' t, (select count(*) from public.purchases) = 0 and public.admin_stats() is null as pass;
+reset role;
+do $$ begin insert into public.studio_admins (entry) values ('not-an-email'); raise exception 'S12 FAIL'; exception when check_violation then raise notice 'S12 pass: list rejects malformed entries'; end $$;
+set role authenticated; select pg_temp.as_user('99999999-9999-9999-9999-999999999999');
 do $$ begin perform public.complete_onboarding('admin', 'Me'); raise exception 'S6 FAIL'; exception when others then if sqlerrm like 'S6%' then raise; end if; raise notice 'S6 pass: %', sqlerrm; end $$;
 
 -- ── Onboarding (individual students) ─────────────────────────────────────────

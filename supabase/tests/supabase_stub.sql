@@ -14,7 +14,8 @@ alter default privileges in schema public grant all on functions to anon, authen
 alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
 
 -- Phone logins and Google profile names, as in Supabase's auth.users.
-alter table auth.users add column phone text, add column raw_user_meta_data jsonb not null default '{}';
+alter table auth.users add column phone text, add column raw_user_meta_data jsonb not null default '{}',
+  add column email_confirmed_at timestamptz default now();
 
 -- Storage: just enough of Supabase's schema for bucket rows and object policies.
 create schema storage;
