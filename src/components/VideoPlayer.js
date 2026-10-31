@@ -177,24 +177,42 @@ function loadYouTube() {
   return ytReady;
 }
 
+// YouTube's error codes → what to tell the viewer.
+const YT_ERRORS = {
+  2: "The video link looks wrong.",
+  5: "This video can't play in this browser.",
+  100: "This video is private or has been removed.",
+  101: "The video's owner doesn't allow it to play inside other sites.",
+  150: "The video's owner doesn't allow it to play inside other sites.",
+  153: "The video's owner doesn't allow it to play inside other sites.",
+};
+const API_TIMEOUT_MS = 6000;
+
 function YouTubePlayer({ id, start, onProgress }) {
   const mount = useRef(null);
   const progress = useRef(onProgress);
-  const [failed, setFailed] = useState(false);
+  const [state, setState] = useState("loading"); // loading | ready | plain | error
+  const [errorCode, setErrorCode] = useState(null);
   useEffect(() => { progress.current = onProgress; }, [onProgress]);
 
   useEffect(() => {
     let player;
     let timer;
     let gone = false;
+    // If YouTube's player script is blocked or slow (ad blockers, Brave, weak networks), fall back to the
+    // plain embed: the video still plays, only automatic progress tracking is lost.
+    const fallback = setTimeout(() => !gone && setState((s) => (s === "loading" ? "plain" : s)), API_TIMEOUT_MS);
     loadYouTube().then((YT) => {
       if (gone || !mount.current) return;
+      const vars = { rel: 0, playsinline: 1, modestbranding: 1 };
+      if (start) vars.start = start;
       player = new YT.Player(mount.current, {
         videoId: id,
         host: "https://www.youtube-nocookie.com",
-        playerVars: { rel: 0, playsinline: 1, modestbranding: 1, start: start || undefined },
+        playerVars: vars,
         events: {
-          onError: () => setFailed(true),
+          onReady: () => { clearTimeout(fallback); if (!gone) setState("ready"); },
+          onError: (e) => { clearTimeout(fallback); if (!gone) { setErrorCode(e.data); setState("error"); } },
           onStateChange: (e) => {
             clearInterval(timer);
             if (e.data === YT.PlayerState.PLAYING) {
@@ -210,13 +228,32 @@ function YouTubePlayer({ id, start, onProgress }) {
           },
         },
       });
-    }).catch(() => !gone && setFailed(true));
-    return () => { gone = true; clearInterval(timer); player?.destroy?.(); };
+    }).catch(() => { clearTimeout(fallback); if (!gone) setState("plain"); });
+    return () => { gone = true; clearTimeout(fallback); clearInterval(timer); player?.destroy?.(); };
   }, [id, start]);
 
-  if (failed) return <Notice icon={TriangleAlert} title="This video won't play" body="It may be private or removed. Tell your teacher which lesson it is." />;
+  if (state === "error") {
+    return (
+      <div className="grid aspect-video place-items-center rounded-2xl bg-[#0f172a] p-6 text-center text-white">
+        <div>
+          <TriangleAlert className="mx-auto h-8 w-8 opacity-60" />
+          <p className="mt-3 font-semibold">This video won&apos;t play here</p>
+          <p className="mt-1 text-sm text-white/70">{YT_ERRORS[errorCode] ?? "YouTube couldn't load it."} Tell your teacher which lesson it is.</p>
+          <a href={`https://www.youtube.com/watch?v=${id}`} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block rounded-lg bg-white/15 px-3 py-2 text-sm font-medium hover:bg-white/25">Watch on YouTube</a>
+        </div>
+      </div>
+    );
+  }
+  if (state === "plain") {
+    return <EmbedPlayer embed={`https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1${start ? `&start=${start}` : ""}`} title="Lesson video" />;
+  }
   return (
     <div className="relative aspect-video overflow-hidden rounded-2xl bg-black">
+      {state === "loading" && (
+        <div className="absolute inset-0 grid place-items-center" aria-label="Loading video">
+          <span className="h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-white" />
+        </div>
+      )}
       <div className="absolute inset-0 [&>iframe]:h-full [&>iframe]:w-full"><div ref={mount} /></div>
     </div>
   );
