@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
@@ -26,6 +26,18 @@ function LoginForm() {
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(params.get("error") ? "That sign-in link has expired. Send a new code." : "");
+
+  // Remember where they came from (website link / QR: ?src=loki&utm_source=qr). Saved to the
+  // profile once, right after onboarding (see OnboardingForm).
+  useEffect(() => {
+    const tags = {};
+    for (const k of ["src", "utm_source", "utm_medium", "utm_campaign"]) {
+      const v = params.get(k);
+      if (v) tags[k] = v.slice(0, 80);
+    }
+    if (!Object.keys(tags).length) return;
+    try { localStorage.setItem("bt_signup_source", JSON.stringify(tags)); } catch {}
+  }, [params]);
 
   const supabase = createClient();
   const callback = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback?next=${encodeURIComponent(next)}`;

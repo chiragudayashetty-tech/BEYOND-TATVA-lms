@@ -14,9 +14,8 @@ const sections = [
   { href: "/admin/quizzes", icon: ListChecks, title: "Quizzes", body: "One quiz per module: questions, pass mark, XP" },
   { href: "/admin/assignments", icon: ClipboardCheck, title: "Assignments", body: "Set work per module and mark what students hand in" },
   { href: "/admin/enrollments", icon: UserCheck, title: "Enrollments", body: "Website payments, manual enrollments and refunds" },
-  { href: "/admin/access", icon: KeyRound, title: "Access keys", body: "Create keys for schools and see who redeemed them" },
   { href: "/admin/people", icon: School, title: "Schools and people", body: "Schools, join codes, classes, teachers and students" },
-  { href: "/admin/crm", icon: Contact, title: "CRM", body: "Leads, schools in the pipeline, follow-ups" },
+  { href: "/admin/pipeline", icon: Contact, title: "Pipeline", body: "Leads to paid: who signed in, watched Module 0 and bought" },
   { href: "/admin/automations", icon: Workflow, title: "Automations", body: "Reminders, emails, WhatsApp and Sheets sync" },
 ];
 
