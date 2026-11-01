@@ -22,7 +22,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Quizzes | One per module, server-side marking, answers never sent to the browser. |
 | Assignments | Text, link, photos/PDF (private bucket); mark, feedback, send back. |
 | Website → LMS | `POST /api/enrollments` and `POST /api/leads` (signed). Website side not connected yet: `docs/website-enrollment.md`. |
-| Pipeline | Studio → Pipeline: one row per person, stages 1–5 (lead → bought), "stopped >24h" filter, CSV export. Leads matched to students by parent phone; `?src=`/UTM saved at sign-up. |
+| Pipeline | Studio → Pipeline: one row per person, stages 1–5 (lead → bought), "stopped >24h" filter, CSV export, Parents / School enquiries tabs. Leads matched to students by parent phone; `?src=`/UTM saved at sign-up. |
 
 ## Decisions (don't reopen without Chirag)
 - **Website and LMS are completely separate.** The website (www.beyondtatva.in) is the front door for
@@ -50,6 +50,12 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
   (no logo yet: a logo triggers Google brand verification).
 - Env vars set (Production): LMS `SUPABASE_SERVICE_ROLE_KEY`, `ENROLLMENT_WEBHOOK_SECRET`; website `ENROLLMENT_WEBHOOK_SECRET`, `LMS_URL`.
 - Leads/pipeline migration applied to Supabase.
+
+## Open at hand-off (2026-11-01)
+- Website (Codex): finish `codex/lead-forwarder` (bump `?v=` cache tags) and `codex/lms-domain`
+  (links/redirects → learn.beyondtatva.in). Then Claude sends a live test lead and checks Pipeline.
+- Website `LMS_URL` env var must be `https://learn.beyondtatva.in`.
+- Close PR #10 (replaced by #14).
 
 ## Waiting on Chirag
 - Merge PR for `feat/planner-sync-honest-copy`, then Claude applies the `study_plans` migration.

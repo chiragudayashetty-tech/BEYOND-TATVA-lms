@@ -12,25 +12,37 @@ const date = (t) => (t ? new Date(t).toLocaleString("en-IN", { day: "numeric", m
 const mins = (s) => `${Math.round((s ?? 0) / 60)} min`;
 
 export default async function PipelinePage({ searchParams }) {
-  const { stage: stageParam, stalled } = await searchParams;
+  const { stage: stageParam, stalled, view: viewParam } = await searchParams;
+  const view = viewParam === "schools" ? "schools" : "parents";
   const stage = STAGES.find((s) => String(s.id) === stageParam)?.id ?? null;
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("admin_pipeline", { p_course: COURSE_ID, p_stall_hours: STALL_HOURS });
-  const all = data ?? [];
+  // School enquiries (principals from the /schools form) are counted apart from parents and students.
+  const all = (data ?? []).filter((r) => (view === "schools") === (r.source === "schools"));
   const rows = all
     .filter((r) => (stage ? r.stage === stage : true) && (stalled ? r.stalled : true))
     .sort((a, b) => new Date(b.signed_up_at ?? b.lead_at) - new Date(a.signed_up_at ?? a.lead_at));
   const count = (id) => all.filter((r) => r.stage === id).length;
   const stalledCount = all.filter((r) => r.stalled).length;
-  const href = (q) => `/admin/pipeline${q ? `?${q}` : ""}`;
+  const href = (q) => {
+    const qs = [view === "schools" && "view=schools", q].filter(Boolean).join("&");
+    return `/admin/pipeline${qs ? `?${qs}` : ""}`;
+  };
 
   return (
     <Shell roles={["admin"]}>
       <PageTitle title="Pipeline" subtitle="Everyone from website lead to paid, one row per person. A website lead and a student are matched by the parent's phone.">
-        <a href={`/admin/pipeline/export${stage ? `?stage=${stage}` : ""}`} className="btn-secondary"><Download size={16} /> Export CSV</a>
+        <a href={`/admin/pipeline/export?view=${view}${stage ? `&stage=${stage}` : ""}`} className="btn-secondary"><Download size={16} /> Export CSV</a>
       </PageTitle>
 
       {error && <p role="alert" className="mb-4 rounded-xl bg-danger-soft p-3 text-sm text-danger">Couldn&apos;t load the pipeline: {error.message}</p>}
+
+      <div className="mb-4 flex gap-2" role="tablist">
+        {[["parents", "Parents & students", ""], ["schools", "School enquiries", "view=schools"]].map(([id, label, q]) => (
+          <Link key={id} href={`/admin/pipeline${q ? `?${q}` : ""}`} role="tab" aria-selected={view === id}
+            className={view === id ? "btn-primary" : "btn-secondary"}>{label}</Link>
+        ))}
+      </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {STAGES.map((s) => (
