@@ -7,7 +7,7 @@ AI course for Grades 8–10 in Udupi. **Payments happen on the website** (beyond
 hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 
 ## Live
-- App: https://beyond-tatva-lms.vercel.app (Vercel project `beyond-tatva-lms`, region **bom1** Mumbai)
+- App: https://learn.beyondtatva.in (also https://beyond-tatva-lms.vercel.app; Vercel project `beyond-tatva-lms`, region **bom1** Mumbai)
 - Database/auth: Supabase project `fpubcjcqpsjnafnmkkzo` (ap-south-1 Mumbai)
 - Studio admins: `studio_admins` table (exact emails or `@beyondtatva.in`), edited only in the Supabase dashboard.
 
@@ -45,9 +45,13 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 - Open PRs at hand-off: #9 (simple homepage), #10 (Codex PWA, approved by lead: limit to phones later),
   #11 (project notes).
 
+## Done 2026-11-01
+- `learn.beyondtatva.in` live (GoDaddy CNAME), Supabase Site URL + redirect, Google OAuth origin, Google app **In production**
+  (no logo yet: a logo triggers Google brand verification).
+- Env vars set (Production): LMS `SUPABASE_SERVICE_ROLE_KEY`, `ENROLLMENT_WEBHOOK_SECRET`; website `ENROLLMENT_WEBHOOK_SECRET`, `LMS_URL`.
+- Leads/pipeline migration applied to Supabase.
+
 ## Waiting on Chirag
-- Custom domain: add `learn.beyondtatva.in` (Vercel + one GoDaddy CNAME), then update Supabase URL
-  settings and the Google OAuth origin.
 - Merge PR for `feat/planner-sync-honest-copy`, then Claude applies the `study_plans` migration.
 - Real Module 0 videos and real premiere dates (Studio → Content).
 - Website: add the 3 snippets in `docs/website-enrollment.md`.
