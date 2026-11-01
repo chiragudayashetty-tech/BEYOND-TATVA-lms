@@ -11,17 +11,23 @@ const poppins = Poppins({
 export const metadata = {
   title: "Beyond Tatva",
   description: "AI education for Grades 8–10",
-  icons: { icon: "/brand/mark-trim.png" },
+  icons: { icon: "/brand/mark-trim.png", apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "Beyond Tatva", statusBarStyle: "default" },
 };
+
+export const viewport = { themeColor: "#4f46e5" };
 
 // Applies the saved theme before first paint so dark mode never flashes light.
 const themeScript = `try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}`;
+// Capture Android's install event before React hydrates the student dashboard.
+const installPromptScript = `if(/Android.*Mobile|iPhone|iPod/i.test(navigator.userAgent))window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__btInstallPrompt=e})`;
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${poppins.variable} h-full antialiased`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: installPromptScript }} />
       </head>
       <body className="min-h-full font-sans">{children}</body>
     </html>
