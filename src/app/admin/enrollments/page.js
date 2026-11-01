@@ -2,7 +2,7 @@ import { UserCheck } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { AddEnrollment, AssignForm, RevokeButton } from "./EnrollmentForms";
+import { AddEnrollment, ApproveButton, AssignForm, RevokeButton } from "./EnrollmentForms";
 
 export const metadata = { title: "Enrollments · Studio · Beyond Tatva" };
 
@@ -23,7 +23,7 @@ export default async function EnrollmentsPage() {
 
   return (
     <Shell roles={["admin"]}>
-      <PageTitle title="Enrollments" subtitle="Everyone who paid. Website payments arrive automatically and unlock when the student signs in with the same email or parent phone." />
+      <PageTitle title="Enrollments" subtitle="Everyone who paid. Website payments unlock on their own when the student signs in with the same verified email or phone. If only the parent's phone matches, approve it here." />
       <div className="grid gap-6 xl:grid-cols-[1fr_1.6fr]">
         <Card title="Add an enrollment"><AddEnrollment /></Card>
 
@@ -41,10 +41,12 @@ export default async function EnrollmentsPage() {
                       {r.amount_paise != null && ` · ₹${(r.amount_paise / 100).toLocaleString("en-IN")}`}
                     </div>
                     {r.status === "claimed" && <div className="text-xs text-muted">→ {name[r.claimed_by] ?? "deleted account"} (matched by {how[r.matched_by] ?? "?"})</div>}
+                    {r.status === "pending" && r.suggested_student && <div className="text-xs text-warning">Parent phone matches {name[r.suggested_student] ?? "a student"}: needs your approval</div>}
                     <div className="font-mono text-[11px] text-subtle">{r.reference}</div>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <Badge tone={tone[r.status]}>{label[r.status]}</Badge>
+                    {r.status === "pending" && r.suggested_student && name[r.suggested_student] && <ApproveButton purchaseId={r.id} studentName={name[r.suggested_student]} />}
                     {r.status === "pending" && <AssignForm purchaseId={r.id} students={students ?? []} />}
                     {r.status !== "revoked" && <RevokeButton reference={r.reference} />}
                   </div>
