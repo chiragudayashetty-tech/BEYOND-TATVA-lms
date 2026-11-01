@@ -202,3 +202,24 @@ select pg_temp.as_user('99999999-9999-9999-9999-999999999999');
 do $$ begin insert into public.study_plans (student_id, plan_date) values (auth.uid(), '2026-11-02'); raise exception 'D5 FAIL';
 exception when insufficient_privilege then raise notice 'D5 pass: accounts without a student profile cannot save plans'; end $$;
 reset role;
+
+-- ── Leads and pipeline ───────────────────────────────────────────────────────
+set role service_role;
+select 'L1 lead saved' t, public.record_lead('loki-1', '98450 12345', 'Loki', 'Mom', 'Solo') = 'saved' as pass;
+select 'L2 retry counts once' t, public.record_lead('loki-1', '9845012345', 'loki') = 'duplicate' as pass;
+select 'L3 website-only lead' t, public.record_lead('loki-2', '9000000001', 'qr', 'Asha') = 'saved' as pass;
+do $$ begin perform public.record_lead('loki-3', '12345', 'loki'); raise exception 'L4 FAIL'; exception when others then if sqlerrm like 'L4%' then raise; end if; raise notice 'L4 pass: %', sqlerrm; end $$;
+reset role;
+set role authenticated; select pg_temp.as_user('99999999-9999-9999-9999-999999999999');
+do $$ begin perform public.record_lead('x', '9000000002', 'loki'); raise exception 'L5 FAIL'; exception when insufficient_privilege then raise notice 'L5 pass: signed-in users cannot write leads'; end $$;
+select 'L6 non-admins cannot read leads' t, (select count(*) from public.leads) = 0 as pass;
+do $$ begin perform public.admin_pipeline(); raise exception 'L7 FAIL'; exception when others then if sqlerrm like 'L7%' then raise; end if; raise notice 'L7 pass: %', sqlerrm; end $$;
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+select 'L8 signup source set once' t, public.record_signup_source('loki', '{"utm_source":"qr","evil":"x"}') and not public.record_signup_source('other') as pass;
+select 'L9 only utm tags kept' t, signup_source = 'loki' and signup_utm = '{"utm_source":"qr"}' as pass from public.profiles where id = auth.uid();
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'L10 lead matched to student by parent phone' t, lead_id is not null and stage between 2 and 5 as pass
+  from public.admin_pipeline() where student_id = '11111111-1111-1111-1111-111111111111';
+select 'L11 unmatched lead is stage 1' t, stage = 1 and source = 'qr' as pass from public.admin_pipeline() where phone = '+919000000001';
+select 'L12 one row per student' t, count(*) = count(distinct student_id) as pass from public.admin_pipeline() where student_id is not null;
+reset role;

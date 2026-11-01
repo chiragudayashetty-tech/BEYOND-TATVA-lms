@@ -21,14 +21,15 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Studio | Content, Quizzes, Assignments (marking queue), Enrollments, Access keys, People. |
 | Quizzes | One per module, server-side marking, answers never sent to the browser. |
 | Assignments | Text, link, photos/PDF (private bucket); mark, feedback, send back. |
-| Website → LMS | `POST /api/enrollments` (signed). Website side not connected yet: `docs/website-enrollment.md`. |
+| Website → LMS | `POST /api/enrollments` and `POST /api/leads` (signed). Website side not connected yet: `docs/website-enrollment.md`. |
+| Pipeline | Studio → Pipeline: one row per person, stages 1–5 (lead → bought), "stopped >24h" filter, CSV export. Leads matched to students by parent phone; `?src=`/UTM saved at sign-up. |
 
 ## Decisions (don't reopen without Chirag)
 - **Website and LMS are completely separate.** The website (www.beyondtatva.in) is the front door for
   everyone: marketing, posts, selling, enrolling. The LMS (planned: learn.beyondtatva.in) is only for
   enrolled students and people who choose "Try Module 0 free". No automatic redirects between them,
   only links the owner places (website: "Log in" / "Start free"; LMS: "Get the full course").
-- School workshops: students get access through **access keys** (Studio → Access keys), one per student.
+- **The login is the key.** No access keys or codes in the funnel (2026-11-01). Access keys are hidden in Studio (page still at `/admin/access`), kept only in case a school deal needs them.
 - Payments only on the website; the LMS never takes money.
 - Account = the student; parent phone stored for messages; access lives on one account (Studio can move it).
 - Free Module 0 on unlisted YouTube; paid modules move to **Bunny Stream** (signed links), on hold.
@@ -40,8 +41,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
   enrollments, quizzes, assignments) is already per course; the screens assume one course today.
 
 ## In planning
-- **Funnel + pipelines + website connection: see `docs/FUNNEL-PLAN.md`** (draft, awaiting decisions).
-  Building is paused until Chirag approves the plan.
+- **Funnel: see `docs/FUNNEL-PLAN.md`.** Phase 1 approved 2026-11-01 and in progress. Payments (Razorpay KYC on hold) and WhatsApp messaging come later.
 - Open PRs at hand-off: #9 (simple homepage), #10 (Codex PWA, approved by lead: limit to phones later),
   #11 (project notes).
 

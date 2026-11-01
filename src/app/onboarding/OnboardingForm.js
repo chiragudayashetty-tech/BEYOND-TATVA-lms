@@ -49,6 +49,14 @@ export default function OnboardingForm({ defaultName, next }) {
       return setError(error.message);
     }
     if (role === "student") {
+      try {
+        const tags = JSON.parse(localStorage.getItem("bt_signup_source") ?? "null");
+        if (tags) {
+          const { src, ...utm } = tags;
+          await supabase.rpc("record_signup_source", { p_source: src ?? null, p_utm: utm });
+          localStorage.removeItem("bt_signup_source");
+        }
+      } catch {}
       const { data } = await supabase.from("profiles").select("invite_code").single();
       setBusy(false);
       return setInviteCode(data?.invite_code ?? "");

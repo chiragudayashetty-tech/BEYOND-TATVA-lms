@@ -76,3 +76,24 @@ await notifyLms({ event: "enrollment.refunded", reference: payment_id });
 ## Tell students on the website's success page
 
 > Open **learn.beyondtatva.in** and sign in with **the same email** you used here. The full course is already unlocked.
+
+## Leads: website → LMS (`POST /api/leads`)
+
+Same secret, same signing and same `api/_lms.js` helper idea as enrollments. The website's Loki chat and
+forms send each lead (keep the Google Sheet as a backup). The LMS matches a lead to a student by the
+**parent phone** the student gives at sign-up, and shows everyone in Studio → Pipeline.
+
+```json
+{ "reference": "loki-<random uuid made once per lead>", "phone": "9845012345", "source": "loki",
+  "parent_name": "...", "student_name": "...", "grade": 9, "school_name": "...",
+  "details": { "board": "CBSE", "goal": "...", "lang": "kn", "utm_source": "qr", "utm_campaign": "..." } }
+```
+- Required: `reference`, `phone` (Indian mobile), `source` (lowercase letters, digits, `-`, `_`).
+- `details`: at most 15 flat keys (`a-z_`), string values up to 200 characters. Anything else is dropped.
+- Response `{ ok: true, status: "saved" | "duplicate" }`. 400 = bad data (don't retry), 401 = bad signature, 500 = retry later.
+- The website endpoint that browsers call must validate the fields itself and never expose the secret.
+
+## Where a sign-in came from
+
+Link to the LMS as `<lms>/login?src=loki&utm_source=qr&utm_campaign=<event>`. The tags are saved on the
+student's profile once, when they finish onboarding, and shown in Studio → Pipeline.

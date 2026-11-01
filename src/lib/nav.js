@@ -47,9 +47,8 @@ export const nav = {
       { href: "/admin/quizzes", label: "Quizzes", icon: "ListChecks" },
       { href: "/admin/assignments", label: "Assignments", icon: "ClipboardCheck" },
       { href: "/admin/enrollments", label: "Enrollments", icon: "UserCheck" },
-      { href: "/admin/access", label: "Access keys", icon: "KeyRound" },
       { href: "/admin/people", label: "Schools & people", icon: "Users" },
-      { href: "/admin/crm", label: "CRM", icon: "Contact" },
+      { href: "/admin/pipeline", label: "Pipeline", icon: "Contact" },
       { href: "/admin/automations", label: "Automations", icon: "Workflow" },
     ],
     more: [

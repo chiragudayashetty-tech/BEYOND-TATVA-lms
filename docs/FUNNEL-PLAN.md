@@ -1,6 +1,23 @@
-# Funnel plan (draft, not approved yet; nothing here is built)
+# Funnel plan
 
-Owner's structure, given 2026-11-01. Build only after Chirag approves the open decisions below.
+Owner's structure, given 2026-11-01. **Phase 1 approved 2026-11-01.**
+
+## Decisions (2026-11-01)
+1. Only the LMS 30-minute Module 0; the website mini-lesson is retired. 2. Loki's last step → LMS sign-in.
+3. Google Sheet stays as the lead backup for now. 4. `learn.beyondtatva.in`: yes. 5. WhatsApp goes to the parent.
+6. Google sign-in now, parent phone required at sign-up; DLT process started for phone login later.
+7. Stage 3 "stopped" = 24 h without progress (students watch at home after school).
+- **No offline funnel, slips or codes. The login is the key.** Paper forms/QR just point to the website.
+- Payments wait for Razorpay KYC (PAN). Until then: UPI + Studio → Enrollments. Messaging is planned later.
+
+## Phases
+- **Phase 1 (now):** website → LMS sign-in (Codex, website); leads API, signup source, Studio Pipeline,
+  access keys hidden (Claude, LMS, PR `claude/leads-pipeline`); lead forwarder on the website (Codex, after that PR);
+  PWA phones-only, in-app browser warning, skeletons (Codex, LMS).
+- **Phase 2 (Razorpay live):** website payment → `/api/enrollments`, refund webhook.
+- **Phase 3:** WhatsApp automations, certificates, course after purchase, schools.
+
+(Below: the original draft and review, kept for reference.)
 
 ## The journey
 1. Visitor lands on the **website** (www.beyondtatva.in, Vercel project `beyond-tatva-web-lptp`), fills in details.
