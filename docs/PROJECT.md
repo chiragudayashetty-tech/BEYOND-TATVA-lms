@@ -24,13 +24,24 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Website → LMS | `POST /api/enrollments` (signed). Website side not connected yet: `docs/website-enrollment.md`. |
 
 ## Decisions (don't reopen without Chirag)
+- **Website and LMS are completely separate.** The website (www.beyondtatva.in) is the front door for
+  everyone: marketing, posts, selling, enrolling. The LMS (planned: learn.beyondtatva.in) is only for
+  enrolled students and people who choose "Try Module 0 free". No automatic redirects between them,
+  only links the owner places (website: "Log in" / "Start free"; LMS: "Get the full course").
+- School workshops: students get access through **access keys** (Studio → Access keys), one per student.
 - Payments only on the website; the LMS never takes money.
 - Account = the student; parent phone stored for messages; access lives on one account (Studio can move it).
 - Free Module 0 on unlisted YouTube; paid modules move to **Bunny Stream** (signed links), on hold.
 - Phone/WhatsApp login waits for DLT registration.
 - GitHub `main` is the only source of truth. No separate folders or copies.
+- **More courses will come later** (e.g. an advanced AI course). Don't build multi-course screens yet,
+  but don't add new single-course assumptions either: always store `course_id` on new data, and prefer
+  passing a course id over using the `COURSE_ID` constant in new code. The database (access, keys,
+  enrollments, quizzes, assignments) is already per course; the screens assume one course today.
 
 ## Waiting on Chirag
+- Custom domain: add `learn.beyondtatva.in` (Vercel + one GoDaddy CNAME), then update Supabase URL
+  settings and the Google OAuth origin.
 - Merge PR for `feat/planner-sync-honest-copy`, then Claude applies the `study_plans` migration.
 - Real Module 0 videos and real premiere dates (Studio → Content).
 - Website: add the 3 snippets in `docs/website-enrollment.md`.
