@@ -6,6 +6,7 @@ import { ContinueHero, ModuleCard, PremiereCard } from "@/components/course";
 import { canWatch, isReleased, nextPremiere } from "@/lib/catalog";
 import { getCourse, getStudentStats } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
+import InstallPrompt from "@/components/InstallPrompt";
 
 export const metadata = { title: "Dashboard · Beyond Tatva" };
 
@@ -18,6 +19,7 @@ export default async function Dashboard() {
 
   return (
     <Shell roles={["student"]} greeting>
+      <InstallPrompt />
       {!hasAccess && (
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 lg:mb-6">
           <IconTile icon={Gift} />

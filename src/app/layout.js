@@ -11,7 +11,16 @@ const poppins = Poppins({
 export const metadata = {
   title: "Beyond Tatva",
   description: "AI education for Grades 8–10",
-  icons: { icon: "/brand/mark-trim.png" },
+  icons: { icon: "/brand/mark-trim.png", apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: {
+    capable: true,
+    title: "Beyond Tatva",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport = {
+  themeColor: "#4f46e5",
 };
 
 // Applies the saved theme before first paint so dark mode never flashes light.
