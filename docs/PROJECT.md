@@ -39,6 +39,12 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
   passing a course id over using the `COURSE_ID` constant in new code. The database (access, keys,
   enrollments, quizzes, assignments) is already per course; the screens assume one course today.
 
+## In planning
+- **Funnel + pipelines + website connection: see `docs/FUNNEL-PLAN.md`** (draft, awaiting decisions).
+  Building is paused until Chirag approves the plan.
+- Open PRs at hand-off: #9 (simple homepage), #10 (Codex PWA, approved by lead: limit to phones later),
+  #11 (project notes).
+
 ## Waiting on Chirag
 - Custom domain: add `learn.beyondtatva.in` (Vercel + one GoDaddy CNAME), then update Supabase URL
   settings and the Google OAuth origin.
