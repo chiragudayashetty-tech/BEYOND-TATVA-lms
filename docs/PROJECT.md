@@ -1,0 +1,54 @@
+# Beyond Tatva LMS: project status
+
+_Maintained by Claude (lead). Last updated: 2026-11-01._
+
+AI course for Grades 8–10 in Udupi. **Payments happen on the website** (beyondtatva.in, separate repo
+`BEYOND-TATVA-web`); this LMS is for learning. Students sign in, watch weekly modules, take quizzes and
+hand in assignments. Chirag runs everything from **Studio** (`/admin`).
+
+## Live
+- App: https://beyond-tatva-lms.vercel.app (Vercel project `beyond-tatva-lms`, region **bom1** Mumbai)
+- Database/auth: Supabase project `fpubcjcqpsjnafnmkkzo` (ap-south-1 Mumbai)
+- Studio admins: `studio_admins` table (exact emails or `@beyondtatva.in`), edited only in the Supabase dashboard.
+
+## Built and live
+| Area | Notes |
+|---|---|
+| Login | Email link (built-in sender: testing only), Google. Phone hidden until DLT. |
+| Onboarding | Student (school code optional), parent (child code), teacher (teacher code). |
+| Course | 1 course, Module 0 free + 6 weekly modules (`release_at`), access via key/payment/admin. |
+| Video | YouTube (tracked, with fallback), Drive/Vimeo/Bunny embeds, MP4. 90% watched = complete. |
+| Studio | Content, Quizzes, Assignments (marking queue), Enrollments, Access keys, People. |
+| Quizzes | One per module, server-side marking, answers never sent to the browser. |
+| Assignments | Text, link, photos/PDF (private bucket); mark, feedback, send back. |
+| Website → LMS | `POST /api/enrollments` (signed). Website side not connected yet: `docs/website-enrollment.md`. |
+
+## Decisions (don't reopen without Chirag)
+- Payments only on the website; the LMS never takes money.
+- Account = the student; parent phone stored for messages; access lives on one account (Studio can move it).
+- Free Module 0 on unlisted YouTube; paid modules move to **Bunny Stream** (signed links), on hold.
+- Phone/WhatsApp login waits for DLT registration.
+- GitHub `main` is the only source of truth. No separate folders or copies.
+
+## Waiting on Chirag
+- Merge PR for `feat/planner-sync-honest-copy`, then Claude applies the `study_plans` migration.
+- Real Module 0 videos and real premiere dates (Studio → Content).
+- Website: add the 3 snippets in `docs/website-enrollment.md`.
+- Make the GitHub repos private.
+
+## Backlog (owner → task)
+**Claude (lead: database, security, integrations)**
+- Certificates: completion rule, certificate ID, public QR verification page, PDF.
+- Resend email sender + login code email templates (before students use email login).
+- Bunny Stream signed playback for paid modules (on hold).
+- Automations (WhatsApp provider + email), CRM: after launch.
+- Interactive video editor (questions on the video timeline): later.
+
+**Codex (builder: UI tasks, small PRs)**
+1. "Install as app" (PWA): manifest, icons, Android install prompt, iPhone "Add to Home Screen" guide, skippable.
+2. In-app browser warning: detect WhatsApp/Instagram/Facebook browsers on /login and ask to open in Chrome/Safari.
+3. Profile page: make "Edit profile" (name, avatar) work; "Help and support" page with WhatsApp contact.
+4. Loading skeletons (`loading.js`) for /course, /watch, /admin pages.
+5. Parent dashboard polish: child's progress, quiz scores, assignment marks (read-only; data already readable via RLS).
+
+Codex tasks that turn out to need a table, an API route or auth changes: stop and hand back to Claude.
