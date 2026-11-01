@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { safeNext } from "@/lib/safe-next";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
 
@@ -19,7 +20,7 @@ const friendly = (msg = "") => {
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") ?? "/dashboard";
+  const next = safeNext(params.get("next"));
   const [method, setMethod] = useState("email");
   const [contact, setContact] = useState("");
   const [code, setCode] = useState("");

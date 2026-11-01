@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_KEY, SUPABASE_URL } from "./config";
 import { cookies } from "next/headers";
 import { cache } from "react";
+import { safeNext } from "../safe-next";
 
 // Supabase client for Server Components, Route Handlers and Server Actions.
 export async function createClient() {
@@ -91,7 +92,8 @@ export async function requireRole(roles) {
     // Come back to the page they asked for (e.g. /unlock or a lesson) once their account is set up.
     const { headers } = await import("next/headers");
     const path = (await headers()).get("x-pathname");
-    redirect(path && path.startsWith("/") && !path.startsWith("//") ? `/onboarding?next=${encodeURIComponent(path)}` : "/onboarding");
+    const back = safeNext(path, null);
+    redirect(back ? `/onboarding?next=${encodeURIComponent(back)}` : "/onboarding");
   }
   if (!roles.includes(session.profile.role) && session.profile.role !== "admin") redirect(homeFor(session.profile.role));
   return session;
