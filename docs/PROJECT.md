@@ -15,7 +15,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Area | Notes |
 |---|---|
 | Login | Email link (built-in sender: testing only), Google. Phone hidden until DLT. |
-| Onboarding | Student (school code optional), parent (child code), teacher (teacher code). |
+| Onboarding | One login per child: the student or a parent sets up the student account (parent WhatsApp required, child phone optional, consent tick). Teachers: teacher code. No parent accounts or codes. |
 | Course | 1 course, Module 0 free + 6 weekly modules (`release_at`), access via key/payment/admin. |
 | Video | YouTube (tracked, with fallback), Drive/Vimeo/Bunny embeds, MP4. 90% watched = complete. |
 | Studio | Content, Quizzes, Assignments (marking queue), Enrollments, Access keys, People. |
@@ -76,6 +76,5 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 2. In-app browser warning: detect WhatsApp/Instagram/Facebook browsers on /login and ask to open in Chrome/Safari.
 3. Profile page: make "Edit profile" (name, avatar) work; "Help and support" page with WhatsApp contact.
 4. Loading skeletons (`loading.js`) for /course, /watch, /admin pages.
-5. Parent dashboard polish: child's progress, quiz scores, assignment marks (read-only; data already readable via RLS).
 
 Codex tasks that turn out to need a table, an API route or auth changes: stop and hand back to Claude.

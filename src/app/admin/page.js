@@ -37,7 +37,7 @@ export default async function AdminPage() {
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatCard label="Students" value={stats.students ?? 0} hint={`${stats.parents ?? 0} parents · ${stats.teachers ?? 0} teachers`} icon={Users} />
+        <StatCard label="Students" value={stats.students ?? 0} hint={`${stats.teachers ?? 0} teachers`} icon={Users} />
         <StatCard label="Full access" value={stats.unlocked ?? 0} hint={`${stats.enrollments_claimed ?? 0} paid · ${stats.keys_used ?? 0} keys`} icon={KeyRound} tone="success" />
         <StatCard label="Lessons completed" value={stats.lessons_completed ?? 0} hint="All students, all time" icon={CheckCircle2} tone="warning" />
         <StatCard label="To mark" value={stats.to_review ?? 0} hint={`${stats.enrollments_pending ?? 0} paid, not signed in yet`} icon={ClipboardCheck} />
