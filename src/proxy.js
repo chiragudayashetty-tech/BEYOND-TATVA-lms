@@ -52,6 +52,7 @@ export async function proxy(request) {
 }
 
 export const config = {
-  // Skip static files and media so videos and images never wait on auth.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|brand/|media/|.*\\.(?:svg|png|jpg|jpeg|webp|mp4)$).*)"],
+  // Skip static files, media and the PWA manifest/icons so they never wait on auth: browsers fetch the
+  // manifest without a session (e.g. on /login), and a redirect to /login would break "Install app".
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|brand/|media/|icons/|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|webp|ico|mp4|webmanifest)$).*)"],
 };
