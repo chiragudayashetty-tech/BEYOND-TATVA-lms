@@ -26,6 +26,41 @@ function LoginForm() {
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(params.get("error") ? "That sign-in link has expired. Send a new code." : "");
+  const [inAppBrowser, setInAppBrowser] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const inApp = /WhatsApp|Instagram|FBAN|FBAV|Messenger/i.test(ua);
+    if (!inApp) return;
+    const platform = /iPhone|iPad|iPod/i.test(ua) ? "ios" : "android";
+    const timer = window.setTimeout(() => setInAppBrowser(platform), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  async function copyCurrentLink() {
+    const link = window.location.href;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+      } else {
+        const field = document.createElement("textarea");
+        field.value = link;
+        field.setAttribute("readonly", "");
+        field.style.position = "fixed";
+        field.style.opacity = "0";
+        document.body.appendChild(field);
+        field.select();
+        const success = document.execCommand("copy");
+        field.remove();
+        if (!success) throw new Error("Copy failed");
+      }
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("Copy didn’t work. Use your browser’s menu to copy this page link.");
+    }
+  }
 
   // Remember where they came from (website link / QR: ?src=loki&utm_source=qr). Saved to the
   // profile once, right after onboarding (see OnboardingForm).
@@ -77,6 +112,18 @@ function LoginForm() {
   }
 
   return (
+    <>
+    {inAppBrowser && <div className="card mb-4 border border-brand/30 p-5 shadow-sm" role="note">
+      <h2 className="text-lg font-semibold">Open this page in Chrome / Safari to sign in</h2>
+      <p className="mt-2 text-sm text-muted">
+        {inAppBrowser === "ios"
+          ? "Tap ••• or Share, then choose Open in Safari."
+          : "Tap ⋮ (menu), then choose Open in Chrome."}
+      </p>
+      <button type="button" onClick={copyCurrentLink} className="btn-secondary mt-4 w-full py-2.5">
+        {copied ? "Link copied" : "Copy link"}
+      </button>
+    </div>}
     <div className="card p-6 shadow-xl shadow-black/5 sm:p-8">
       <h1 className="text-2xl font-semibold">Sign in or sign up</h1>
       <p className="mt-1 text-sm text-muted">New here? This same step creates your account. Use the student&apos;s own Google account or email.</p>
@@ -127,6 +174,7 @@ function LoginForm() {
 
       {error && <p role="alert" className="mt-4 rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
     </div>
+    </>
   );
 }
 
