@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useIsClient } from "@/lib/hooks";
 import { BookOpen, CalendarPlus, Check, ChevronLeft, ChevronRight, Plus, RotateCcw, Target, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui";
+import { createClient } from "@/lib/supabase/client";
 
 const kindStyle = {
   Lesson: { tone: "primary", icon: BookOpen },
@@ -15,27 +16,43 @@ const key = (d) => d.toLocaleDateString("en-CA");
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const startOfWeek = (d) => addDays(d, -((d.getDay() + 6) % 7)); // Monday
 
-// Study blocks are stored per day on this device. Syncing to the account comes with the planner table.
-export default function PlannerView() {
+const LOCAL_KEY = "planner:v2";
+const readLocal = () => {
+  try { return typeof window === "undefined" ? {} : JSON.parse(localStorage.getItem(LOCAL_KEY) ?? "{}"); } catch { return {}; }
+};
+
+// Study blocks per day. For signed-in students each day is saved to their account (study_plans), so plans
+// follow them across phones; a copy is kept on the device as a fallback when offline.
+export default function PlannerView({ serverPlan = {}, userId = null }) {
   // Dates and the saved plan come from this device, so render only once in the browser.
   const isClient = useIsClient();
   const [today] = useState(() => new Date());
   const [selected, setSelected] = useState(today);
   const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
-  const [plan, setPlan] = useState(() => {
-    try { return typeof window === "undefined" ? {} : JSON.parse(localStorage.getItem("planner:v2") ?? "{}"); } catch { return {}; }
-  });
+  // Account plans win; days only planned on this device (before syncing existed) are kept too.
+  const [plan, setPlan] = useState(() => ({ ...readLocal(), ...serverPlan }));
+  const [syncState, setSyncState] = useState(""); // "" | saving | saved | offline
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ title: "", time: "7:00 PM", kind: "Lesson" });
 
-  const save = (next) => { setPlan(next); try { localStorage.setItem("planner:v2", JSON.stringify(next)); } catch {} };
+  const save = (next, day) => {
+    setPlan(next);
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(next)); } catch {}
+    if (!userId) return;
+    setSyncState("saving");
+    createClient()
+      .from("study_plans")
+      .upsert({ student_id: userId, plan_date: day, items: next[day] ?? [], updated_at: new Date().toISOString() }, { onConflict: "student_id,plan_date" })
+      .then(({ error }) => setSyncState(error ? "offline" : "saved"));
+  };
   const week = useMemo(() => (selected ? Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(selected), i)) : []), [selected]);
 
   if (!isClient) return <div className="card h-96 animate-pulse" />;
 
   const dayKey = key(selected);
   const items = plan[dayKey] ?? [];
-  const setItems = (next) => save({ ...plan, [dayKey]: next });
+  const setItems = (next) => save({ ...plan, [dayKey]: next }, dayKey);
+  const syncNote = !userId ? "Saved on this device" : { saving: "Saving…", offline: "Couldn't sync: kept on this device, check your internet", saved: "Saved to your account" }[syncState] ?? "Saved to your account";
   const done = items.filter((i) => i.done).length;
   const isToday = dayKey === key(today);
 
@@ -75,6 +92,7 @@ export default function PlannerView() {
             <div>
               <h2 className="font-semibold">{isToday ? "Today's plan" : selected.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}</h2>
               <p className="text-sm text-muted">{items.length ? `${done} of ${items.length} done` : "Nothing planned yet"}</p>
+              <p role="status" className={`text-xs ${syncState === "offline" ? "text-warning" : "text-subtle"}`}>{syncNote}</p>
             </div>
             <button onClick={() => setAdding(!adding)} className="btn-primary"><Plus className="h-4 w-4" /> Add block</button>
           </div>

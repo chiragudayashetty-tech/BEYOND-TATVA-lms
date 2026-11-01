@@ -185,3 +185,20 @@ reset role;
 set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
 select 'Z1 Studio numbers' t, (s ->> 'to_review')::int = 0 and (s ->> 'enrollments_claimed')::int >= 5 as pass from (select public.admin_stats() as s) x;
 reset role;
+
+-- ── Study planner ────────────────────────────────────────────────────────────
+set role authenticated; select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
+insert into public.study_plans (student_id, plan_date, items) values (auth.uid(), '2026-11-02', '[{"id":"a","title":"Lesson 1","time":"7:00 PM","kind":"Lesson","done":false}]');
+insert into public.study_plans (student_id, plan_date, items) values (auth.uid(), '2026-11-02', '[{"id":"a","title":"Lesson 1","done":true}]')
+  on conflict (student_id, plan_date) do update set items = excluded.items, updated_at = now();
+select 'D1 student saves and updates own plan' t, (items -> 0 ->> 'done')::boolean as pass from public.study_plans where plan_date = '2026-11-02';
+do $$ begin insert into public.study_plans (student_id, plan_date) values ('11111111-1111-1111-1111-111111111111', '2026-11-02'); raise exception 'D2 FAIL';
+exception when insufficient_privilege then raise notice 'D2 pass: cannot write another student''s plan'; end $$;
+do $$ begin insert into public.study_plans (student_id, plan_date, items) values (auth.uid(), '2026-11-03', '{"not":"a list"}'); raise exception 'D3 FAIL';
+exception when check_violation then raise notice 'D3 pass: items must be a list'; end $$;
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+select 'D4 other students cannot read it' t, count(*) = 0 as pass from public.study_plans;
+select pg_temp.as_user('99999999-9999-9999-9999-999999999999');
+do $$ begin insert into public.study_plans (student_id, plan_date) values (auth.uid(), '2026-11-02'); raise exception 'D5 FAIL';
+exception when insufficient_privilege then raise notice 'D5 pass: accounts without a student profile cannot save plans'; end $$;
+reset role;

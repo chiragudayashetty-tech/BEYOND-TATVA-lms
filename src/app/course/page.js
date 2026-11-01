@@ -194,7 +194,7 @@ export default async function CoursePage({ searchParams }) {
 
           <Card title="What you'll get">
             <ul className="space-y-2.5 text-sm">
-              {[`${course.lessonCount} short video lessons with quick checks`, "A quiz and an assignment in every module", "A final project: your own chatbot", "A certificate your school can verify"].map((t) => (
+              {[`${course.lessonCount} short video lessons with quick checks`, "A quiz and an assignment in every module", "A final project: your own chatbot", "A certificate at the end (verification coming soon)"].map((t) => (
                 <li key={t} className="flex gap-2.5"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />{t}</li>
               ))}
             </ul>
@@ -204,7 +204,7 @@ export default async function CoursePage({ searchParams }) {
             <IconTile icon={Award} tone="warning" />
             <div>
               <div className="font-semibold">Certificate</div>
-              <p className="mt-1 text-sm text-muted">Finish every module and its quiz to earn it.</p>
+              <p className="mt-1 text-sm text-muted">Finish every module to earn it. Downloading and verification are coming soon.</p>
             </div>
           </div>
         </aside>
