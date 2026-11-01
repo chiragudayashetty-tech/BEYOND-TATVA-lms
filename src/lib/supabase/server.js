@@ -75,12 +75,9 @@ async function realSession() {
   // Teachers and admins can watch everything (has_course_access in the database); parents only follow progress.
   let hasAccess = Boolean(profile && (profile.role === "teacher" || profile.role === "admin"));
   if (profile?.role === "student") {
+    // Website purchases are claimed at sign-in (auth/callback), after onboarding and on /unlock,
+    // not on every page: that extra database call slowed every tap for free students.
     hasAccess = Boolean(access);
-    // Paid on the website with this account's email or parent phone? Unlock now.
-    if (!hasAccess) {
-      const { data: claimed } = await supabase.rpc("claim_purchases");
-      hasAccess = claimed > 0;
-    }
   }
   return { user, profile, hasAccess };
 }

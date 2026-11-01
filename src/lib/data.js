@@ -1,22 +1,51 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
+import { createClient as createAnonClient } from "@supabase/supabase-js";
 import { createClient, getSession } from "./supabase/server";
+import { SUPABASE_KEY, SUPABASE_URL } from "./supabase/config";
 import { COURSE_ID, buildCourse } from "./catalog";
 
-// The course with the viewer's progress. Lesson titles are public; videos are fetched separately.
-export const getCourse = cache(async () => {
-  const supabase = await createClient();
-  const { user } = await getSession();
+const CATALOG = {
+  course: "id, title, tagline, description, grade, hero_url, price_inr",
+  chapters: "id, title, blurb, position, release_at, is_free, thumbnail_url",
+  lessons: "id, chapter_id, title, description, position, minutes",
+};
+
+async function loadCatalog(supabase, courseId) {
   const [{ data: course }, { data: chapters }, { data: lessons }] = await Promise.all([
-    supabase.from("courses").select("id, title, tagline, description, grade, hero_url, price_inr").eq("id", COURSE_ID).single(),
-    supabase.from("chapters").select("id, title, blurb, position, release_at, is_free, thumbnail_url").eq("course_id", COURSE_ID),
-    supabase.from("lessons").select("id, chapter_id, title, description, position, minutes").eq("course_id", COURSE_ID),
+    supabase.from("courses").select(CATALOG.course).eq("id", courseId).single(),
+    supabase.from("chapters").select(CATALOG.chapters).eq("course_id", courseId),
+    supabase.from("lessons").select(CATALOG.lessons).eq("course_id", courseId),
   ]);
-  let done = new Set();
-  if (user && user.id !== "preview") {
-    const { data } = await supabase.from("lesson_progress").select("lesson_id").eq("student_id", user.id).not("completed_at", "is", null);
-    done = new Set((data ?? []).map((r) => r.lesson_id));
-  }
-  return buildCourse(course, chapters ?? [], lessons ?? [], done);
+  return { course, chapters: chapters ?? [], lessons: lessons ?? [] };
+}
+
+// Published course content is the same for every student, so it is cached across requests (no cookies:
+// anonymous client, published rows only). Studio saves call updateTag(COURSE_TAG) to refresh it.
+export const COURSE_TAG = "course";
+const cachedCatalog = unstable_cache(
+  async (courseId) => {
+    const catalog = await loadCatalog(createAnonClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } }), courseId);
+    if (!catalog.course) throw new Error("course not found"); // never cache a failed read
+    return catalog;
+  },
+  ["course-catalog-v1"],
+  { tags: [COURSE_TAG], revalidate: 300 },
+);
+
+// The course with the viewer's progress. Lesson titles are public; videos are fetched separately.
+// Admins read live (they also see unpublished drafts); everyone else gets the cached copy.
+export const getCourse = cache(async (courseId = COURSE_ID) => {
+  const supabase = await createClient();
+  const { user, profile } = await getSession();
+  const live = user?.id === "preview" || profile?.role === "admin";
+  const progress = user && user.id !== "preview"
+    ? supabase.from("lesson_progress").select("lesson_id").eq("student_id", user.id).not("completed_at", "is", null)
+    : Promise.resolve({ data: [] });
+  const catalogP = live ? loadCatalog(supabase, courseId) : cachedCatalog(courseId).catch(() => loadCatalog(supabase, courseId));
+  const [{ course, chapters, lessons }, { data: rows }] = await Promise.all([catalogP, progress]);
+  const done = new Set((rows ?? []).map((r) => r.lesson_id));
+  return buildCourse(course, chapters, lessons, done);
 });
 
 // The video link for a lesson, or null when the viewer may not watch it (enforced by RLS).

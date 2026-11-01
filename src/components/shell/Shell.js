@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Logo from "@/components/Logo";
 import { Avatar } from "@/components/ui";
 import { isPreview, requireRole } from "@/lib/supabase/server";
@@ -31,13 +32,13 @@ export default async function Shell({ roles, children, greeting = false }) {
             </>
           )}
         </nav>
-        <a href="/profile" className="m-3 flex items-center gap-3 rounded-xl border border-border p-3 transition hover:bg-surface-2">
+        <Link href="/profile" className="m-3 flex items-center gap-3 rounded-xl border border-border p-3 transition hover:bg-surface-2">
           <Avatar name={profile.full_name} />
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold">{profile.full_name}</div>
             <div className="text-xs text-muted">View profile</div>
           </div>
-        </a>
+        </Link>
       </aside>
 
       <TopBar

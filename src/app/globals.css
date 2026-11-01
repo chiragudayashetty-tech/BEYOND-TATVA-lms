@@ -73,13 +73,29 @@ body {
   transition: background-color 0.2s ease;
 }
 
+/* Touch: no double-tap-zoom wait, no grey flash, instant pressed feedback on every tappable thing. */
+a, button, [role="button"], input, select, textarea, label, summary {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+a:active, button:not(:disabled):active, summary:active {
+  opacity: 0.7;
+  transition: opacity 0s;
+}
+
+/* Thin bar at the top while a page is loading (see NavProgress). */
+@keyframes nav-progress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
 h1, h2, h3, h4 {
   font-family: var(--font-poppins);
   letter-spacing: -0.01em;
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.97] active:brightness-95 disabled:opacity-50 disabled:pointer-events-none;
 }
 @utility btn-primary {
   @apply btn bg-primary text-primary-fg hover:brightness-110;
@@ -91,7 +107,7 @@ h1, h2, h3, h4 {
   @apply btn text-muted hover:bg-surface-2 hover:text-fg;
 }
 @utility input {
-  @apply w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-fg outline-none placeholder:text-subtle focus:border-primary focus:ring-4 focus:ring-primary/15;
+  @apply min-h-11 w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-base text-fg sm:text-sm outline-none placeholder:text-subtle focus:border-primary focus:ring-4 focus:ring-primary/15;
 }
 @utility card {
   @apply rounded-2xl border border-border bg-surface;

@@ -67,8 +67,8 @@ export default function PlannerView({ serverPlan = {}, userId = null }) {
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm font-semibold">{week[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} – {week[6].toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
             <div className="flex gap-1">
-              <button onClick={() => setSelected(addDays(selected, -7))} aria-label="Previous week" className="btn-ghost h-8 w-8 p-0"><ChevronLeft className="h-4 w-4" /></button>
-              <button onClick={() => setSelected(addDays(selected, 7))} aria-label="Next week" className="btn-ghost h-8 w-8 p-0"><ChevronRight className="h-4 w-4" /></button>
+              <button onClick={() => setSelected(addDays(selected, -7))} aria-label="Previous week" className="btn-ghost h-11 w-11 p-0"><ChevronLeft className="h-4 w-4" /></button>
+              <button onClick={() => setSelected(addDays(selected, 7))} aria-label="Next week" className="btn-ghost h-11 w-11 p-0"><ChevronRight className="h-4 w-4" /></button>
             </div>
           </div>
           <div className="grid grid-cols-7 gap-1.5">
@@ -128,7 +128,7 @@ export default function PlannerView({ serverPlan = {}, userId = null }) {
                     <div className="w-20 shrink-0 text-sm font-semibold">{it.time}</div>
                     <div className={`min-w-0 flex-1 text-sm font-medium ${it.done ? "line-through" : ""}`}>{it.title}</div>
                     <Badge tone={k.tone}><Icon className="h-3 w-3" /> {it.kind}</Badge>
-                    <button onClick={() => setItems(items.filter((_, j) => j !== i))} aria-label="Remove" className="btn-ghost h-8 w-8 p-0 opacity-0 group-hover:opacity-100"><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={() => setItems(items.filter((_, j) => j !== i))} aria-label="Remove" className="btn-ghost h-11 w-11 p-0 lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"><Trash2 className="h-4 w-4" /></button>
                   </li>
                 );
               })}
@@ -141,8 +141,8 @@ export default function PlannerView({ serverPlan = {}, userId = null }) {
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-semibold">{month.toLocaleDateString("en-IN", { month: "long", year: "numeric" })}</h2>
           <div className="flex gap-1">
-            <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} aria-label="Previous month" className="btn-ghost h-8 w-8 p-0"><ChevronLeft className="h-4 w-4" /></button>
-            <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} aria-label="Next month" className="btn-ghost h-8 w-8 p-0"><ChevronRight className="h-4 w-4" /></button>
+            <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} aria-label="Previous month" className="btn-ghost h-11 w-11 p-0"><ChevronLeft className="h-4 w-4" /></button>
+            <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} aria-label="Next month" className="btn-ghost h-11 w-11 p-0"><ChevronRight className="h-4 w-4" /></button>
           </div>
         </div>
         <div className="grid grid-cols-7 gap-1 text-center text-xs">

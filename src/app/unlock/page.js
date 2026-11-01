@@ -1,13 +1,20 @@
 import Shell from "@/components/shell/Shell";
 import { PageTitle } from "@/components/ui";
 import { getCourse } from "@/lib/data";
-import { getSession, isPreview } from "@/lib/supabase/server";
+import { createClient, getSession, isPreview } from "@/lib/supabase/server";
 import UnlockView from "./UnlockView";
 
 export const metadata = { title: "Unlock the course · Beyond Tatva" };
 
 export default async function UnlockPage() {
-  const [{ user, hasAccess }, course] = await Promise.all([getSession(), getCourse()]);
+  const [session, course] = await Promise.all([getSession(), getCourse()]);
+  const { user } = session;
+  let { hasAccess } = session;
+  // The one page where a free student is looking to unlock: check for a website purchase here.
+  if (!hasAccess && !isPreview && session.profile?.role === "student") {
+    const { data: claimed } = await (await createClient()).rpc("claim_purchases");
+    hasAccess = claimed > 0;
+  }
   return (
     <Shell roles={["student"]}>
       <PageTitle title={`Unlock ${course.title}`} subtitle="Module 0 (AI 101) is free. Unlock modules 1–6 with a school key, or enroll on our website." />

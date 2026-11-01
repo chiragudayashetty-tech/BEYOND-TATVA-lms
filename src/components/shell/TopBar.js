@@ -46,21 +46,21 @@ export default function TopBar({ name, role, greeting, streak }) {
         </form>
 
         <div ref={ref} className="flex items-center gap-2">
-          <Link href="/search" aria-label="Search" className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-surface text-muted md:hidden"><Search className="h-[18px] w-[18px]" /></Link>
+          <Link href="/search" aria-label="Search" className="grid h-11 w-11 place-items-center rounded-xl border border-border bg-surface text-muted md:hidden"><Search className="h-[18px] w-[18px]" /></Link>
           {streak != null && (
-            <span className="hidden h-10 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 text-sm font-semibold sm:flex" title="Day streak">
+            <span className="hidden h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 text-sm font-semibold sm:flex" title="Day streak">
               <Flame className="h-4 w-4 text-warning" /> {streak}
             </span>
           )}
           <ThemeToggle />
           <div className="relative">
             <button onClick={() => setMenu(menu === "bell" ? null : "bell")} aria-label="Notifications"
-              className="relative grid h-10 w-10 place-items-center rounded-xl border border-border bg-surface text-muted hover:text-fg">
+              className="relative grid h-11 w-11 place-items-center rounded-xl border border-border bg-surface text-muted hover:text-fg">
               <Bell className="h-[18px] w-[18px]" />
               {unread > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">{unread}</span>}
             </button>
             {menu === "bell" && (
-              <div className="absolute right-0 top-12 w-80 animate-[pop_.15s_ease-out] rounded-2xl border border-border bg-surface p-2 shadow-xl">
+              <div className="absolute right-0 top-14 w-[min(20rem,calc(100vw-2rem))] animate-[pop_.15s_ease-out] rounded-2xl border border-border bg-surface p-2 shadow-xl">
                 <div className="px-3 py-2 text-sm font-semibold">Notifications</div>
                 {notifications.length === 0 && <div className="px-3 pb-3 text-sm text-muted">You&apos;re all caught up.</div>}
                 {notifications.map((n) => (
@@ -77,18 +77,18 @@ export default function TopBar({ name, role, greeting, streak }) {
           </div>
           <div className="relative">
             <button onClick={() => setMenu(menu === "me" ? null : "me")} aria-label="Account" className="rounded-full ring-offset-2 ring-offset-bg focus-visible:ring-2 focus-visible:ring-primary">
-              <Avatar name={name} size="h-10 w-10 text-sm" />
+              <Avatar name={name} size="h-11 w-11 text-sm" />
             </button>
             {menu === "me" && (
-              <div className="absolute right-0 top-12 w-60 animate-[pop_.15s_ease-out] rounded-2xl border border-border bg-surface p-2 shadow-xl">
+              <div className="absolute right-0 top-14 w-60 animate-[pop_.15s_ease-out] rounded-2xl border border-border bg-surface p-2 shadow-xl">
                 <div className="px-3 py-2">
                   <div className="truncate font-semibold">{name}</div>
                   <div className="text-xs capitalize text-muted">{role}</div>
                 </div>
-                <Link href="/profile" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-surface-2"><User className="h-4 w-4 text-muted" /> Profile</Link>
-                <Link href="/profile#settings" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-surface-2"><Settings className="h-4 w-4 text-muted" /> Settings</Link>
+                <Link href="/profile" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm hover:bg-surface-2"><User className="h-4 w-4 text-muted" /> Profile</Link>
+                <Link href="/profile#settings" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm hover:bg-surface-2"><Settings className="h-4 w-4 text-muted" /> Settings</Link>
                 <form action="/auth/signout" method="post">
-                  <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-danger hover:bg-danger-soft"><LogOut className="h-4 w-4" /> Log out</button>
+                  <button className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-danger hover:bg-danger-soft"><LogOut className="h-4 w-4" /> Log out</button>
                 </form>
               </div>
             )}

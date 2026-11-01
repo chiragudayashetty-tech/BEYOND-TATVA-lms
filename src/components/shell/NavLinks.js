@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BadgeCheck, BookOpen, CalendarDays, ChartLine, Circle, Clapperboard, ClipboardCheck, ClipboardList, Contact, GraduationCap,
@@ -11,6 +11,12 @@ const Icons = {
   BadgeCheck, BookOpen, CalendarDays, ChartLine, Circle, Clapperboard, ClipboardCheck, ClipboardList, Contact, GraduationCap,
   House, KeyRound, LayoutDashboard, ListChecks, User, UserCheck, Users, Workflow,
 };
+
+// Lights up the tapped item straight away while its page loads (useLinkStatus must sit inside the Link).
+function Pending() {
+  const { pending } = useLinkStatus();
+  return <span aria-hidden className={`pointer-events-none absolute inset-0 rounded-xl bg-primary/10 transition-opacity ${pending ? "opacity-100" : "opacity-0"}`} />;
+}
 
 const isActive = (pathname, href) => {
   const path = href.split("#")[0];
@@ -28,9 +34,10 @@ export function SidebarLinks({ items }) {
         return (
           <li key={href}>
             <Link href={href} aria-current={active ? "page" : undefined}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${active ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-2 hover:text-fg"}`}>
+              className={`relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${active ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-2 hover:text-fg"}`}>
               <Icon className="h-[18px] w-[18px]" strokeWidth={active ? 2.25 : 1.75} />
               {label}
+              <Pending />
             </Link>
           </li>
         );
@@ -49,9 +56,10 @@ export function MobileTabs({ items }) {
           const active = isActive(pathname, href);
           return (
             <li key={href}>
-              <Link href={href} className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${active ? "text-primary" : "text-subtle"}`}>
+              <Link href={href} className={`relative flex min-h-14 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium ${active ? "text-primary" : "text-subtle"}`}>
                 <Icon className="h-5 w-5" strokeWidth={active ? 2.25 : 1.75} />
                 {label}
+                <Pending />
               </Link>
             </li>
           );
