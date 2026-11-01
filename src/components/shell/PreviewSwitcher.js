@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
-const homes = { student: "/browse", parent: "/parent", teacher: "/teacher", admin: "/admin" };
+const homes = { student: "/browse", teacher: "/teacher", admin: "/admin" };
 function setCookie(k, v) {
   document.cookie = `${k}=${v}; path=/; max-age=86400`;
 }

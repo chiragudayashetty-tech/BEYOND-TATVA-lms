@@ -27,7 +27,7 @@ export default async function ProfilePage() {
   const { user, profile } = await getSession();
   const student = profile?.role === "student";
   return (
-    <Shell roles={["student", "parent", "teacher", "admin"]}>
+    <Shell roles={["student", "teacher", "admin"]}>
       <PageTitle title="Profile" />
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
         <Card className="h-fit text-center">
@@ -40,15 +40,16 @@ export default async function ProfilePage() {
               {profile.grade && <Badge>Grade {profile.grade}</Badge>}
             </div>
           </div>
-          {student && profile.invite_code && (
-            <div className="mt-6 rounded-xl border border-dashed border-border p-4 text-left">
-              <div className="text-xs font-medium uppercase tracking-wider text-muted">Parent link code</div>
-              <div className="mt-1 font-mono text-2xl font-semibold tracking-[0.25em]">{profile.invite_code}</div>
+          {student && (
+            <div className="mt-6 rounded-xl border border-border p-4 text-left text-sm">
+              <div className="text-xs font-medium uppercase tracking-wider text-muted">Parent or guardian</div>
+              <div className="mt-1 font-medium">{profile.guardian_phone ?? "–"}</div>
               <div className="mt-2 flex items-center gap-1.5 text-xs">
                 {profile.guardian_consent_at
-                  ? <><ShieldCheck className="h-3.5 w-3.5 text-success" /><span className="text-success">Parent linked and consent given</span></>
-                  : <span className="text-warning">Share this with your parent so they can link their account.</span>}
+                  ? <><ShieldCheck className="h-3.5 w-3.5 text-success" /><span className="text-success">Parent consent given</span></>
+                  : <span className="text-warning">Parent consent not recorded yet.</span>}
               </div>
+              <p className="mt-2 text-xs text-muted">This account opens only with {user.email ?? user.phone}. Course updates go to the parent&apos;s WhatsApp (coming soon).</p>
             </div>
           )}
         </Card>

@@ -11,7 +11,7 @@ export default async function PeoplePage() {
   const [{ data: schools }, { data: classes }, { data: people }, { data: access }] = await Promise.all([
     supabase.rpc("admin_schools"),
     supabase.from("classes").select("id, name, grade, school_id, teacher_id"),
-    supabase.from("profiles").select("id, role, full_name, grade, school_id, school_name, guardian_phone, guardian_consent_at, created_at").order("created_at", { ascending: false }),
+    supabase.from("profiles").select("id, role, full_name, grade, school_id, school_name, guardian_phone, guardian_consent_at, consent_by, signed_up_by, student_phone, created_at").order("created_at", { ascending: false }),
     supabase.from("course_access").select("student_id, source"),
   ]);
   const schoolName = Object.fromEntries((schools ?? []).map((s) => [s.id, s.name]));
@@ -71,7 +71,7 @@ export default async function PeoplePage() {
                   <tr key={s.id} className="border-b border-border last:border-0">
                     <td className="px-5 py-3"><div className="flex items-center gap-3"><Avatar name={s.full_name} size="h-8 w-8 text-xs" /><div><div className="font-medium">{s.full_name}</div><div className="text-xs text-muted">Grade {s.grade}</div></div></div></td>
                     <td className="px-5 py-3 text-muted">{schoolName[s.school_id] ?? s.school_name ?? "–"}{!s.school_id && <div className="text-xs">Individual</div>}</td>
-                    <td className="px-5 py-3"><div className="text-xs text-muted">{s.guardian_phone ?? "–"}</div>{s.guardian_consent_at ? <Badge tone="success">Linked</Badge> : <Badge tone="warning">Not linked</Badge>}</td>
+                    <td className="px-5 py-3"><div className="text-xs text-muted">{s.guardian_phone ?? "–"}</div>{s.guardian_consent_at ? <Badge tone="success">Consent ({s.consent_by ?? "parent"})</Badge> : <Badge tone="warning">No consent</Badge>}{s.signed_up_by === "parent" && <div className="text-[11px] text-subtle">Set up by parent</div>}</td>
                     <td className="px-5 py-3">{accessBy[s.id] ? <Badge tone="success">Full · {accessBy[s.id]}</Badge> : <GrantButton studentId={s.id} />}</td>
                   </tr>
                 ))}
@@ -88,9 +88,9 @@ export default async function PeoplePage() {
         </Card>
       </div>
 
-      <Card title={`Parents and teachers (${(people ?? []).filter((p) => p.role === "parent" || p.role === "teacher").length})`} className="mt-6">
+      <Card title={`Teachers (${(people ?? []).filter((p) => p.role === "teacher").length})`} className="mt-6">
         <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {(people ?? []).filter((p) => p.role === "parent" || p.role === "teacher").map((p) => (
+          {(people ?? []).filter((p) => p.role === "teacher").map((p) => (
             <li key={p.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
               <Avatar name={p.full_name} size="h-8 w-8 text-xs" />
               <div className="min-w-0 flex-1 truncate text-sm font-medium">{p.full_name}</div>
@@ -98,7 +98,7 @@ export default async function PeoplePage() {
             </li>
           ))}
         </ul>
-        {!people?.some((p) => p.role === "parent" || p.role === "teacher") && <p className="text-sm text-muted"><School className="mr-1 inline h-4 w-4" />None yet.</p>}
+        {!people?.some((p) => p.role === "teacher") && <p className="text-sm text-muted"><School className="mr-1 inline h-4 w-4" />None yet.</p>}
       </Card>
     </Shell>
   );

@@ -52,22 +52,22 @@ do $$ begin perform public.complete_onboarding('admin', 'Me'); raise exception '
 
 -- ── Onboarding (individual students) ─────────────────────────────────────────
 select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
-select public.complete_onboarding('student', 'Solo Student', null, 9::smallint, 'Mom', '098450 12345', 'Udupi Public School');
+select public.complete_onboarding('student', 'Solo Student', null, 9::smallint, 'Mom', '098450 12345', 'Udupi Public School', p_consent => true);
 select 'T1 phone normalised' t, guardian_phone = '+919845012345' and school_id is null and school_name = 'Udupi Public School' as pass from public.profiles where id = auth.uid();
 select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
-select public.complete_onboarding('student', 'School Kid', 'test-abc', 8::smallint, 'Dad', '+91 99000 11224');
+select public.complete_onboarding('student', 'School Kid', 'test-abc', 8::smallint, 'Dad', '+91 99000 11224', p_consent => true);
 select 'T2 school code' t, school_id is not null as pass from public.profiles where id = auth.uid();
 select pg_temp.as_user('55555555-5555-5555-5555-555555555555');
-do $$ begin perform public.complete_onboarding('student', 'X', 'NOPE', 8::smallint, 'D', '9900011223'); raise exception 'T3a FAIL';
+do $$ begin perform public.complete_onboarding('student', 'X', 'NOPE', 8::smallint, 'D', '9900011223', p_consent => true); raise exception 'T3a FAIL';
 exception when others then if sqlerrm like 'T3a%' then raise; end if; raise notice 'T3a pass: %', sqlerrm; end $$;
-do $$ begin perform public.complete_onboarding('student', 'X', null, 8::smallint, 'D', '12345'); raise exception 'T3b FAIL';
+do $$ begin perform public.complete_onboarding('student', 'X', null, 8::smallint, 'D', '12345', p_consent => true); raise exception 'T3b FAIL';
 exception when others then if sqlerrm like 'T3b%' then raise; end if; raise notice 'T3b pass: %', sqlerrm; end $$;
 select pg_temp.as_user('66666666-6666-6666-6666-666666666666');
-select public.complete_onboarding('student', 'Sibling One', null, 8::smallint, 'Same Parent', '9876500000');
+select public.complete_onboarding('student', 'Sibling One', null, 8::smallint, 'Same Parent', '9876500000', p_consent => true);
 select pg_temp.as_user('77777777-7777-7777-7777-777777777777');
-select public.complete_onboarding('student', 'Sibling Two', null, 10::smallint, 'Same Parent', '9876500000');
+select public.complete_onboarding('student', 'Sibling Two', null, 10::smallint, 'Same Parent', '9876500000', p_consent => true);
 select pg_temp.as_user('88888888-8888-8888-8888-888888888888');
-select public.complete_onboarding('student', 'Phone Login Kid', null, 9::smallint, 'P', '9811111111');
+select public.complete_onboarding('student', 'Phone Login Kid', null, 9::smallint, 'P', '9811111111', p_consent => true);
 reset role;
 
 -- ── Website enrollments ──────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ reset role;
 -- The buyer of pay_2 signs up later with that email: access appears on first sign-in.
 insert into auth.users (id, email) values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'newkid@gmail.com');
 set role authenticated; select pg_temp.as_user('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
-select public.complete_onboarding('student', 'New Kid', null, 9::smallint, 'P', '9845077777');
+select public.complete_onboarding('student', 'New Kid', null, 9::smallint, 'P', '9845077777', p_consent => true);
 select 'P9a claim on sign-in' t, public.claim_purchases() = 1 as pass;
 select 'P9b course unlocked' t, public.has_course_access('ai-for-students') as pass;
 select 'P10 nothing left to claim' t, public.claim_purchases() = 0 as pass;
@@ -233,7 +233,7 @@ reset role;
 -- ── H2: unverified email never unlocks ───────────────────────────────────────
 insert into auth.users (id, email, email_confirmed_at) values ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'unverified@x.in', null);
 set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
-select public.complete_onboarding('student', 'Unverified', null, 9::smallint, 'P', '9811122233');
+select public.complete_onboarding('student', 'Unverified', null, 9::smallint, 'P', '9811122233', p_consent => true);
 reset role; set role service_role;
 select 'H2c unverified email stays pending' t, public.record_purchase('pay_unv', 'unverified@x.in') = 'pending' as pass;
 reset role; set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
@@ -242,3 +242,24 @@ select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
 do $$ begin perform public.admin_approve_suggestion((select id from public.purchases limit 1)); raise exception 'H2e FAIL';
 exception when others then if sqlerrm like 'H2e%' then raise; end if; raise notice 'H2e pass: students cannot approve (%)', sqlerrm; end $$;
 reset role;
+
+-- ── One login per child ──────────────────────────────────────────────────────
+insert into auth.users (id, email, phone) values
+ ('f1111111-1111-1111-1111-111111111111', 'mom@x.in', null),
+ ('f2222222-2222-2222-2222-222222222222', 'kid2@x.in', null);
+set role authenticated; select pg_temp.as_user('f1111111-1111-1111-1111-111111111111');
+do $$ begin perform public.complete_onboarding('student', 'Kid', null, 9::smallint, 'Mom', '9845011111'); raise exception 'O1 FAIL';
+exception when others then if sqlerrm like 'O1%' then raise; end if; raise notice 'O1 pass: %', sqlerrm; end $$;
+do $$ begin perform public.complete_onboarding('parent', 'Mom', 'ABC123'); raise exception 'O2 FAIL';
+exception when others then if sqlerrm like 'O2%' then raise; end if; raise notice 'O2 pass: %', sqlerrm; end $$;
+do $$ begin perform public.complete_onboarding('student', 'Kid', null, 9::smallint, 'Mom', '9845011111', null, 'parent', '12345', true); raise exception 'O3 FAIL';
+exception when others then if sqlerrm like 'O3%' then raise; end if; raise notice 'O3 pass: %', sqlerrm; end $$;
+select public.complete_onboarding('student', 'Kid Rao', null, 9::smallint, 'Mom Rao', '9845011111', null, 'parent', '98450 22222', true);
+select 'O4 parent sets up the child account' t, (select role = 'student' and signed_up_by = 'parent' and consent_by = 'parent' and guardian_consent_at is not null
+  and student_phone = '+919845022222' and guardian_phone = '+919845011111' and invite_code is null from public.profiles where id = auth.uid()) as pass;
+select pg_temp.as_user('f2222222-2222-2222-2222-222222222222');
+select public.complete_onboarding('student', 'Kid Two', null, 8::smallint, 'Dad', '9845033333', null, 'student', null, true);
+select 'O5 student signs up, child phone optional' t, (select signed_up_by = 'student' and student_phone is null and consent_by = 'student' from public.profiles where id = auth.uid()) as pass;
+reset role;
+select 'O6 no invite codes left' t, not exists (select 1 from public.profiles where invite_code is not null) as pass;
+select 'O7 link_child is gone' t, not exists (select 1 from pg_proc where proname = 'link_child') as pass;

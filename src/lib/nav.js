@@ -19,14 +19,6 @@ export const nav = {
       { href: "/profile", label: "Profile", icon: "User" },
     ],
   },
-  parent: {
-    main: [{ href: "/parent", label: "Overview", icon: "LayoutDashboard" }],
-    more: [],
-    mobile: [
-      { href: "/parent", label: "Overview", icon: "House" },
-      { href: "/profile", label: "Profile", icon: "User" },
-    ],
-  },
   teacher: {
     main: [
       { href: "/teacher", label: "My Class", icon: "Users" },

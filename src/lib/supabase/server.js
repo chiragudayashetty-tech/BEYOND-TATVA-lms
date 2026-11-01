@@ -28,7 +28,7 @@ const PREVIEW = process.env.NODE_ENV === "development" ? process.env.DEV_PREVIEW
 export const getSession = cache(async () => {
   if (PREVIEW) {
     const picked = (await cookies()).get("preview_role")?.value;
-    const role = ["student", "parent", "teacher", "admin"].includes(picked) ? picked : PREVIEW;
+    const role = ["student", "teacher", "admin"].includes(picked) ? picked : PREVIEW;
     const unlocked = (await cookies()).get("preview_access")?.value === "1";
     return { ...previewSession(role), hasAccess: role !== "student" || unlocked };
   }
@@ -37,16 +37,16 @@ export const getSession = cache(async () => {
 
 export const isPreview = Boolean(PREVIEW);
 
-const previewNames = { student: "Ananya Rao", parent: "Lakshmi Rao", teacher: "Meera D'Souza", admin: "Chirag Shetty" };
+const previewNames = { student: "Ananya Rao", teacher: "Meera D'Souza", admin: "Chirag Shetty" };
 
 function previewSession(role) {
   return {
     user: { id: "preview", email: "preview@example.com" },
-    profile: { id: "preview", role, full_name: previewNames[role], grade: role === "student" ? 9 : null, invite_code: "C6C02F", guardian_consent_at: null },
+    profile: { id: "preview", role, full_name: previewNames[role], grade: role === "student" ? 9 : null, guardian_consent_at: null },
   };
 }
 
-const PROFILE_FIELDS = "id, role, full_name, avatar, grade, invite_code, guardian_consent_at, school_id, guardian_phone";
+const PROFILE_FIELDS = "id, role, full_name, avatar, grade, guardian_consent_at, school_id, guardian_phone";
 
 // The signed-in user from the verified session token: no network call to Supabase Auth.
 async function currentUser(supabase) {
@@ -99,4 +99,4 @@ export async function requireRole(roles) {
   return session;
 }
 
-export const homeFor = (role) => ({ student: "/browse", parent: "/parent", teacher: "/teacher", admin: "/admin" })[role] ?? "/onboarding";
+export const homeFor = (role) => ({ student: "/browse", teacher: "/teacher", admin: "/admin" })[role] ?? "/onboarding";

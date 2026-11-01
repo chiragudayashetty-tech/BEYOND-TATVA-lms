@@ -11,5 +11,5 @@ export default async function Onboarding({ searchParams }) {
   const { user, profile } = await getSession();
   if (!user) redirect("/login");
   if (profile) redirect(back ?? homeFor(profile.role));
-  return <OnboardingForm defaultName={user.user_metadata?.full_name ?? ""} next={back} />;
+  return <OnboardingForm defaultName={user.user_metadata?.full_name ?? ""} next={back} signedInAs={user.email || user.phone || ""} loginPhone={user.phone || ""} />;
 }
