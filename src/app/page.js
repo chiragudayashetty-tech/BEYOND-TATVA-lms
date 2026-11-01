@@ -1,190 +1,50 @@
 import Link from "next/link";
-import { ArrowRight, BarChart3, CalendarClock, Check, CirclePlay, Flame, Gift, MessageSquareText, Plug, School, ShieldCheck, Smartphone, Sparkles, Trophy, Users, Zap } from "lucide-react";
+import { redirect } from "next/navigation";
+import { ArrowRight, ExternalLink, Gift, LogIn } from "lucide-react";
 import Logo from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
-import { IconTile } from "@/components/ui";
-import { ModuleCard } from "@/components/course";
-import Countdown from "@/components/Countdown";
-import { fmtPremiere, nextPremiere } from "@/lib/catalog";
-import { getCourse } from "@/lib/data";
+import { getSession, homeFor } from "@/lib/supabase/server";
 
+export const metadata = { title: "Beyond Tatva · Learn" };
 
-export const metadata = { title: "Beyond Tatva · AI education for Grades 8–10" };
-
-
-
-const audiences = [
-  {
-    title: "For students",
-    icon: Zap,
-    points: ["Short video lessons that pause to ask you questions", "XP and streaks for showing up", "A study planner and a certificate at the end"],
-  },
-  {
-    title: "For parents",
-    icon: ShieldCheck,
-    points: ["See lessons completed and quiz accuracy", "Link to your child with a simple code", "Consent and data handled under the DPDP Act"],
-  },
-  {
-    title: "For schools",
-    icon: BarChart3,
-    points: ["A class dashboard for every teacher", "See who is active, slipping or inactive", "Access keys for every student, invoiced to the school"],
-  },
-];
-
+// The LMS front door. Marketing and payments live on the website (beyondtatva.in); this page only
+// gets people into their account. Signed-in visitors go straight to their home screen.
 export default async function Home() {
-  const course = await getCourse();
-  const next = nextPremiere(course);
-  const stats = [
-    [`${course.modules.length}`, "Modules"],
-    [`${course.lessonCount}`, "Video lessons"],
-    ["Sun 6 PM", "New module every week"],
-    ["Free", "AI 101 to start"],
-  ];
+  const { user, profile } = await getSession();
+  if (user) redirect(profile ? homeFor(profile.role) : "/onboarding");
+  const enrollUrl = process.env.NEXT_PUBLIC_ENROLL_URL || "https://www.beyondtatva.in";
+
   return (
-    <div className="min-h-screen bg-bg">
-      <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center gap-8 px-4 py-4 sm:px-6">
-          <Logo />
-          <nav className="hidden gap-7 text-sm font-medium text-muted md:flex">
-            <a href="#modules" className="hover:text-fg">Modules</a>
-            <a href="#pricing" className="hover:text-fg">Pricing</a>
-            <a href="#who" className="hover:text-fg">For schools</a>
-            <a href="#who" className="hover:text-fg">For parents</a>
-          </nav>
-          <div className="ml-auto flex items-center gap-2">
-            <ThemeToggle />
-            <Link href="/login" className="btn-ghost hidden sm:inline-flex">Log in</Link>
-            <Link href="/login" className="btn-primary">Get started</Link>
-          </div>
-        </div>
-      </header>
+    <div className="grid min-h-screen place-items-center bg-bg px-4 py-10">
+      <div className="absolute right-4 top-4"><ThemeToggle /></div>
+      <div className="w-full max-w-md">
+        <div className="mb-8 flex justify-center"><Logo /></div>
+        <div className="card p-6 text-center shadow-xl shadow-black/5 sm:p-8">
+          <h1 className="text-2xl font-semibold">Welcome to Beyond Tatva</h1>
+          <p className="mt-2 text-muted">Your AI course for Grades 8–10. Sign in to keep learning.</p>
+          <Link href="/login" className="btn-primary mt-6 w-full py-3"><LogIn className="h-4 w-4" /> Sign in</Link>
 
-      <section className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-12 sm:px-6 lg:grid-cols-[1fr_1.05fr] lg:pt-20">
-        <div>
-          <span className="chip border border-border bg-surface text-muted"><CalendarClock className="h-3.5 w-3.5 text-primary" /> New module every Sunday, 6 PM</span>
-          <h1 className="mt-5 text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
-            Learn AI.<br />Study smarter.<br /><span className="text-primary">Build the future.</span>
-          </h1>
-          <p className="mt-6 max-w-lg text-lg text-muted">
-            AI for Students is a 6-week course for Grades 8–10. One module premieres every Sunday. Start today with AI 101, free.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/login" className="btn-primary px-6 py-3 text-base">Start AI 101 free <ArrowRight className="h-4 w-4" /></Link>
-            <a href="#modules" className="btn-secondary px-6 py-3 text-base"><CirclePlay className="h-4 w-4" /> See all modules</a>
-          </div>
-          <div className="mt-8 flex items-center gap-3 text-sm text-muted">
-            <Users className="h-4 w-4" /> Made in Udupi for Grades 8–10
-          </div>
-        </div>
-
-        <div className="relative">
-          <div className="overflow-hidden rounded-3xl border border-border bg-surface p-2 shadow-2xl shadow-black/5">
-            <video src="/media/hero1.mp4" poster="/media/frames/v1-1.jpg" autoPlay muted loop playsInline className="aspect-video w-full rounded-2xl object-cover" />
-          </div>
-          <div className="absolute -bottom-5 -left-3 flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 shadow-lg sm:-left-6">
-            <IconTile icon={MessageSquareText} size="sm" />
-            <div>
-              <div className="text-xs text-muted">Quick check</div>
-              <div className="text-sm font-semibold">Correct, +10 XP</div>
-            </div>
-          </div>
-          <div className="absolute -right-3 -top-5 flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 shadow-lg sm:-right-6">
-            <IconTile icon={Flame} size="sm" tone="warning" />
-            <div>
-              <div className="text-xs text-muted">Streak</div>
-              <div className="text-sm font-semibold">Learn daily</div>
-            </div>
+          <div className="mt-6 space-y-3 text-left">
+            <Link href="/login?next=/course" className="flex items-center gap-3 rounded-xl border border-border p-4 transition hover:bg-surface-2">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-success-soft text-success"><Gift className="h-5 w-5" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold">New here? Start AI 101 free</span>
+                <span className="text-sm text-muted">Sign in with Google or email: Module 0 is free.</span>
+              </span>
+              <ArrowRight className="h-4 w-4 text-subtle" />
+            </Link>
+            <a href={enrollUrl} className="flex items-center gap-3 rounded-xl border border-border p-4 transition hover:bg-surface-2">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"><ExternalLink className="h-5 w-5" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold">Get the full course</span>
+                <span className="text-sm text-muted">Enroll on beyondtatva.in, then sign in here with the same email.</span>
+              </span>
+              <ArrowRight className="h-4 w-4 text-subtle" />
+            </a>
           </div>
         </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid grid-cols-2 gap-6 rounded-3xl bg-[#0f172a] px-6 py-8 text-white sm:px-10 lg:grid-cols-4">
-          {stats.map(([n, l]) => (
-            <div key={l}>
-              <div className="font-display text-3xl font-semibold sm:text-4xl">{n}</div>
-              <div className="mt-1 text-sm text-white/70">{l}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="modules" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-20 sm:px-6">
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-6">
-          <div>
-            <h2 className="text-3xl font-semibold">AI 101 free. Then a new module every Sunday.</h2>
-            <p className="mt-2 text-muted">Watch each premiere at 6 PM, or catch up any time that week.</p>
-          </div>
-          {next && (
-            <div className="rounded-2xl bg-[#0f172a] p-4 text-white">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/70">Module {next.n} premieres {fmtPremiere(next.release)}</div>
-              <Countdown to={next.release} />
-            </div>
-          )}
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {course.modules.map((m) => <ModuleCard key={m.id} module={m} hasAccess={false} courseId={course.id} />)}
-        </div>
-      </section>
-
-      <section id="pricing" className="scroll-mt-20 border-y border-border bg-surface">
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
-          <h2 className="text-3xl font-semibold">Simple pricing</h2>
-          <p className="mt-2 text-muted">Try the first module free. Unlock the rest when you&apos;re ready.</p>
-          <div className="mt-10 grid gap-4 lg:grid-cols-3">
-            {[
-              { icon: Gift, name: "Free", price: "₹0", note: "Free account", points: ["Module 0: AI 101", "Quick checks and XP", "Parent dashboard"], cta: "Start free", primary: false },
-              { icon: Sparkles, name: "Full course", price: `₹${course.price}`, note: "One time", points: ["Every module as it premieres", "In-video quick checks and XP", "Certificate on completion"], cta: "Get full access", primary: true },
-              { icon: School, name: "Schools", price: "Per student", note: "Invoiced to the school", points: ["Access keys for every student", "Teacher dashboard and reports", "On-campus workshop option"], cta: "Talk to us", primary: false },
-            ].map((t) => (
-              <div key={t.name} className={`card flex flex-col p-6 ${t.primary ? "border-primary ring-4 ring-primary/10" : ""}`}>
-                <div className="flex items-center justify-between"><IconTile icon={t.icon} tone={t.primary ? "primary" : "neutral"} />{t.primary && <span className="chip bg-primary text-primary-fg">Most popular</span>}</div>
-                <div className="mt-4 font-semibold">{t.name}</div>
-                <div className="mt-2 flex items-baseline gap-1.5"><span className="font-display text-3xl font-semibold">{t.price}</span><span className="text-sm text-muted">{t.note}</span></div>
-                <ul className="mt-5 flex-1 space-y-2.5 text-sm">{t.points.map((p) => <li key={p} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />{p}</li>)}</ul>
-                <Link href="/login" className={`${t.primary ? "btn-primary" : "btn-secondary"} mt-6 w-full`}>{t.cta}</Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-      <section id="who" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-20 sm:px-6">
-        <h2 className="text-3xl font-semibold">One platform, three views</h2>
-        <p className="mt-2 text-muted">Everyone sees exactly what they need, and nothing they shouldn&apos;t.</p>
-        <div className="mt-10 grid gap-4 lg:grid-cols-3">
-          {audiences.map((a) => (
-            <div key={a.title} className="card p-6">
-              <IconTile icon={a.icon} size="lg" />
-              <h3 className="mt-5 text-lg font-semibold">{a.title}</h3>
-              <ul className="mt-4 space-y-3 text-sm text-muted">
-                {a.points.map((p) => <li key={p} className="flex gap-2.5"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />{p}</li>)}
-              </ul>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          {[[Trophy, "Certificate on completion"], [Smartphone, "Works great on any phone"], [Plug, "Light and dark mode"]].map(([I, t]) => (
-            <div key={t} className="card flex items-center gap-3 p-4 text-sm font-medium"><IconTile icon={I} size="sm" tone="neutral" />{t}</div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6">
-        <div className="flex flex-col items-start justify-between gap-6 rounded-3xl bg-primary px-6 py-10 text-white sm:px-10 md:flex-row md:items-center">
-          <div>
-            <h2 className="text-2xl font-semibold sm:text-3xl">Bring Beyond Tatva to your school</h2>
-            <p className="mt-2 text-white/80">Workshops and full courses for Grades 8–10, with a dashboard for every teacher.</p>
-          </div>
-          <Link href="/login" className="btn shrink-0 bg-white px-6 py-3 text-base text-[#0f172a] hover:bg-white/90">Get started <ArrowRight className="h-4 w-4" /></Link>
-        </div>
-      </section>
-
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-8 text-sm text-muted sm:px-6">
-          <Logo />
-          <span>© {new Date().getFullYear()} Beyond Tatva, Udupi. AI education for the next generation.</span>
-        </div>
-      </footer>
+        <p className="mt-6 text-center text-xs text-muted">Students under 18 need a parent or guardian&apos;s consent to join.</p>
+      </div>
     </div>
   );
 }
