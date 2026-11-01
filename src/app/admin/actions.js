@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { COURSE_TAG } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { COURSE_ID } from "@/lib/catalog";
 import { VIDEO_HELP, parseVideo } from "@/lib/video";
@@ -22,6 +23,7 @@ async function run(fn) {
   const supabase = await createClient();
   const { error } = await fn(supabase);
   if (error) return { ok: false, error: error.message.includes("row-level security") ? "Only an admin can do this. Sign in with your admin account." : error.message };
+  updateTag(COURSE_TAG); // course content is cached across requests (lib/data.js)
   revalidatePath("/", "layout");
   return { ok: true };
 }

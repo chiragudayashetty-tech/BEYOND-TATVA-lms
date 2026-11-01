@@ -126,7 +126,7 @@ function NativePlayer({ src, onAnswer, onProgress }) {
         </div>
       )}
 
-      <div className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pb-2 pt-10 text-white transition sm:px-4 [&>*]:pointer-events-auto ${playing ? "opacity-0 group-hover:opacity-100" : "opacity-100"}`}>
+      <div className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pb-2 pt-10 text-white transition sm:px-4 ${playing ? "opacity-0 group-hover:opacity-100 [&>*]:pointer-events-none group-hover:[&>*]:pointer-events-auto" : "opacity-100 [&>*]:pointer-events-auto"}`}>
         <div className="relative h-5 cursor-pointer" onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); seek(((e.clientX - r.left) / r.width) * dur); }}>
           <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-white/30">
             <div className="h-full rounded-full bg-primary" style={{ width: dur ? `${(t / dur) * 100}%` : 0 }} />
@@ -135,14 +135,14 @@ function NativePlayer({ src, onAnswer, onProgress }) {
             <span key={c.at} title="Quick check" className={`absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-black/60 ${answered.includes(c.at) ? "bg-success" : "bg-accent"}`} style={{ left: `${(c.at / dur) * 100}%` }} />
           ))}
         </div>
-        <div className="flex items-center gap-1 text-sm">
-          <button onClick={toggle} aria-label={playing ? "Pause" : "Play"} className="grid h-9 w-9 place-items-center rounded-lg hover:bg-white/15">{playing ? <Pause className="h-5 w-5" fill="currentColor" /> : <Play className="h-5 w-5" fill="currentColor" />}</button>
-          <button onClick={() => seek(t - 10)} aria-label="Back 10 seconds" className="grid h-9 w-9 place-items-center rounded-lg hover:bg-white/15"><RotateCcw className="h-[18px] w-[18px]" /></button>
-          <button onClick={() => seek(t + 10)} aria-label="Forward 10 seconds" className="grid h-9 w-9 place-items-center rounded-lg hover:bg-white/15"><RotateCw className="h-[18px] w-[18px]" /></button>
-          <button onClick={() => setMuted(!muted)} aria-label={muted ? "Unmute" : "Mute"} className="grid h-9 w-9 place-items-center rounded-lg hover:bg-white/15">{muted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}</button>
-          <span className="ml-1 tabular-nums text-white/80">{fmt(t)} / {fmt(dur)}</span>
-          <button onClick={cycleSpeed} className="ml-auto rounded-lg px-2 py-1 text-xs font-semibold hover:bg-white/15">{SPEEDS[speed]}x</button>
-          <button onClick={() => (document.fullscreenElement ? document.exitFullscreen() : box.current?.requestFullscreen?.())} aria-label="Full screen" className="grid h-9 w-9 place-items-center rounded-lg hover:bg-white/15"><Maximize className="h-[18px] w-[18px]" /></button>
+        <div className="flex items-center gap-0 text-sm sm:gap-1">
+          <button onClick={toggle} aria-label={playing ? "Pause" : "Play"} className="grid h-11 w-11 place-items-center rounded-lg hover:bg-white/15">{playing ? <Pause className="h-5 w-5" fill="currentColor" /> : <Play className="h-5 w-5" fill="currentColor" />}</button>
+          <button onClick={() => seek(t - 10)} aria-label="Back 10 seconds" className="grid h-11 w-11 place-items-center rounded-lg hover:bg-white/15"><RotateCcw className="h-[18px] w-[18px]" /></button>
+          <button onClick={() => seek(t + 10)} aria-label="Forward 10 seconds" className="grid h-11 w-11 place-items-center rounded-lg hover:bg-white/15"><RotateCw className="h-[18px] w-[18px]" /></button>
+          <button onClick={() => setMuted(!muted)} aria-label={muted ? "Unmute" : "Mute"} className="grid h-11 w-11 place-items-center rounded-lg hover:bg-white/15">{muted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}</button>
+          <span className="ml-1 hidden tabular-nums text-white/80 min-[380px]:inline">{fmt(t)} / {fmt(dur)}</span>
+          <button onClick={cycleSpeed} className="ml-auto min-h-11 rounded-lg px-2 text-xs font-semibold hover:bg-white/15">{SPEEDS[speed]}x</button>
+          <button onClick={() => (document.fullscreenElement ? document.exitFullscreen() : box.current?.requestFullscreen?.())} aria-label="Full screen" className="grid h-11 w-11 place-items-center rounded-lg hover:bg-white/15"><Maximize className="h-[18px] w-[18px]" /></button>
         </div>
       </div>
     </div>

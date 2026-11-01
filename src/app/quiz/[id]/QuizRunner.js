@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, CircleCheck, CircleX, RotateCcw, Sparkles, Trophy } from "lucide-react";
@@ -50,7 +52,7 @@ export default function QuizRunner({ quiz, questions, best }) {
           {result.passed && result.xp > 0 && <div className="mt-3"><Badge tone="warning"><Sparkles className="h-3 w-3" /> +{result.xp} XP</Badge></div>}
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
             <button onClick={retry} className="btn-secondary"><RotateCcw className="h-4 w-4" /> Try again</button>
-            <a href="/course" className="btn-primary">Back to the course</a>
+            <Link href="/course" className="btn-primary">Back to the course</Link>
           </div>
         </div>
         <ol className="space-y-3">

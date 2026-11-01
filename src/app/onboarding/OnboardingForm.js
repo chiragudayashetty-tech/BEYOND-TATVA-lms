@@ -49,6 +49,7 @@ export default function OnboardingForm({ defaultName, next }) {
       return setError(error.message);
     }
     if (role === "student") {
+      await supabase.rpc("claim_purchases"); // paid on the website before signing up? unlock now
       try {
         const tags = JSON.parse(localStorage.getItem("bt_signup_source") ?? "null");
         if (tags) {

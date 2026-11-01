@@ -16,6 +16,8 @@ export async function GET(request) {
   else error = { message: "missing code" };
 
   if (error) return NextResponse.redirect(`${origin}/login?error=link`);
+  // Paid on the website before signing in? Unlock now (no-op for non-students and new accounts).
+  await supabase.rpc("claim_purchases");
   const dest = next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
   return NextResponse.redirect(`${origin}${dest}`);
 }
