@@ -8,8 +8,8 @@ export default function AutomationsPage() {
   return (
     <Shell roles={["admin"]}>
       <PageTitle title="Automations" subtitle="Rules that run on their own." />
-      <Empty icon={Workflow} title="Coming after the CRM"
-        body="Premiere reminders by email and WhatsApp, nudges for inactive students, sign-ups synced to Google Sheets, and webhooks to any other tool." />
+      <Empty icon={Workflow} title="Automations are not set up yet"
+        body="No email, WhatsApp or Sheets messages are being sent. Planned: welcome + how-to-log-in, a parent screen-time message, weekly module releases and certificate notices. Needs a WhatsApp provider, an email sender and parent opt-in wording first." />
     </Shell>
   );
 }

@@ -24,8 +24,8 @@ function Certificate({ name, course }) {
           <div className="mt-1 border-t border-[#cbd5e1] pt-1">Founder, Beyond Tatva</div>
         </div>
         <div className="text-right">
-          <div>Issued on completion</div>
-          <div className="mt-1">Verifiable ID</div>
+          <div>Preview</div>
+          <div className="mt-1">Certificate ID on issue</div>
         </div>
       </div>
     </div>
@@ -37,20 +37,21 @@ export default async function CertificatesPage() {
   const earned = course.progress === 100;
   return (
     <Shell roles={["student"]}>
-      <PageTitle title="Certificate" subtitle="Finish all modules and their quizzes to earn a certificate your school can verify." />
+      <PageTitle title="Certificate" subtitle="Finish every module to earn your certificate. This is a preview; downloading, sharing and school verification are coming before the course ends." />
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
         <div className="card p-4 sm:p-5">
           <div className={earned ? "" : "pointer-events-none select-none opacity-50 blur-[1px]"}>
             <Certificate name={profile?.full_name ?? "Student"} course={course} />
           </div>
+          {/* Not wired up yet: issuing, PDF and verification come with the certificates feature. */}
           <div className="mt-4 flex gap-2">
-            <button disabled={!earned} className="btn-primary flex-1"><Download className="h-4 w-4" /> Download PDF</button>
-            <button disabled={!earned} className="btn-secondary flex-1"><Share2 className="h-4 w-4" /> Share</button>
+            <button disabled title="Coming soon" className="btn-primary flex-1"><Download className="h-4 w-4" /> PDF coming soon</button>
+            <button disabled title="Coming soon" className="btn-secondary flex-1"><Share2 className="h-4 w-4" /> Sharing coming soon</button>
           </div>
         </div>
         <div className="space-y-3">
-          <h2 className="font-semibold">{earned ? "Earned" : `${course.progress}% of the way there`}</h2>
+          <h2 className="font-semibold">{earned ? "All lessons done! Your certificate will be issued soon." : `${course.progress}% of lessons done`}</h2>
           {course.modules.map((m) => (
             <div key={m.id} className="card flex items-center gap-4 p-4">
               <span className={`grid h-10 w-10 place-items-center rounded-xl ${m.progress === 100 ? "bg-success-soft text-success" : "bg-surface-2 text-subtle"}`}>
