@@ -25,7 +25,7 @@ export default async function Dashboard() {
           <IconTile icon={Gift} />
           <div className="min-w-0 flex-1 basis-52">
             <div className="text-sm font-semibold">You&apos;re on the free plan: AI 101 is yours</div>
-            <div className="text-sm text-muted">Unlock the other modules with your school&apos;s access key or a one-time payment.</div>
+            <div className="text-sm text-muted">Unlock the other modules with your school&apos;s access key, or by enrolling on beyondtatva.in.</div>
           </div>
           <Link href="/unlock" className="btn-primary w-full sm:w-auto"><KeyRound className="h-4 w-4" /> Unlock course</Link>
         </div>

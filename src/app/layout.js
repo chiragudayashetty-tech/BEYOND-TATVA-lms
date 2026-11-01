@@ -25,11 +25,13 @@ export const viewport = {
 
 // Applies the saved theme before first paint so dark mode never flashes light.
 const themeScript = `try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}`;
+const installCaptureScript = `window.__btInstallPrompt=window.__btInstallPrompt||null;window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__btInstallPrompt=e})`;
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${poppins.variable} h-full antialiased`}>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: installCaptureScript }} />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-full font-sans">{children}</body>

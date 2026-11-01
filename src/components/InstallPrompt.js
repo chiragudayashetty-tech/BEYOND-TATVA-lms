@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Download, Share, SquarePlus, X } from "lucide-react";
+import { Check, Download, MoreVertical, Share, Smartphone, SquarePlus, X } from "lucide-react";
 import { useIsClient } from "@/lib/hooks";
 
 const DISMISSED_UNTIL = "beyond-tatva-install-dismissed-until";
@@ -31,6 +31,10 @@ function isIosSafari() {
   return iosDevice && safari;
 }
 
+function isAndroid() {
+  return /Android/i.test(navigator.userAgent);
+}
+
 function isSuppressed() {
   if (readStorage(DISMISSED_FOREVER) === "yes") return true;
   const until = Number(readStorage(DISMISSED_UNTIL));
@@ -47,15 +51,19 @@ export default function InstallPrompt() {
 
   useEffect(() => {
     if (!isClient) return;
-    const visibilityTimer = window.setTimeout(() => {
-      if (isInstalled()) setInstalled(true);
-      else if (isSuppressed()) setHidden(true);
-      else if (isIosSafari()) setMode("ios");
-    }, 0);
+    let fallbackTimer;
+
+    const clearPendingPrompt = (event) => {
+      if (window.__btInstallPrompt === event) window.__btInstallPrompt = null;
+    };
 
     const onBeforeInstallPrompt = (event) => {
       event.preventDefault();
-      if (isInstalled() || isSuppressed()) return;
+      window.__btInstallPrompt = event;
+      if (isInstalled() || isSuppressed()) {
+        clearPendingPrompt(event);
+        return;
+      }
       setDeferredPrompt(event);
       setMode("android");
     };
@@ -64,10 +72,32 @@ export default function InstallPrompt() {
       setDeferredPrompt(null);
     };
 
+    const visibilityTimer = window.setTimeout(() => {
+      const pendingPrompt = window.__btInstallPrompt;
+      if (isInstalled()) {
+        if (pendingPrompt) clearPendingPrompt(pendingPrompt);
+        setInstalled(true);
+      } else if (isSuppressed()) {
+        if (pendingPrompt) clearPendingPrompt(pendingPrompt);
+        setHidden(true);
+      } else if (isIosSafari()) {
+        setMode("ios");
+      } else if (pendingPrompt) {
+        onBeforeInstallPrompt(pendingPrompt);
+      } else if (isAndroid()) {
+        fallbackTimer = window.setTimeout(() => {
+          const latePrompt = window.__btInstallPrompt;
+          if (latePrompt) onBeforeInstallPrompt(latePrompt);
+          else if (!isInstalled() && !isSuppressed()) setMode("manual");
+        }, 3000);
+      }
+    }, 0);
+
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
     window.addEventListener("appinstalled", onAppInstalled);
     return () => {
       window.clearTimeout(visibilityTimer);
+      if (fallbackTimer) window.clearTimeout(fallbackTimer);
       window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
       window.removeEventListener("appinstalled", onAppInstalled);
     };
@@ -77,10 +107,14 @@ export default function InstallPrompt() {
 
   const dismissForThreeDays = () => {
     writeStorage(DISMISSED_UNTIL, String(Date.now() + THREE_DAYS));
+    if (window.__btInstallPrompt) window.__btInstallPrompt = null;
+    setDeferredPrompt(null);
     setHidden(true);
   };
   const dismissForever = () => {
     writeStorage(DISMISSED_FOREVER, "yes");
+    if (window.__btInstallPrompt) window.__btInstallPrompt = null;
+    setDeferredPrompt(null);
     setHidden(true);
   };
 
@@ -88,12 +122,15 @@ export default function InstallPrompt() {
     if (!deferredPrompt || busy) return;
     setBusy(true);
     try {
-      await deferredPrompt.prompt();
+      const promptResult = deferredPrompt.prompt();
+      if (window.__btInstallPrompt === deferredPrompt) window.__btInstallPrompt = null;
+      await promptResult;
       const result = await deferredPrompt.userChoice;
       setDeferredPrompt(null);
       if (result?.outcome === "accepted") setInstalled(true);
       else dismissForThreeDays();
     } catch {
+      if (window.__btInstallPrompt === deferredPrompt) window.__btInstallPrompt = null;
       setDeferredPrompt(null);
       dismissForThreeDays();
     } finally {
@@ -120,6 +157,12 @@ export default function InstallPrompt() {
         <button type="button" disabled={busy} onClick={install} className="btn-primary mt-4 w-full sm:w-auto">
           <Download className="h-4 w-4" /> {busy ? "Opening install…" : "Install"}
         </button>
+      ) : mode === "manual" ? (
+        <div className="mt-4 flex items-start gap-3 rounded-xl border border-border bg-surface p-3 text-sm leading-relaxed">
+          <MoreVertical aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <p>Tap the <b>⋮ menu</b> in your browser, then choose <b>Add to Home screen</b> or <b>Install app</b>.</p>
+          <Smartphone aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+        </div>
       ) : (
         <ol className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
           <li className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3">

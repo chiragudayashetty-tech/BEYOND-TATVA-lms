@@ -2,7 +2,8 @@ export default function manifest() {
   return {
     name: "Beyond Tatva",
     short_name: "Beyond Tatva",
-    start_url: "/browse",
+    id: "/",
+    start_url: "/",
     display: "standalone",
     background_color: "#f6f7fb",
     theme_color: "#4f46e5",
