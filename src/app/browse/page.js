@@ -6,11 +6,12 @@ import { ContinueHero, ModuleCard, PremiereCard } from "@/components/course";
 import { canWatch, isReleased, nextPremiere } from "@/lib/catalog";
 import { getCourse, getStudentStats } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
+import InstallPrompt from "@/components/InstallPrompt";
 
 export const metadata = { title: "Dashboard · Beyond Tatva" };
 
 export default async function Dashboard() {
-  const [{ hasAccess }, course, stats] = await Promise.all([getSession(), getCourse(), getStudentStats()]);
+  const [{ hasAccess, profile }, course, stats] = await Promise.all([getSession(), getCourse(), getStudentStats()]);
   const next = nextPremiere(course);
   const released = course.modules.filter((m) => isReleased(m)).length;
   const current = course.modules.find((m) => m.progress < 100 && m.lessons.length && canWatch(m, hasAccess)) ?? course.modules[0];
@@ -18,6 +19,7 @@ export default async function Dashboard() {
 
   return (
     <Shell roles={["student"]} greeting>
+      {profile?.role === "student" && <InstallPrompt />}
       {!hasAccess && (
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 lg:mb-6">
           <IconTile icon={Gift} />
