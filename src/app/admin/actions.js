@@ -143,6 +143,11 @@ export async function assignEnrollment(_, fd) {
   return run((s) => s.rpc("admin_assign_purchase", { p_purchase: purchase, p_student: student }));
 }
 
+// Parent-phone match (unverified): Studio confirms the suggested student.
+export async function approveSuggestion(purchaseId) {
+  return run((s) => s.rpc("admin_approve_suggestion", { p_purchase: purchaseId }));
+}
+
 // ── Quizzes ─────────────────────────────────────────────────────────────────
 
 export async function saveQuiz(_, fd) {

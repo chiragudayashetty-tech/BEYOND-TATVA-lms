@@ -3,7 +3,7 @@
 import { useActionState, useTransition } from "react";
 import { Plus, Undo2, UserCheck } from "lucide-react";
 import FormStatus from "@/components/FormStatus";
-import { addEnrollment, assignEnrollment, revokeEnrollment } from "../actions";
+import { addEnrollment, approveSuggestion, assignEnrollment, revokeEnrollment } from "../actions";
 
 export function AddEnrollment() {
   const [state, action, pending] = useActionState(addEnrollment, null);
@@ -31,12 +31,20 @@ export function RevokeButton({ reference }) {
   );
 }
 
+export function ApproveButton({ purchaseId, studentName }) {
+  const [pending, start] = useTransition();
+  return (
+    <button disabled={pending} onClick={() => confirm(`Unlock the course for ${studentName}? Only the parent's phone matched, so check with the family first.`) && start(() => approveSuggestion(purchaseId))}
+      className="btn-primary px-3 py-1 text-xs"><UserCheck className="h-3.5 w-3.5" /> {pending ? "Unlocking…" : `Approve ${studentName}`}</button>
+  );
+}
+
 export function AssignForm({ purchaseId, students }) {
   const [state, action, pending] = useActionState(assignEnrollment, null);
   return (
     <form action={action} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="purchase" value={purchaseId} />
-      <select name="student" className="input h-8 w-44 py-0 text-xs" required defaultValue="">
+      <select name="student" className="input w-44 py-0 text-xs" required defaultValue="">
         <option value="" disabled>Give to student…</option>
         {students.map((s) => <option key={s.id} value={s.id}>{s.full_name}{s.guardian_phone ? ` · ${s.guardian_phone.slice(-4)}` : ""}</option>)}
       </select>

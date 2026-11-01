@@ -8,7 +8,7 @@ import { IconTile } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 
 // Payments happen on the website. After paying there, the course unlocks here automatically when the
-// student signs in with the email or parent phone used at checkout.
+// student signs in with the email used at checkout. Parent-phone-only matches are approved in Studio.
 function EnrollOnWebsite({ price, enrollUrl, signedInAs }) {
   const router = useRouter();
   const [checking, setChecking] = useState(false);
@@ -37,12 +37,12 @@ function EnrollOnWebsite({ price, enrollUrl, signedInAs }) {
       <div className="mt-5 rounded-xl border border-border bg-surface-2 p-4 text-sm">
         <p className="font-semibold">Already paid?</p>
         <p className="mt-1 text-muted">
-          The course unlocks on this account when the email or parent&apos;s phone used at checkout matches it.
+          The course unlocks on this account when the email used at checkout matches it. If you paid with a parent&apos;s phone only, we check and unlock it for you, usually within a day.
           {signedInAs && <> You&apos;re signed in as <b className="text-fg">{signedInAs}</b>.</>}
         </p>
         <button onClick={checkAgain} disabled={checking} className="btn-secondary mt-3 w-full"><RefreshCw className={`h-4 w-4 ${checking ? "animate-spin" : ""}`} /> {checking ? "Checking…" : "Check for my payment"}</button>
         {checked && !checking && (
-          <p role="status" className="mt-2 text-muted">No payment found for this account yet. If you paid with a different email or phone, message us and we&apos;ll link it.</p>
+          <p role="status" className="mt-2 text-muted">Not unlocked yet. If you paid with a parent&apos;s phone or a different email, we&apos;ll check and unlock it soon. You can also message us.</p>
         )}
       </div>
       <p className="mt-3 flex items-center gap-1.5 text-xs text-muted"><ShieldCheck className="h-3.5 w-3.5" /> Secure checkout on our website: UPI, cards and netbanking.</p>
