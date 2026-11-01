@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/safe-next";
 
 // Finishes Google sign-in (?code=) and email magic links (?token_hash=&type=).
 export async function GET(request) {
@@ -18,6 +19,6 @@ export async function GET(request) {
   if (error) return NextResponse.redirect(`${origin}/login?error=link`);
   // Paid on the website before signing in? Unlock now (no-op for non-students and new accounts).
   await supabase.rpc("claim_purchases");
-  const dest = next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+  const dest = safeNext(next);
   return NextResponse.redirect(`${origin}${dest}`);
 }
