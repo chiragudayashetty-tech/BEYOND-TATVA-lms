@@ -16,10 +16,11 @@ Tailwind 4, Supabase). Students are Grade 8–10 kids in Udupi, India; most use 
 1. Branch `codex/<task>` from the latest `origin/main`. One task per PR. Never commit to `main`. Never merge.
 2. Before each PR: `npm run lint`, `npm test`, `npm run build`, all green. Paste the output. Write what you
    changed, why, how you tested it, and **what you did not test**.
-3. **Don't touch:** `supabase/**`, `src/proxy.js`, `src/lib/supabase/*`, `src/app/api/**`, `src/app/auth/**`,
-   `src/lib/enrollments.js`, `src/app/admin/actions.js`, `vercel.json`, `.github/**`. No SQL against Supabase.
-   If a task needs a table, column, function, route or server action there, **stop and describe it in
-   the PR**; Claude builds it.
+3. **Database and security files (rule changed 2026-11-02, `AGENTS.md` wins):** you MAY add **new**
+   migrations in `supabase/migrations/` with tests in `supabase/tests/studio_test.sql` (`npm run test:db` green);
+   never edit an existing migration; never run SQL against Supabase. You MAY edit `src/proxy.js`,
+   `src/lib/supabase/*`, `src/app/api/**`, `src/app/auth/**`, `src/lib/enrollments.js`, `src/app/admin/actions.js`,
+   `vercel.json`, `.github/**`, but the PR title must start with "SECURITY:".
 4. No new dependencies or paid services. No secrets, no `.env*` files.
 5. UI: reuse `src/components/ui.js` (Card, Badge, StatCard, Empty, PageTitle, Progress, Bars, LineChart,
    Avatar, IconTile) and the classes `card`, `btn-primary`, `btn-secondary`, `btn-ghost`, `input`, `label`.

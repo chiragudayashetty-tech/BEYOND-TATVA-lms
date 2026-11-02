@@ -1,7 +1,7 @@
 # Phase 2: what's done, what's left, who builds it
 
-_Claude (lead), 2026-11-02._ **Next Codex batch: `docs/CODEX-SPRINT-1.md`.** Codex builds UI only; anything that needs a table, an API route, auth or RLS goes
-to Claude first (AGENTS.md). Codex prompt: bottom of this file.
+_Claude (lead), 2026-11-02._ **Next Codex batch: `docs/CODEX-SPRINT-1.md`.** **Since 2026-11-02 Codex builds everything, including
+migrations and security-critical files, under the limits in `AGENTS.md` (which wins over this file).** Codex prompt: bottom of this file.
 
 ## Launch checklist (status)
 | Item | Status | Left to do | Owner |
@@ -21,8 +21,8 @@ to Claude first (AGENTS.md). Codex prompt: bottom of this file.
 | Payment reconciliation | **Done** (`/admin/reconcile`, PR 27 + review fixes 28) | No | done |
 | Business analytics | Studio home has counts; Pipeline has stages | No for v1 | 3. Codex: analytics page from existing data |
 | Parent/student CRM | Pipeline + `crm_notes` table (live after "apply 8") | Done | 4. **Ready for Codex** (task 6 spec below) |
-| School bulk enrollment | School keys (one per student) | CSV roster import: **yes** | 5. Claude RPC (`admin_bulk_enroll`), then Codex UI |
-| Workshop registration and attendance | Nothing | **Yes** (`workshops`, `workshop_registrations`, attendance) | 6. Claude migration + API, then Codex UI |
+| School bulk enrollment | School keys (one per student) | CSV roster import: **yes** | 5. Codex (migration + UI), task 7 |
+| Workshop registration and attendance | Nothing | **Yes** (`workshops`, `workshop_registrations`, attendance) | 6. Codex (migration + API + UI, "SECURITY:"), task 8 |
 
 ---
 
@@ -32,10 +32,11 @@ You are Codex, the builder for Beyond Tatva LMS (repo `BEYOND-TATVA-lms`). First
 `docs/PROJECT.md` and `docs/PHASE-2.md`. Follow the rules exactly:
 - One task per branch `codex/<task>` from the latest `origin/main`; one small PR each; never commit to `main`.
 - Before each PR: `npm run lint`, `npm test`, `npm run build`. Paste the results, and say what you did NOT test.
-- **Hard limits:** no files in `supabase/migrations/`, no SQL against Supabase, no edits to `src/proxy.js`,
-  `src/lib/supabase/*`, `src/app/api/**`, `src/app/auth/**`, `src/lib/enrollments.js`, `src/app/admin/actions.js`,
-  `vercel.json`. No new paid services or dependencies. No secrets. If a task needs any of these, stop and
-  describe what you need in the PR. Claude builds it.
+- **Hard limits (see `AGENTS.md`):** you MAY add **new** migrations in `supabase/migrations/` with tests in
+  `supabase/tests/studio_test.sql` (`npm run test:db` must pass); never edit an existing migration; never run SQL
+  against Supabase. You MAY edit security-critical files (`src/proxy.js`, `src/lib/supabase/*`, `src/app/api/**`,
+  `src/app/auth/**`, `src/lib/enrollments.js`, `src/app/admin/actions.js`, `vercel.json`, `.github/**`) but the PR
+  title must start with "SECURITY:". No new paid services or dependencies. No secrets.
 - UI: reuse `src/components/ui.js` and the `card`, `btn-primary`, `btn-secondary`, `input`, `label` classes.
   Mobile first: test at 320, 375 and 430px; tap targets ≥ 44px; no sideways scroll.
 - Copy: plain English for 13–15 year olds and parents. Never promise what doesn't work: say "coming soon".
