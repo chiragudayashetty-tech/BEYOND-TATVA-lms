@@ -12,7 +12,7 @@ export default function PreviewSwitcher({ role, hasAccess }) {
   const router = useRouter();
   const pick = (r) => { setCookie("preview_role", r); router.push(homes[r]); router.refresh(); };
   return (
-    <div className="fixed bottom-20 right-3 z-50 flex flex-wrap items-center gap-1 rounded-xl border border-border bg-surface p-1 text-xs shadow-lg lg:bottom-4 lg:right-4">
+    <div data-preview-switcher className="fixed bottom-20 right-3 z-50 flex flex-wrap items-center gap-1 rounded-xl border border-border bg-surface p-1 text-xs shadow-lg lg:bottom-4 lg:right-4">
       <span className="px-2 font-medium text-subtle">Preview</span>
       {Object.keys(homes).map((r) => (
         <button key={r} onClick={() => pick(r)}

@@ -404,3 +404,38 @@ set role authenticated; select pg_temp.as_user('77777777-7777-7777-7777-77777777
 do $$ begin perform public.redeem_access_key((select code from b_codes where student_name = 'Asha')); raise exception 'B7 FAIL';
 exception when others then if sqlerrm like 'B7%' then raise; end if; raise notice 'B7 pass: %', sqlerrm; end $$;
 reset role;
+
+-- ── Workshops ────────────────────────────────────────────────────────────────
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+insert into public.workshops (slug, title, starts_at, venue, seats, published) values
+  ('udupi-ai-day', 'AI Day', now() + interval '7 days', 'Town Hall', 2, true),
+  ('draft-day', 'Draft', now() + interval '7 days', null, 10, false),
+  ('past-day', 'Past', now() - interval '1 day', null, 10, true);
+reset role;
+set role anon; select pg_temp.as_user('');
+select 'W1 public sees published workshops only' t, count(*) = 2 and bool_and(published) as pass from public.workshops;
+select 'W2 seats left shown, draft hidden' t, (public.get_workshop('udupi-ai-day') ->> 'seats_left')::int = 2 and public.get_workshop('draft-day') is null as pass;
+select 'W3 parent registers without an account' t, public.register_workshop('udupi-ai-day', 'Asha', 9, 'Mum', '98450 44444', true) = 'registered' as pass;
+select 'W4 same phone again is not a second seat' t, public.register_workshop('udupi-ai-day', 'Asha', 9, 'Mum', '+919845044444', true) = 'already' as pass;
+do $$ begin perform public.register_workshop('udupi-ai-day', 'Ravi', 8, 'Dad', '9845055555', false); raise exception 'W5 FAIL';
+exception when others then if sqlerrm like 'W5%' then raise; end if; raise notice 'W5 pass: %', sqlerrm; end $$;
+select 'W6 second family takes the last seat' t, public.register_workshop('udupi-ai-day', 'Ravi', 8, 'Dad', '9845055555', true) = 'registered' as pass;
+do $$ begin perform public.register_workshop('udupi-ai-day', 'Meera', 10, 'Mum', '9845066666', true); raise exception 'W7 FAIL';
+exception when others then if sqlerrm like 'W7%' then raise; end if; raise notice 'W7 pass: %', sqlerrm; end $$;
+do $$ begin perform public.register_workshop('draft-day', 'Meera', 10, 'Mum', '9845066666', true); raise exception 'W8 FAIL';
+exception when others then if sqlerrm like 'W8%' then raise; end if; raise notice 'W8 pass: %', sqlerrm; end $$;
+do $$ begin perform public.register_workshop('past-day', 'Meera', 10, 'Mum', '9845066666', true); raise exception 'W9 FAIL';
+exception when others then if sqlerrm like 'W9%' then raise; end if; raise notice 'W9 pass: %', sqlerrm; end $$;
+select 'W10 public cannot read registrations' t, count(*) = 0 as pass from public.workshop_registrations;
+do $$ begin insert into public.workshop_registrations (workshop_id, student_name, grade, parent_name, parent_phone, consent_at)
+  select id, 'X', 9, 'Y', '+919845077777', now() from public.workshops limit 1; raise exception 'W11 FAIL';
+exception when others then if sqlerrm like 'W11%' then raise; end if; raise notice 'W11 pass: %', sqlerrm; end $$;
+reset role;
+set role authenticated; select pg_temp.as_user('66666666-6666-6666-6666-666666666666');
+select 'W12 students cannot read registrations' t, count(*) = 0 as pass from public.workshop_registrations;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'W13 admin sees registrations, each linked to a workshop lead' t, count(*) = 2
+  and bool_and(exists (select 1 from public.leads l where l.id = r.lead_id and l.source = 'workshop')) as pass from public.workshop_registrations r;
+update public.workshop_registrations set attended_at = now() where student_name = 'Asha';
+select 'W14 admin marks attendance' t, count(*) = 1 as pass from public.workshop_registrations where attended_at is not null;
+reset role;
