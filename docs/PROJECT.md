@@ -45,7 +45,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Phase | What | Who | Time |
 |---|---|---|---|
 | A | Codex Sprint 1 tasks 4–8 (`docs/CODEX-SPRINT-1.md`) | Codex → Claude review | ~2–3 h |
-| C | CRM notes → school bulk enrollment → workshops (`docs/PHASE-2.md`) | Claude (DB) → Codex (UI) | ~2–3 h |
+| C | CRM notes → school bulk enrollment → workshops (`docs/PHASE-2.md`) | Codex (DB + UI) → Claude review | ~2–3 h |
 | B | Website payment → LMS, refunds (`docs/CODEX-PHASE-2.md`) | Codex (website) | ~1–2 h, **after Razorpay KYC** |
 | D | **Testing and fixing**: code freeze; automatic tests; real phones (cheap Android, iPhone, WhatsApp browser, slow 4G) with 2–3 families on the full path; Studio pass; security re-audit; backup restore drill; fix all critical/high | Everyone | ~1 day |
 | Launch | Vercel Pro, Supabase Pro, Resend sender, real Module 0 videos, Razorpay live | Chirag | 1 day |
