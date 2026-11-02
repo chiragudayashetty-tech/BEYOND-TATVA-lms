@@ -35,7 +35,7 @@ function StateBadge({ m, state }) {
   return <Badge tone="primary">Available</Badge>;
 }
 
-const firstLesson = (m) => m.lessons.find((l) => l.current) ?? m.lessons.find((l) => !l.done) ?? m.lessons[0];
+export const firstLesson = (m) => m.lessons.find((l) => l.current) ?? m.lessons.find((l) => !l.done) ?? m.lessons[0];
 
 export function ModuleCard({ module: m, hasAccess, courseId }) {
   const state = moduleState(m, hasAccess);

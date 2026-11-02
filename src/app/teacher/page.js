@@ -55,7 +55,11 @@ export default async function TeacherPage() {
 
   return (
     <Shell roles={["teacher"]} greeting>
-      <PageTitle title={classes.map((c) => c.name).join(", ") || "My class"} subtitle={course.title} />
+      <section className="mb-4 rounded-3xl bg-primary p-5 text-primary-fg sm:p-6 lg:mb-6">
+        <p className="text-sm opacity-90">{course.title}</p>
+        <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">{classes.map((c) => c.name).join(", ") || "My class"}</h1>
+        <p className="mt-1 text-sm opacity-90">{students.length} student{students.length === 1 ? "" : "s"}</p>
+      </section>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
         <StatCard label="Students" value={students.length} icon={Users} />
