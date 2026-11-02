@@ -1,3 +1,4 @@
+import { LoadingFrame } from "@/components/LoadingSkeleton";
 import { Card } from "@/components/ui";
 
 function Bar({ className = "" }) {
@@ -6,6 +7,7 @@ function Bar({ className = "" }) {
 
 export default function CourseLoading() {
   return (
+    <LoadingFrame>
     <div className="grid gap-6 xl:grid-cols-[1fr_360px]" role="status" aria-label="Loading course">
       <span className="sr-only">Loading course…</span>
       <div className="min-w-0 space-y-6">
@@ -38,5 +40,6 @@ export default function CourseLoading() {
         {[0, 1, 2].map((item) => <Card key={item}><Bar className="h-5 w-2/3" /><Bar className="mt-3 h-4 w-full" /><Bar className="mt-2 h-4 w-4/5" /></Card>)}
       </aside>
     </div>
+    </LoadingFrame>
   );
 }
