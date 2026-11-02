@@ -83,7 +83,9 @@ limit before choosing, a clear error for too-big files, and a progress state on 
   follow-ups. Read/write with the browser Supabase client (`createClient` from `@/lib/supabase/client`): RLS allows
   admins only. Add a "Follow-ups due (n)" filter to Pipeline (notes with `done_at is null and follow_up_at <= now()`),
   loaded with one extra query in the page (don't change `admin_pipeline`). Show due follow-ups on the Studio home
-  as a small card with links. Don't touch `supabase/**` or `src/app/admin/actions.js`.
+  as a small card with links. The `crm_notes` table and its RLS are **already live** (migration
+  `20261102000006`), so this task likely needs no migration. If you do need one (e.g. an index or helper), add a
+  **new** migration with tests per `AGENTS.md`; editing `src/app/admin/actions.js` is allowed with "SECURITY:" in the title.
 - 7. **`codex/school-bulk-enroll`** (migration + UI). Studio → School keys: "Upload class list" (CSV: student name,
   grade 8–10, parent WhatsApp; optional section). Migration: table `school_rosters` (school_id, class name, grade,
   student_name, parent_phone normalised with `public.normalize_phone`, access_key code, redeemed_by, created_at);
