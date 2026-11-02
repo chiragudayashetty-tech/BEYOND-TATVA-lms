@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Gift, KeyRound, Medal } from "lucide-react";
+import { Crown, Gift, KeyRound, Play } from "lucide-react";
 import Shell from "@/components/shell/Shell";
-import { Card, IconTile, Ring, ViewAll, Progress } from "@/components/ui";
-import { ContinueHero, ModuleCard, PremiereCard } from "@/components/course";
-import { canWatch, isReleased, nextPremiere } from "@/lib/catalog";
+import { Card, IconTile, Ring, ViewAll } from "@/components/ui";
+import { ContinueHero, ModuleCard, PremiereCard, firstLesson } from "@/components/course";
+import { canWatch, nextPremiere } from "@/lib/catalog";
 import { getCourse, getLearningStats, getLeaderboard } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -13,9 +13,25 @@ export const metadata = { title: "Dashboard · Beyond Tatva" };
 export default async function Dashboard() {
   const [{ hasAccess, profile }, course, stats, board] = await Promise.all([getSession(), getCourse(), getLearningStats(), getLeaderboard()]);
   const next = nextPremiere(course);
-  const released = course.modules.filter((m) => isReleased(m)).length;
   const current = course.modules.find((m) => m.progress < 100 && m.lessons.length && canWatch(m, hasAccess)) ?? course.modules[0];
   const done = course.lessons.filter((l) => l.done).length;
+  const nextLesson = current ? firstLesson(current) : null;
+  const firstName = profile?.full_name?.trim().split(/\s+/)[0] || "there";
+  // Friendly nudge: the XP gap to the next rank, from the leaderboard (only real numbers).
+  const me = board?.me;
+  const ahead = me && board.top.find((p) => p.rank === me.rank - 1);
+  const tip = !stats ? "Let's learn something new today." : me?.rank === 1 ? "You're #1. Keep it up!"
+    : ahead ? `${ahead.xp - me.xp + 1} XP more and you pass ${ahead.me ? "the next learner" : ahead.name} for #${ahead.rank}!`
+    : stats.xp ? `You have ${stats.xp} XP. Keep going!` : "Answer a quick check to earn your first XP.";
+  const top3 = (board?.top ?? []).slice(0, 3);
+  const bars = { 1: "h-24 bg-primary text-primary-fg", 2: "h-16 bg-primary-soft text-primary", 3: "h-14 bg-warning text-[#1e1b3a]" };
+  const podium = [top3[1], top3[0], top3[2]].filter(Boolean).map((p) => ({ ...p, bar: bars[p.rank] ?? bars[3], order: "" }));
+  const rest = (board?.top ?? []).slice(3, 10);
+  const earn = stats ? [
+    { badge: "+10", label: "Each right quick check", value: stats.xp_breakdown?.checks ?? 0, chip: "bg-primary-soft text-primary" },
+    { badge: "Quiz XP", label: "Pass a module quiz", value: stats.xp_breakdown?.quizzes ?? 0, chip: "bg-warning-soft text-warning" },
+    { badge: "up to 50", label: "Each marked assignment", value: stats.xp_breakdown?.assignments ?? 0, chip: "bg-success-soft text-success" },
+  ] : [];
 
   return (
     <Shell roles={["student"]} greeting>
@@ -31,36 +47,50 @@ export default async function Dashboard() {
         </div>
       )}
 
-      <section className="mb-5 flex items-start gap-3 rounded-2xl bg-primary-soft p-4 sm:p-5" aria-label="Welcome">
-        <IconTile icon={Medal} />
-        <div><h1 className="text-xl font-semibold">Hi {profile?.full_name?.trim().split(/\s+/)[0] || "there"}!</h1><p className="mt-1 text-sm text-muted">You have {stats?.xp ?? 0} XP. Earn more in quick checks, quizzes and assignments.</p></div>
+      <section aria-label="Welcome" className="mb-4 flex flex-col gap-4 rounded-3xl bg-primary p-5 text-primary-fg sm:p-6 lg:mb-6">
+        <div className="flex items-center gap-3">
+          <Mascot />
+          <p className="rounded-2xl rounded-bl-sm bg-surface px-4 py-2.5 text-sm font-semibold text-fg">{tip}</p>
+        </div>
+        <h1 className="text-2xl font-semibold sm:text-3xl">Hi {firstName}!</h1>
+        {nextLesson && <Link href={`/watch/${course.id}?l=${nextLesson.n}`} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[15px] font-bold text-[#3b2fc0] sm:self-start">
+          <Play className="h-4 w-4 fill-current" /> {current.progress > 0 ? "Continue" : "Start"} · Lesson {nextLesson.idx ?? 1}
+        </Link>}
       </section>
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Card className="flex items-center gap-4"><Ring value={course.progress} size={92} stroke={9}><span className="text-lg font-semibold">{course.progress}%</span></Ring><div><div className="font-semibold">Course</div><p className="text-sm text-muted">{done} of {course.lessonCount} lessons</p></div></Card>
-        {stats && <Card className="flex items-center gap-4"><Ring value={Math.min(stats.xp, 1000) / 10} size={92} stroke={9} tone="warning"><span className="text-lg font-semibold">{stats.xp}</span></Ring><div><div className="font-semibold">XP</div><p className="text-sm text-muted">{board?.me ? `Rank #${board.me.rank} of ${board.players}` : "Earn XP to join the leaderboard"}</p></div></Card>}
-        {stats?.checks_answered > 0 && <Card className="flex items-center gap-4"><Ring value={stats.checks_answered ? stats.checks_correct / stats.checks_answered * 100 : 0} size={92} stroke={9} tone="success"><span className="text-lg font-semibold">{Math.round(stats.checks_correct / stats.checks_answered * 100)}%</span></Ring><div><div className="font-semibold">Quick checks</div><p className="text-sm text-muted">{stats.checks_correct}/{stats.checks_answered} right</p></div></Card>}
+      <div className="mb-4 grid grid-cols-1 gap-3 min-[360px]:grid-cols-3 lg:mb-6">
+        <Tile tone="primary-soft"><Ring value={course.progress} size={64} stroke={7}><span className="text-sm font-semibold">{course.progress}%</span></Ring><TileText title="Course" sub={`${done} of ${course.lessonCount} lessons`} /></Tile>
+        {stats && <Tile tone="warning-soft"><span className="grid h-16 w-16 place-items-center rounded-full bg-warning text-base font-bold text-[#1e1b3a]">{stats.xp}</span><TileText title="XP" sub={board?.me ? `Rank #${board.me.rank} of ${board.players}` : "Earn XP to rank"} /></Tile>}
+        {stats?.checks_answered > 0 && <Tile tone="success-soft"><Ring value={stats.checks_correct / stats.checks_answered * 100} size={64} stroke={7} tone="success"><span className="text-sm font-semibold">{Math.round(stats.checks_correct / stats.checks_answered * 100)}%</span></Ring><TileText title="Quick checks" sub={`${stats.checks_correct} of ${stats.checks_answered} right`} /></Tile>}
       </div>
 
-      <div className="mt-4 grid gap-4 lg:mt-6 lg:gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-4 lg:gap-6 xl:grid-cols-[1.4fr_1fr]">
         <ContinueHero course={course} module={current} />
         {next ? <PremiereCard module={next} hasAccess={hasAccess} /> : (
           <Card title="All modules are out"><p className="text-sm text-muted">Finish the course to earn your certificate.</p></Card>
         )}
       </div>
 
-      {board && <section className="mt-6 grid gap-4 xl:grid-cols-2">
-        <Card title="Top learners">
-          <ol className="divide-y divide-border">
-            {board.top.slice(0, 10).map((player) => <li key={`${player.rank}-${player.name}`} className={`flex min-h-12 items-center gap-3 py-2 ${player.me ? "rounded-lg bg-primary-soft px-2 font-semibold" : ""}`}>
-              <span className="w-8 text-sm font-semibold text-muted">{player.rank <= 3 ? <Medal aria-label={`Rank ${player.rank}`} className={`h-5 w-5 ${player.rank === 1 ? "text-warning" : player.rank === 2 ? "text-muted" : "text-primary"}`} /> : `#${player.rank}`}</span><span className="min-w-0 flex-1 truncate">{player.me ? "You" : player.name}</span><span className="text-sm text-muted">{player.xp} XP</span>
+      {(board || stats) && <section className="mt-6 grid gap-4 lg:gap-6 xl:grid-cols-2">
+        {board && <div className="card rounded-3xl p-5">
+          <div className="mb-4 flex items-baseline justify-between gap-3"><h2 className="text-lg font-semibold">Top learners</h2><span className="text-xs text-muted">{board.players} learners</span></div>
+          {podium.length > 0 ? <ol className="grid grid-cols-3 items-end gap-2 text-center" aria-label="Top 3">
+            {podium.map((p) => <li key={p.rank} className={p.order}>
+              {p.rank === 1 && <Crown className="mx-auto mb-1 h-5 w-5 fill-warning text-warning" aria-hidden="true" />}
+              <div className={`mb-1.5 truncate text-xs font-bold ${p.me ? "text-primary" : ""}`}>{p.me ? "You" : p.name}</div>
+              <div className={`flex flex-col justify-center rounded-t-2xl font-bold ${p.bar}`}><span className={p.rank === 1 ? "text-2xl" : "text-xl"}>{p.rank}</span><span className="text-[11px] font-medium">{p.xp} XP</span></div>
             </li>)}
-            {board.me && !board.top.some((player) => player.me) && <li className="mt-2 flex min-h-12 items-center gap-3 border-t border-border pt-3 font-semibold"><span className="w-8 text-sm text-muted">#{board.me.rank}</span><span className="flex-1">You</span><span className="text-sm text-muted">{board.me.xp} XP</span></li>}
-          </ol>
-          <p className="mt-4 text-xs text-muted">How to earn XP: 10 per right quick check · quiz XP when you pass · up to 50 per marked assignment.</p>
+          </ol> : <p className="text-sm text-muted">Be the first: answer a quick check to earn XP.</p>}
+          {rest.length > 0 && <ol className="mt-3 space-y-2">{rest.map((p) => <li key={`${p.rank}-${p.name}`} className={`flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm ${p.me ? "bg-primary-soft font-bold" : "bg-surface-2"}`}><span className="w-6 font-semibold text-muted">{p.rank}</span><span className="min-w-0 flex-1 truncate font-semibold">{p.me ? "You" : p.name}</span><span className="text-muted">{p.xp} XP</span></li>)}</ol>}
+          {board.me && !board.top.some((p) => p.me) && <div className="mt-2 flex min-h-11 items-center gap-3 rounded-xl bg-primary-soft px-3 text-sm font-bold"><span className="w-6">{board.me.rank}</span><span className="flex-1">You</span><span>{board.me.xp} XP</span></div>}
           {board.me?.hidden && <p className="mt-3 rounded-xl bg-surface-2 p-3 text-sm">You&apos;re hidden from the leaderboard. <Link href="/profile" className="font-medium text-primary underline">Change this in Profile</Link></p>}
-        </Card>
-        {stats && <Card title="Where your XP came from"><ul className="space-y-4">{[["Quick checks", stats.xp_breakdown?.checks ?? 0], ["Quizzes", stats.xp_breakdown?.quizzes ?? 0], ["Assignments", stats.xp_breakdown?.assignments ?? 0]].map(([label, value]) => <li key={label}><div className="mb-1 flex justify-between gap-3 text-sm"><span>{label}</span><span className="font-semibold">{value} XP</span></div><Progress value={stats.xp ? value / stats.xp * 100 : 0} /></li>)}</ul></Card>}
+        </div>}
+        {stats && <div className="card rounded-3xl p-5">
+          <h2 className="mb-3 text-lg font-semibold">Ways to earn XP</h2>
+          <ul className="space-y-3">{earn.map((e) => <li key={e.label} className="flex min-h-11 items-center gap-3 text-sm font-semibold">
+            <span className={`min-w-[76px] rounded-lg py-1.5 text-center text-xs font-bold ${e.chip}`}>{e.badge}</span><span className="flex-1">{e.label}</span><span className="text-xs text-muted">{e.value} XP</span>
+          </li>)}</ul>
+        </div>}
       </section>}
 
       <section className="mt-8">
@@ -79,4 +109,17 @@ export default async function Dashboard() {
       </section>
     </Shell>
   );
+}
+
+const tileTones = { "primary-soft": "bg-primary-soft", "warning-soft": "bg-warning-soft", "success-soft": "bg-success-soft" };
+function Tile({ tone, children }) {
+  return <div className={`flex items-center gap-3 rounded-3xl p-4 min-[360px]:flex-col min-[360px]:gap-2 min-[360px]:px-2 min-[360px]:text-center ${tileTones[tone]}`}>{children}</div>;
+}
+function TileText({ title, sub }) {
+  return <div><div className="text-sm font-bold">{title}</div><div className="text-xs text-muted">{sub}</div></div>;
+}
+function Mascot() {
+  return <span className="grid h-13 w-13 shrink-0 place-items-center rounded-full bg-accent" aria-hidden="true">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1e1b3a" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><circle cx="9" cy="10" r="1" /><circle cx="15" cy="10" r="1" /><path d="M8.5 14.5c1.8 1.8 5.2 1.8 7 0" /></svg>
+  </span>;
 }
