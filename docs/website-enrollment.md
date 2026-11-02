@@ -1,7 +1,8 @@
 # Website → LMS enrollment
 
 Payments happen on beyondtatva.in. After a payment is verified there, the website tells the LMS,
-and the course unlocks on the student's LMS account that signs in with the same **email** or **parent phone**.
+and the course unlocks on the LMS account that signs in with the same **verified email** (Google) or **phone login**.
+A match on the parent phone typed at sign-up only creates a suggestion that Chirag approves in Studio (audit H2).
 
 ## 1. Set the shared secret (both Vercel projects)
 
@@ -68,14 +69,14 @@ await notifyLms({ event: "enrollment.refunded", reference: payment_id });
 ## 3. What happens
 
 - `status: "claimed"`: a student account already matched, so it's unlocked now.
-- `status: "pending"`: no account yet. It unlocks the moment they sign in with that email, or sign up giving that parent phone.
+- `status: "pending"`: no verified match yet. It unlocks the moment someone signs in with that email/phone; a parent-phone match waits for Studio approval.
 - Retrying the same `reference` is safe. Refunded payments never re-unlock.
-- Two siblings sharing one parent phone and no email match: the enrollment waits; assign it in **Studio → Enrollments**.
+- Parent-phone-only or sibling matches wait in **Studio → Enrollments** (Approve / Give to student).
 - Every enrollment is listed in **Studio → Enrollments**, where you can also add UPI/cash payments by hand.
 
 ## Tell students on the website's success page
 
-> Open **learn.beyondtatva.in** and sign in with **the same email** you used here. The full course is already unlocked.
+> Open **learn.beyondtatva.in** and sign in with **the same Google account or phone number** you used here. The course can be opened only with that login.
 
 ## Leads: website → LMS (`POST /api/leads`)
 

@@ -2,7 +2,7 @@ import { School, Users } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Avatar, Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { GrantButton, MoveAccess, NewClass, NewSchool } from "./PeopleForms";
+import { GrantButton, MoveAccess, NewClass, NewSchool, TeacherRevoke } from "./PeopleForms";
 
 export const metadata = { title: "Schools and people · Admin · Beyond Tatva" };
 
@@ -11,7 +11,7 @@ export default async function PeoplePage() {
   const [{ data: schools }, { data: classes }, { data: people }, { data: access }] = await Promise.all([
     supabase.rpc("admin_schools"),
     supabase.from("classes").select("id, name, grade, school_id, teacher_id"),
-    supabase.from("profiles").select("id, role, full_name, grade, school_id, school_name, guardian_phone, guardian_consent_at, consent_by, signed_up_by, student_phone, created_at").order("created_at", { ascending: false }),
+    supabase.from("profiles").select("id, role, full_name, grade, school_id, school_name, guardian_phone, guardian_consent_at, consent_by, teacher_terms_at, teacher_revoked_at, signed_up_by, student_phone, created_at").order("created_at", { ascending: false }),
     supabase.from("course_access").select("student_id, source"),
   ]);
   const schoolName = Object.fromEntries((schools ?? []).map((s) => [s.id, s.name]));
@@ -94,7 +94,8 @@ export default async function PeoplePage() {
             <li key={p.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
               <Avatar name={p.full_name} size="h-8 w-8 text-xs" />
               <div className="min-w-0 flex-1 truncate text-sm font-medium">{p.full_name}</div>
-              <Badge tone={p.role === "teacher" ? "primary" : "neutral"}><span className="capitalize">{p.role}</span></Badge>
+              {p.teacher_revoked_at ? <Badge tone="danger">Revoked</Badge> : p.teacher_terms_at ? <Badge tone="success">Terms accepted</Badge> : <Badge tone="warning">Terms pending</Badge>}
+              <TeacherRevoke teacherId={p.id} name={p.full_name} revoked={Boolean(p.teacher_revoked_at)} />
             </li>
           ))}
         </ul>

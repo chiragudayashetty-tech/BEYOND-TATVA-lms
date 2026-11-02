@@ -6,6 +6,7 @@ import { GraduationCap, House, Info, Users } from "lucide-react";
 import Logo from "@/components/Logo";
 import { IconTile } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
+import { TermsList } from "@/components/TeacherTerms";
 
 const who = [
   { id: "student", icon: GraduationCap, label: "I'm the student", body: "I'm in Grade 8, 9 or 10" },
@@ -22,6 +23,7 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
   const done = () => { router.replace(next ?? "/dashboard"); router.refresh(); };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [terms, setTerms] = useState(false); // teacher terms pop-up
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
   const parent = by === "parent";
   const teacher = by === "teacher";
@@ -37,13 +39,16 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
     }));
   }
 
-  async function submit(e) {
-    e.preventDefault();
+  async function submit(e, agreed = false) {
+    e?.preventDefault();
+    // A teacher code only works after the teacher accepts the terms in the pop-up.
+    if (teacher && !agreed) return setTerms(true);
+    setTerms(false);
     setBusy(true);
     setError("");
     const supabase = createClient();
     const { error } = await supabase.rpc("complete_onboarding", teacher
-      ? { p_role: "teacher", p_full_name: form.name, p_code: form.code }
+      ? { p_role: "teacher", p_full_name: form.name, p_code: form.code, p_consent: true }
       : {
           p_role: "student",
           p_full_name: form.name,
@@ -169,6 +174,19 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
           )}
         </div>
       </div>
+      {terms && (
+        <div role="dialog" aria-modal="true" aria-labelledby="terms-title" className="fixed inset-0 z-50 grid place-items-end bg-black/50 p-0 sm:place-items-center sm:p-4">
+          <div className="w-full max-w-lg animate-[pop_.15s_ease-out] rounded-t-2xl bg-surface p-6 shadow-2xl sm:rounded-2xl">
+            <h2 id="terms-title" className="text-lg font-semibold">Teacher terms</h2>
+            <p className="mt-1 text-sm text-muted">Your teacher code works only after you agree.</p>
+            <div className="mt-4"><TermsList /></div>
+            <div className="mt-6 flex gap-3">
+              <button type="button" onClick={() => setTerms(false)} className="btn-secondary">Cancel</button>
+              <button type="button" onClick={() => submit(null, true)} className="btn-primary flex-1">I agree</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

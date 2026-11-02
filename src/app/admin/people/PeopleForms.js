@@ -2,7 +2,7 @@
 
 import { useActionState, useTransition } from "react";
 import { ArrowRight, CircleCheck, KeyRound, Plus } from "lucide-react";
-import { createClass, createSchool, grantAccess, moveAccess } from "../actions";
+import { createClass, createSchool, grantAccess, moveAccess, setTeacherRevoked } from "../actions";
 
 function Status({ state }) {
   if (!state) return null;
@@ -51,6 +51,17 @@ export function NewClass({ schools, teachers }) {
         <Status state={state} />
       </div>
     </form>
+  );
+}
+
+export function TeacherRevoke({ teacherId, name, revoked }) {
+  const [pending, start] = useTransition();
+  return (
+    <button disabled={pending}
+      onClick={() => (revoked || confirm(`Remove ${name}'s teacher access? They lose the course and their class list.`)) && start(() => setTeacherRevoked(teacherId, !revoked))}
+      className={revoked ? "btn-secondary px-3 py-1 text-xs" : "btn-ghost px-3 py-1 text-xs text-danger"}>
+      {pending ? "Saving…" : revoked ? "Restore" : "Revoke"}
+    </button>
   );
 }
 
