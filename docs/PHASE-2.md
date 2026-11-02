@@ -73,8 +73,7 @@ bottom tabs work; Studio pages load for admin. Don't run it in `npm test`.
 **Task 5: `codex/upload-polish`.** On the assignment hand-in screen: show allowed file types and the size
 limit before choosing, a clear error for too-big files, and a progress state on phones. UI only.
 
-**Tasks 6–8 wait for Claude's database work.** Don't start them until `docs/PHASE-2.md` says
-"ready for Codex" next to them:
+**Tasks 6–8: Codex builds them fully now (including migrations), per the new rules in `AGENTS.md`.**
 - 6. **READY FOR CODEX: `codex/crm-notes`.** Table `public.crm_notes` (admins only via RLS): `id, student_id, lead_id`
   (one of them required: use the Pipeline row's `student_id`, else `lead_id`), `body` (1–1000 chars), `channel`
   (`call|whatsapp|email|visit|other`, optional), `follow_up_at` (optional), `done_at`, `created_by` (auto), `created_at`.
@@ -84,6 +83,21 @@ limit before choosing, a clear error for too-big files, and a progress state on 
   admins only. Add a "Follow-ups due (n)" filter to Pipeline (notes with `done_at is null and follow_up_at <= now()`),
   loaded with one extra query in the page (don't change `admin_pipeline`). Show due follow-ups on the Studio home
   as a small card with links. Don't touch `supabase/**` or `src/app/admin/actions.js`.
-- 7. School bulk enrollment: upload a class CSV (name, grade, parent WhatsApp) → school keys per student (needs `admin_bulk_enroll`).
-- 8. Workshops: Studio creates a workshop (date, school/venue, seats), a public sign-up page, an attendance
-  checklist on the day, and attendee → lead in Pipeline (needs `workshops` tables and an API route).
+- 7. **`codex/school-bulk-enroll`** (migration + UI). Studio → School keys: "Upload class list" (CSV: student name,
+  grade 8–10, parent WhatsApp; optional section). Migration: table `school_rosters` (school_id, class name, grade,
+  student_name, parent_phone normalised with `public.normalize_phone`, access_key code, redeemed_by, created_at);
+  function `admin_bulk_enroll(p_school uuid, p_course text, p_label text, p_rows jsonb)` (admins only, max 200 rows,
+  validates every row and returns per-row errors without inserting anything if any row is bad) that creates one
+  access key per row (same code format as `create_access_keys`) and returns `{name, code}` list. When a student
+  redeems a roster key, link `redeemed_by` and put them in the class (`enrollments`) for that school + grade.
+  UI: preview table with row errors before saving; after saving, download CSV of name + key to print or WhatsApp.
+  Tests: admin only, bad rows rejected atomically, keys work once, redeem links the roster row.
+- 8. **`codex/workshops`** (migration + public page + Studio UI; title starts with "SECURITY:" because it adds a
+  public write path). Tables: `workshops` (title, starts_at, venue, school_id null, seats, published, slug) and
+  `workshop_registrations` (workshop_id, student_name, grade, parent_name, parent_phone normalised, consent_at,
+  attended_at, lead_id). RLS: admins manage both; anonymous users may read **published** workshops only (no
+  registrations). Public registration goes through `register_workshop(p_slug, ...)` (security definer, rate-limit
+  per phone+workshop: one registration; respects seats; requires the parent-consent tick) which also inserts a
+  `leads` row with source `workshop` so it shows in Pipeline. Public page `/w/[slug]` (no sign-in; add the path to
+  the proxy's public list) with the form; Studio `/admin/workshops`: create/edit, registrations list, attendance
+  ticks on a phone at the door, CSV export. Tests for RLS, seats, duplicate phone, consent required.
