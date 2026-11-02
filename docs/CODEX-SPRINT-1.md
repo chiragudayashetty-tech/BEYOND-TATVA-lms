@@ -42,7 +42,7 @@ icon `ChartLine`). Range picker: 7 / 30 / 90 days (search param `?days=`), IST d
 - **Funnel** (counts + % step to step): leads (`leads`) → signed up (`profiles` role student) → started
   Module 0 (any `lesson_progress` row on a Module 0 lesson) → finished Module 0 (all Module 0 lessons
   `completed_at`) → bought (`course_access`). Reuse helpers in `src/lib/pipeline.js` where they fit.
-- **Sign-ups by source** (`profiles.signup_source` / UTM fields, see `src/lib/pipeline.js`) and **by grade**.
+- **Sign-ups by source** (`profiles.signup_source`, `profiles.signup_utm`) and **by grade**.
 - **Revenue by week** from `purchases.amount_paise` (status ≠ `revoked`), shown in ₹.
 - **Module completion:** for paying students, % who finished each module.
 - **Quiz health:** per quiz, attempts, pass rate, average score (`quiz_attempts`).
