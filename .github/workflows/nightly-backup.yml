@@ -1,0 +1,72 @@
+# Nightly encrypted database backup (audit M5). Runs at 02:17 IST.
+# The repo is public and the data is about minors: the dump is encrypted (AES-256, gpg) BEFORE upload,
+# and only someone with BACKUP_PASSPHRASE can open it. Restore steps: docs/BACKUPS.md.
+# Secrets (GitHub → Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL     Supabase → Connect → Session pooler URI (with the database password)
+#   BACKUP_PASSPHRASE   a long random passphrase, also kept in Chirag's password manager
+name: Nightly backup
+
+on:
+  schedule:
+    - cron: "47 20 * * *" # 20:47 UTC = 02:17 IST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check secrets
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DB" ] || [ -z "$PASS" ]; then echo "::error::Set SUPABASE_DB_URL and BACKUP_PASSPHRASE (docs/BACKUPS.md)"; exit 1; fi
+          if [ ${#PASS} -lt 24 ]; then echo "::error::BACKUP_PASSPHRASE must be at least 24 characters"; exit 1; fi
+
+      - name: Install pg_dump 17
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17 >/dev/null
+          /usr/lib/postgresql/17/bin/pg_dump --version
+
+      - name: Dump, check and encrypt
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          umask 077
+          STAMP=$(date -u +%Y-%m-%dT%H%MZ)
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          BIN=/usr/lib/postgresql/17/bin
+          # Our data (public schema + storage object rows + auth users). Supabase's own schemas are recreated by Supabase.
+          $BIN/pg_dump "$DB" --format=custom --no-owner --no-privileges \
+            --schema=public --schema=auth --schema=storage --file=db.dump
+          # Sanity check: the dump must list our key tables, or the backup fails loudly.
+          $BIN/pg_restore --list db.dump > toc.txt
+          for t in profiles course_access purchases leads lesson_progress; do
+            grep -q "TABLE DATA public $t " toc.txt || { echo "::error::table $t missing from dump"; exit 1; }
+          done
+          echo "Dump size: $(du -h db.dump | cut -f1), $(grep -c 'TABLE DATA' toc.txt) tables with data"
+          gpg --batch --yes --pinentry-mode loopback --passphrase-fd 3 \
+            --symmetric --cipher-algo AES256 --output "bt-db-$STAMP.dump.gpg" db.dump 3<<<"$PASS"
+          shred -u db.dump toc.txt
+
+      - name: Upload (encrypted only)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bt-db-${{ env.STAMP }}
+          path: bt-db-*.dump.gpg
+          retention-days: 30
+          if-no-files-found: error
+          compression-level: 0
