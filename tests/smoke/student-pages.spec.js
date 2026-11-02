@@ -48,6 +48,7 @@ async function inspectPage(path, width, cookies = []) {
       if (el.closest("[data-preview-switcher], nextjs-portal")) return false; // dev-only tools
       return true;
     }).map((el) => {
+      el.scrollIntoView({ block: "center" }); // check what is on top once it's on screen, not below the fold
       const rect = el.getBoundingClientRect(); const style = getComputedStyle(el);
       const inlineTextLink = el.tagName === "A" && ["inline", "inline-block"].includes(style.display);
       const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
@@ -75,7 +76,7 @@ test("paid course modules show locks when access is off and unlock when access i
   const locked = await browser.newPage({ viewport: { width: 375, height: 850 } });
   await locked.context().addCookies([{ name: "preview_access", value: "0", url: baseURL }]);
   await locked.goto(`${baseURL}/course`, { waitUntil: "networkidle" });
-  assert.ok(await locked.getByRole("link", { name: /Unlock module/i }).count() > 0, "locked modules should offer an unlock action");
+  assert.ok(await locked.locator('a[href="/unlock"]').count() > 0, "locked modules should offer an unlock action");
   await locked.close();
   const unlocked = await browser.newPage({ viewport: { width: 375, height: 850 } });
   await unlocked.context().addCookies([{ name: "preview_access", value: "1", url: baseURL }]);
@@ -87,7 +88,7 @@ test("paid course modules show locks when access is off and unlock when access i
 test("student bottom tabs navigate between student pages", async () => {
   const page = await browser.newPage({ viewport: { width: 375, height: 850 } });
   await page.goto(`${baseURL}/browse`, { waitUntil: "networkidle" });
-  await page.locator("nav.fixed a", { hasText: "Planner" }).click();
+  await page.locator("nav.fixed").getByRole("link", { name: "Planner", exact: true }).click();
   await page.waitForURL("**/planner");
   assert.equal(new URL(page.url()).pathname, "/planner");
   await page.close();
