@@ -5,6 +5,7 @@ import { Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { COURSE_ID } from "@/lib/catalog";
 import { STAGES, STALL_HOURS } from "@/lib/pipeline";
 import { createClient } from "@/lib/supabase/server";
+import { NotesButton } from "./CrmNotes";
 
 export const metadata = { title: "Pipeline · Studio · Beyond Tatva" };
 
@@ -12,18 +13,28 @@ const date = (t) => (t ? new Date(t).toLocaleString("en-IN", { day: "numeric", m
 const mins = (s) => `${Math.round((s ?? 0) / 60)} min`;
 
 export default async function PipelinePage({ searchParams }) {
-  const { stage: stageParam, stalled, view: viewParam } = await searchParams;
+  const { stage: stageParam, stalled, view: viewParam, followups } = await searchParams;
   const view = viewParam === "schools" ? "schools" : "parents";
   const stage = STAGES.find((s) => String(s.id) === stageParam)?.id ?? null;
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("admin_pipeline", { p_course: COURSE_ID, p_stall_hours: STALL_HOURS });
+  const [{ data, error }, { data: notes }] = await Promise.all([
+    supabase.rpc("admin_pipeline", { p_course: COURSE_ID, p_stall_hours: STALL_HOURS }),
+    supabase.from("crm_notes").select("*").order("created_at", { ascending: false }),
+  ]);
+  const byPerson = new Map();
+  for (const note of notes ?? []) {
+    const key = note.student_id ?? note.lead_id;
+    byPerson.set(key, [...(byPerson.get(key) ?? []), note]);
+  }
+  const duePeople = new Set((notes ?? []).filter((n) => !n.done_at && n.follow_up_at && new Date(n.follow_up_at) <= new Date()).map((n) => n.student_id ?? n.lead_id));
   // School enquiries (principals from the /schools form) are counted apart from parents and students.
   const all = (data ?? []).filter((r) => (view === "schools") === (r.source === "schools"));
   const rows = all
-    .filter((r) => (stage ? r.stage === stage : true) && (stalled ? r.stalled : true))
+    .filter((r) => (stage ? r.stage === stage : true) && (stalled ? r.stalled : true) && (followups ? duePeople.has(r.student_id ?? r.lead_id) : true))
     .sort((a, b) => new Date(b.signed_up_at ?? b.lead_at) - new Date(a.signed_up_at ?? a.lead_at));
   const count = (id) => all.filter((r) => r.stage === id).length;
   const stalledCount = all.filter((r) => r.stalled).length;
+  const dueCount = all.filter((r) => duePeople.has(r.student_id ?? r.lead_id)).length;
   const href = (q) => {
     const qs = [view === "schools" && "view=schools", q].filter(Boolean).join("&");
     return `/admin/pipeline${qs ? `?${qs}` : ""}`;
@@ -43,6 +54,7 @@ export default async function PipelinePage({ searchParams }) {
             className={view === id ? "btn-primary" : "btn-secondary"}>{label}</Link>
         ))}
       </div>
+      <Link href={href(followups ? "" : "followups=1")} className="btn-secondary mb-4 min-h-11">Follow-ups due ({dueCount}){followups ? " · Show all" : ""}</Link>
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {STAGES.map((s) => (
@@ -83,6 +95,7 @@ export default async function PipelinePage({ searchParams }) {
                   <Badge tone={STAGES[r.stage - 1].tone}>{STAGES[r.stage - 1].label}</Badge>
                   {r.stalled && <Badge tone="danger">Stopped</Badge>}
                   {r.source && <span className="text-[11px] text-subtle">from {r.source}</span>}
+                  <NotesButton person={r} notes={byPerson.get(r.student_id ?? r.lead_id) ?? []} />
                 </div>
               </li>
             ))}
