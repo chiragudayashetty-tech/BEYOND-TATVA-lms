@@ -2,7 +2,7 @@
 
 import { useActionState, useTransition } from "react";
 import { ArrowRight, CircleCheck, KeyRound, Plus } from "lucide-react";
-import { createClass, createSchool, grantAccess, moveAccess, setTeacherRevoked } from "../actions";
+import { createClass, createSchool, deleteStudent, exportStudent, grantAccess, moveAccess, setTeacherRevoked } from "../actions";
 
 function Status({ state }) {
   if (!state) return null;
@@ -51,6 +51,37 @@ export function NewClass({ schools, teachers }) {
         <Status state={state} />
       </div>
     </form>
+  );
+}
+
+// DPDP requests from a parent: download all of a student's data, or delete the account for good.
+export function StudentDataButtons({ studentId, name }) {
+  const [pending, start] = useTransition();
+  function download() {
+    start(async () => {
+      const r = await exportStudent(studentId);
+      if (!r.ok) return alert(r.error);
+      const url = URL.createObjectURL(new Blob([JSON.stringify(r.data, null, 2)], { type: "application/json" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `student-data-${name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+  function remove() {
+    const typed = prompt(`Delete ${name}'s account and all their data (progress, quiz attempts, assignments, uploads)? This can't be undone. Payments stay in Enrollments without the student link; leads are kept.\n\nType the student's full name to confirm:`);
+    if (typed == null) return;
+    start(async () => {
+      const r = await deleteStudent(studentId, typed);
+      alert(r.ok ? r.message : r.error);
+    });
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      <button type="button" disabled={pending} onClick={download} className="btn-ghost px-3 py-1 text-xs">Export</button>
+      <button type="button" disabled={pending} onClick={remove} className="btn-ghost px-3 py-1 text-xs text-danger">Delete</button>
+    </div>
   );
 }
 

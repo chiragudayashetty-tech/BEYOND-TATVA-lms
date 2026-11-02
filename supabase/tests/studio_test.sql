@@ -173,7 +173,11 @@ select 'A4 resubmit with a photo updates the same row' t, public.submit_assignme
   (select id from public.assignment_submissions limit 1) as pass;
 do $$ begin perform public.grade_submission((select id from public.assignment_submissions limit 1), 10); raise exception 'A5 FAIL'; exception when others then if sqlerrm like 'A5%' then raise; end if; raise notice 'A5 pass: %', sqlerrm; end $$;
 -- Storage: own folder only.
-insert into storage.objects (bucket_id, name) values ('submissions', '44444444-4444-4444-4444-444444444444/x/photo.jpg');
+insert into storage.objects (bucket_id, name) select 'submissions', '44444444-4444-4444-4444-444444444444/' || id || '/photo.jpg' from public.assignments limit 1;
+do $$ begin insert into storage.objects (bucket_id, name) values ('submissions', '44444444-4444-4444-4444-444444444444/x/junk.bin'); raise exception 'L1a FAIL';
+exception when insufficient_privilege then raise notice 'L1a pass: only real assignment folders'; end $$;
+do $$ begin insert into storage.objects (bucket_id, name) values ('submissions', '44444444-4444-4444-4444-444444444444/junk.bin'); raise exception 'L1b FAIL';
+exception when insufficient_privilege then raise notice 'L1b pass: no files at the top of the folder'; end $$;
 do $$ begin insert into storage.objects (bucket_id, name) values ('submissions', '11111111-1111-1111-1111-111111111111/x/evil.jpg'); raise exception 'A6 FAIL';
 exception when insufficient_privilege then raise notice 'A6 pass: cannot upload into another student''s folder'; end $$;
 select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
@@ -322,3 +326,24 @@ reset role; update public.quiz_attempts set created_at = created_at - interval '
 select 'M3d 3rd attempt reveals' t, (r ->> 'revealed')::boolean and (r -> 'results' -> 0 ->> 'correct_index')::int = 0 as pass
   from (select public.submit_quiz((select id from public.quizzes where title = 'AI 101 quiz'), array[1, 0, 1]) as r) x;
 reset role;
+
+-- ── M4: Studio export and delete ─────────────────────────────────────────────
+set role authenticated; select pg_temp.as_user('f2222222-2222-2222-2222-222222222222');
+do $$ begin perform public.admin_export_student('44444444-4444-4444-4444-444444444444'); raise exception 'X1 FAIL';
+exception when others then if sqlerrm like 'X1%' then raise; end if; raise notice 'X1 pass: students cannot export (%)', sqlerrm; end $$;
+do $$ begin perform public.admin_delete_student('44444444-4444-4444-4444-444444444444', 'School Kid'); raise exception 'X2 FAIL';
+exception when others then if sqlerrm like 'X2%' then raise; end if; raise notice 'X2 pass: students cannot delete (%)', sqlerrm; end $$;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'X3 export has the account, profile and activity' t, (e -> 'account' ->> 'email') = 'school@x.in' and (e -> 'profile' ->> 'full_name') = 'School Kid'
+  and json_array_length(e -> 'assignment_submissions') = 1 and json_array_length(e -> 'quiz_attempts') >= 2
+  from (select public.admin_export_student('44444444-4444-4444-4444-444444444444') as e) x;
+do $$ begin perform public.admin_delete_student('44444444-4444-4444-4444-444444444444', 'Wrong Name'); raise exception 'X4 FAIL';
+exception when others then if sqlerrm like 'X4%' then raise; end if; raise notice 'X4 pass: %', sqlerrm; end $$;
+select 'X5 delete returns the file paths' t, cardinality(public.admin_delete_student('44444444-4444-4444-4444-444444444444', ' school kid ')) = 1 as pass;
+reset role;
+select 'X6 account and activity gone, payment kept unlinked' t,
+  not exists (select 1 from auth.users where id = '44444444-4444-4444-4444-444444444444')
+  and not exists (select 1 from public.quiz_attempts where student_id = '44444444-4444-4444-4444-444444444444')
+  and not exists (select 1 from public.course_access where student_id = '44444444-4444-4444-4444-444444444444')
+  and exists (select 1 from public.purchases where reference = 'pay_5' and claimed_by is null)
+  and exists (select 1 from public.data_deletions where student_id = '44444444-4444-4444-4444-444444444444') as pass;
