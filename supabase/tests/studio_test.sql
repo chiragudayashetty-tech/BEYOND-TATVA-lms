@@ -347,3 +347,19 @@ select 'X6 account and activity gone, payment kept unlinked' t,
   and not exists (select 1 from public.course_access where student_id = '44444444-4444-4444-4444-444444444444')
   and exists (select 1 from public.purchases where reference = 'pay_5' and claimed_by is null)
   and exists (select 1 from public.data_deletions where student_id = '44444444-4444-4444-4444-444444444444') as pass;
+
+-- ── CRM notes ────────────────────────────────────────────────────────────────
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+insert into public.crm_notes (student_id, body, channel, follow_up_at)
+values ('66666666-6666-6666-6666-666666666666', 'Called mum, will pay after exams', 'call', now() - interval '1 hour');
+insert into public.crm_notes (lead_id, body) select id, 'Asked for school pricing' from public.leads limit 1;
+select 'C1 admin adds notes on students and leads' t, count(*) = 2 and bool_and(created_by = auth.uid()) as pass from public.crm_notes;
+select 'C2 due follow-ups' t, count(*) = 1 as pass from public.crm_notes where done_at is null and follow_up_at <= now();
+select 'C3 export includes notes' t, json_array_length(public.admin_export_student('66666666-6666-6666-6666-666666666666') -> 'crm_notes') = 1 as pass;
+do $$ begin insert into public.crm_notes (body) values ('nobody'); raise exception 'C4 FAIL';
+exception when check_violation then raise notice 'C4 pass: a note needs a person'; end $$;
+select pg_temp.as_user('66666666-6666-6666-6666-666666666666');
+select 'C5 students cannot read notes' t, count(*) = 0 as pass from public.crm_notes;
+do $$ begin insert into public.crm_notes (student_id, body) values (auth.uid(), 'self note'); raise exception 'C6 FAIL';
+exception when insufficient_privilege then raise notice 'C6 pass: students cannot write notes'; end $$;
+reset role;
