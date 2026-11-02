@@ -61,3 +61,11 @@ test("Studio delete removes uploaded files with the server-only admin client", (
   assert.match(a, /storage\.from\("submissions"\)\.remove\(files\)/);
   assert.doesNotMatch(src("app/admin/people/PeopleForms.js"), /supabase\/admin/);
 });
+
+test("page skeletons share the app frame (padding, top bar, progress bar)", async () => {
+  const { readdirSync, statSync } = await import("node:fs");
+  const walk = (d) => readdirSync(d).flatMap((f) => { const p = `${d}/${f}`; return statSync(p).isDirectory() ? walk(p) : [p]; });
+  const root = new URL("../src/app", import.meta.url).pathname;
+  const loaders = walk(root).filter((p) => p.endsWith("/loading.js") );
+  for (const f of loaders) assert.match(readFileSync(f, "utf8"), /LoadingState|LoadingFrame/, f);
+});

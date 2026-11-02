@@ -1,3 +1,4 @@
+import { LoadingFrame } from "@/components/LoadingSkeleton";
 import { Card } from "@/components/ui";
 
 function Bar({ className = "" }) {
@@ -6,6 +7,7 @@ function Bar({ className = "" }) {
 
 export default function AdminLoading() {
   return (
+    <LoadingFrame>
     <div className="space-y-6" role="status" aria-label="Loading Studio">
       <span className="sr-only">Loading Studio…</span>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
@@ -20,5 +22,6 @@ export default function AdminLoading() {
         </div>
       </div>
     </div>
+    </LoadingFrame>
   );
 }
