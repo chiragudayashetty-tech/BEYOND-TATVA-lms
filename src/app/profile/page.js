@@ -63,7 +63,7 @@ export default async function ProfilePage() {
             <div className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-subtle">Preferences</div>
             <Row icon={Moon} label="Dark mode" hint="Easier on the eyes at night"><ThemeSwitch /></Row>
             {student && <LeaderboardSwitch hidden={board?.me?.hidden ?? false} />}
-            <Row icon={Bell} label="Notifications" hint="Class reminders, grades and streaks" href="/profile#settings" />
+            <Row icon={Bell} label="Notifications" hint="Class reminders and grades" href="/profile#settings" />
           </section>
           <section className="card divide-y divide-border overflow-hidden">
             <div className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-subtle">Account</div>

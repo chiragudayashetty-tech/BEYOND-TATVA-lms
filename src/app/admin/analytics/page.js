@@ -143,7 +143,7 @@ function InsightsSection({ insights }) {
       <StatCard label="Refunds" value={insights.refunds.count} hint={`${rupees(insights.refunds.paise)} returned`} tone="danger" />
 
       <Card title="Schools">
-        {insights.schools?.length ? <ul className="space-y-2">{insights.schools.map((row) => <li key={row.school} className="rounded-xl bg-surface-2 p-3"><div className="font-medium">{row.school}</div><div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted"><span>{row.keys} keys</span><span>{row.used} used ({row.keys ? Math.round(row.used / row.keys * 100) : 0}%)</span><span>{row.students} students</span></div></li>)}</ul> : <Empty title="No school data yet" body="School keys and students will appear here." />}
+        {insights.schools?.length ? <ul className="space-y-2">{insights.schools.map((row) => <li key={row.school} className="rounded-xl bg-surface-2 p-3"><div className="font-medium">{row.school}</div><div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted"><span>{row.keys ?? 0} keys</span><span>{row.used ?? 0} used ({row.keys ? Math.round((row.used ?? 0) / row.keys * 100) : 0}%)</span><span>{row.students ?? 0} students</span></div></li>)}</ul> : <Empty title="No school data yet" body="School keys and students will appear here." />}
       </Card>
 
       <Card title="Workshops">

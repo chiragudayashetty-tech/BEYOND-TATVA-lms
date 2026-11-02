@@ -1,4 +1,3 @@
-import Shell from "@/components/shell/Shell";
 import { Card, PageTitle } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import WorkshopSignup from "./WorkshopSignup";
