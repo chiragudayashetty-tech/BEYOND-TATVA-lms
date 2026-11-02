@@ -49,6 +49,7 @@ export default function QuizRunner({ quiz, questions, best }) {
           </span>
           <h1 className="mt-3 text-2xl font-semibold">{result.passed ? "You passed!" : "Not yet. Try again!"}</h1>
           <p className="mt-1 text-muted">{result.score} of {result.total} correct ({pct}%). Pass mark is {result.pass_percent}%.</p>
+          {!result.revealed && <p className="mt-2 text-sm text-muted">You&apos;ll see the right answers once you pass, or after your 3rd try. Look back at the lesson and try again.</p>}
           {result.passed && result.xp > 0 && <div className="mt-3"><Badge tone="warning"><Sparkles className="h-3 w-3" /> +{result.xp} XP</Badge></div>}
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
             <button onClick={retry} className="btn-secondary"><RotateCcw className="h-4 w-4" /> Try again</button>
@@ -66,7 +67,7 @@ export default function QuizRunner({ quiz, questions, best }) {
                 </div>
                 <ul className="mt-3 space-y-1.5 pl-7 text-sm">
                   {qq.options.map((o, j) => (
-                    <li key={j} className={`rounded-lg px-3 py-1.5 ${j === r.correct_index ? "bg-success-soft font-medium text-success" : j === r.picked ? "bg-danger-soft text-danger line-through" : "text-muted"}`}>{o}</li>
+                    <li key={j} className={`rounded-lg px-3 py-1.5 ${r.correct_index != null && j === r.correct_index ? "bg-success-soft font-medium text-success" : j === r.picked ? (r.correct ? "bg-success-soft font-medium text-success" : "bg-danger-soft text-danger line-through") : "text-muted"}`}>{o}</li>
                   ))}
                 </ul>
                 {r.explanation && <p className="mt-2 pl-7 text-sm text-muted">{r.explanation}</p>}

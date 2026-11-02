@@ -1,12 +1,12 @@
 # Phase 2: what's done, what's left, who builds it
 
-_Claude (lead), 2026-11-02._ Codex builds UI only; anything that needs a table, an API route, auth or RLS goes
+_Claude (lead), 2026-11-02._ **Next Codex batch: `docs/CODEX-SPRINT-1.md`.** Codex builds UI only; anything that needs a table, an API route, auth or RLS goes
 to Claude first (AGENTS.md). Codex prompt: bottom of this file.
 
 ## Launch checklist (status)
 | Item | Status | Left to do | Owner |
 |---|---|---|---|
-| Database permissions and RLS | **Mostly done.** Audit + fixes H1, H2, H3 live (H3 waiting for "apply 5"). RLS on every table. | M2 progress/answers via checked functions; M3 quiz answers after pass or 3 tries; L1 upload path rule; L6 indexes | Claude |
+| Database permissions and RLS | **Mostly done.** H1, H2, H3 live; M2 + M3 built (PR `checked progress`). RLS on every table. | L1 upload path rule; L6 indexes | Claude |
 | Student sign-in | **Done in code**, SQL-tested (onboarding, consent, one login per child). | One real test on a phone: Google sign-in → "I'm a parent" → course. Automated browser smoke tests. | Chirag (manual), Codex (tests) |
 | Course access rules | **Done**, SQL-tested (free Module 0, release dates, paid, teacher, keys). | Browser smoke tests for locked vs unlocked. | Codex |
 | Assignment uploads | **Works**, SQL-tested (private bucket, own folder). | L1 tighter path rule. Codex: file type/size message on phones. | Claude, Codex |
@@ -18,7 +18,7 @@ to Claude first (AGENTS.md). Codex prompt: bottom of this file.
 | Feature | Today | Needs a database change? | Build order |
 |---|---|---|---|
 | Website → LMS integration | Leads API live; payment → LMS not wired | No (API exists) | 1. Codex (website): `docs/CODEX-PHASE-2.md` |
-| Payment reconciliation | Studio → Enrollments lists payments | No for v1 | 2. Codex: reconciliation view + CSV |
+| Payment reconciliation | **Done** (`/admin/reconcile`, PR 27 + review fixes 28) | No | done |
 | Business analytics | Studio home has counts; Pipeline has stages | No for v1 | 3. Codex: analytics page from existing data |
 | Parent/student CRM | Pipeline (stages 1–5, filters, CSV) | Notes/follow-ups: **yes** | 4. Claude migration (`crm_notes`), then Codex UI |
 | School bulk enrollment | School keys (one per student) | CSV roster import: **yes** | 5. Claude RPC (`admin_bulk_enroll`), then Codex UI |

@@ -144,6 +144,8 @@ do $$ begin perform public.submit_quiz((select id from public.quizzes limit 1), 
 select 'Q8 2 of 3 passes at 60%' t, (r ->> 'score')::int = 2 and (r ->> 'passed')::boolean and (r ->> 'xp')::int = 100
   and (r -> 'results' -> 1 ->> 'correct')::boolean = false and r -> 'results' -> 1 ->> 'explanation' = 'Always check.' as pass
   from (select public.submit_quiz((select id from public.quizzes limit 1), array[0, 0, 0]) as r) x;
+reset role; update public.quiz_attempts set created_at = created_at - interval '1 minute';
+set role authenticated; select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
 select 'Q9 1 of 3 fails' t, ((public.submit_quiz((select id from public.quizzes limit 1), array[1, 0, 1])) ->> 'passed')::boolean = false as pass;
 select 'Q10 attempts saved' t, count(*) = 2 as pass from public.quiz_attempts where student_id = auth.uid();
 do $$ begin insert into public.quiz_attempts (quiz_id, student_id, answers, score, total, passed) select id, auth.uid(), '{0}', 3, 3, true from public.quizzes limit 1; raise exception 'Q11 FAIL';
@@ -282,4 +284,41 @@ select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
 select public.admin_set_teacher_revoked('7eac0000-0000-0000-0000-000000000001', false);
 select pg_temp.as_user('7eac0000-0000-0000-0000-000000000001');
 select 'H3e restored teacher has access again' t, public.has_course_access('ai-for-students') as pass;
+reset role;
+
+-- ── M2: progress and answers only through checked functions ──────────────────
+create function pg_temp.lesson(pos int) returns uuid language sql as $$
+  select l.id from public.lessons l join public.chapters c on c.id = l.chapter_id where c.course_id = 'ai-for-students' and c.position = pos order by l.position limit 1 $$;
+set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+do $$ begin insert into public.lesson_progress (student_id, lesson_id, completed_at) values (auth.uid(), pg_temp.lesson(1), now()); raise exception 'M2a FAIL';
+exception when insufficient_privilege then raise notice 'M2a pass: no direct progress writes'; end $$;
+do $$ begin insert into public.checkpoint_answers (student_id, lesson_id, question, correct) values (auth.uid(), pg_temp.lesson(0), 'q', true); raise exception 'M2b FAIL';
+exception when insufficient_privilege then raise notice 'M2b pass: no direct answer writes'; end $$;
+do $$ begin perform public.save_progress(pg_temp.lesson(1), 100, true); raise exception 'M2c FAIL';
+exception when others then if sqlerrm like 'M2c%' then raise; end if; raise notice 'M2c pass: locked lesson refused (%)', sqlerrm; end $$;
+select public.save_progress(pg_temp.lesson(0), 120);
+select public.save_progress(pg_temp.lesson(0), 60);
+select public.save_progress(pg_temp.lesson(0), 99999999, true);
+select 'M2d free lesson saved, watch time never goes down and is capped' t,
+  (select seconds_watched between 120 and 14400 and completed_at is not null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select public.save_progress(pg_temp.lesson(0), null, false);
+select 'M2e can un-mark done' t, (select completed_at is null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select 'M2f first answer counts' t, public.save_answer(pg_temp.lesson(0), 'Which tool?', true) and not public.save_answer(pg_temp.lesson(0), 'Which tool?', true) as pass;
+select 'M2g one row' t, (select count(*) = 1 from public.checkpoint_answers where student_id = auth.uid()) as pass;
+do $$ begin perform public.save_answer(pg_temp.lesson(1), 'x', true); raise exception 'M2h FAIL';
+exception when others then if sqlerrm like 'M2h%' then raise; end if; raise notice 'M2h pass: %', sqlerrm; end $$;
+reset role;
+
+-- ── M3: quiz answers only after a pass or the 3rd attempt ────────────────────
+set role authenticated; select pg_temp.as_user('f2222222-2222-2222-2222-222222222222');
+select 'M3a 1st failed attempt hides answers' t, (r ->> 'revealed')::boolean = false and r -> 'results' -> 0 ->> 'correct_index' is null
+  and r -> 'results' -> 0 ->> 'explanation' is null and (r -> 'results' -> 0 ->> 'correct') is not null as pass
+  from (select public.submit_quiz((select id from public.quizzes where title = 'AI 101 quiz'), array[1, 0, 1]) as r) x;
+do $$ begin perform public.submit_quiz((select id from public.quizzes where title = 'AI 101 quiz'), array[1, 0, 1]); raise exception 'M3b FAIL';
+exception when others then if sqlerrm like 'M3b%' then raise; end if; raise notice 'M3b pass: %', sqlerrm; end $$;
+reset role; update public.quiz_attempts set created_at = created_at - interval '1 minute'; set role authenticated; select pg_temp.as_user('f2222222-2222-2222-2222-222222222222');
+select 'M3c 2nd failed attempt still hidden' t, (public.submit_quiz((select id from public.quizzes where title = 'AI 101 quiz'), array[1, 0, 1]) ->> 'revealed')::boolean = false as pass;
+reset role; update public.quiz_attempts set created_at = created_at - interval '1 minute'; set role authenticated; select pg_temp.as_user('f2222222-2222-2222-2222-222222222222');
+select 'M3d 3rd attempt reveals' t, (r ->> 'revealed')::boolean and (r -> 'results' -> 0 ->> 'correct_index')::int = 0 as pass
+  from (select public.submit_quiz((select id from public.quizzes where title = 'AI 101 quiz'), array[1, 0, 1]) as r) x;
 reset role;
