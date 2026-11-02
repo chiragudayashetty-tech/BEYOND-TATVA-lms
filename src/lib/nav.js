@@ -44,6 +44,7 @@ export const nav = {
       { href: "/admin/access", label: "School keys", icon: "KeyRound" },
       { href: "/admin/pipeline", label: "Pipeline", icon: "Contact" },
       { href: "/admin/analytics", label: "Analytics", icon: "ChartLine" },
+      { href: "/admin/workshops", label: "Workshops", icon: "CalendarDays" },
       { href: "/admin/automations", label: "Automations", icon: "Workflow" },
     ],
     more: [
