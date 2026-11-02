@@ -41,7 +41,7 @@ const supportUrl = supportNumber.length >= 8 ? `https://wa.me/${supportNumber}` 
 
 export default function HelpPage() {
   return (
-    <Shell roles={["student", "parent", "teacher", "admin"]}>
+    <Shell roles={["student", "teacher", "admin"]}>
       <PageTitle title="Help and support" subtitle="Quick answers for students, families and teachers." />
       <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
         <Card title="Common questions" className="divide-y divide-border">
@@ -63,7 +63,7 @@ export default function HelpPage() {
 
           <Card title="Your privacy">
             <p className="text-sm leading-relaxed text-muted">We store your name, grade, school and parent or guardian&apos;s WhatsApp number so the course can work and your family can receive important updates. We never sell this information.</p>
-            <p className="mt-3 text-sm leading-relaxed text-muted">To delete your data, ask a parent or guardian to message us. Self-service deletion in Studio is coming soon.</p>
+            <p className="mt-3 text-sm leading-relaxed text-muted">Want a copy of your data, or want it deleted? Ask a parent or guardian to message us and we will do it for you.</p>
           </Card>
         </div>
       </div>
