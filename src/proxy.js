@@ -31,7 +31,8 @@ export async function proxy(request) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims?.sub ? data.claims : null;
   // API routes answer for themselves (401 JSON, or Razorpay's webhook which has no session).
-  const isPublic = PUBLIC.includes(pathname) || pathname.startsWith("/auth/") || pathname.startsWith("/api/");
+  // /w/<slug> is the public workshop sign-up page (parents register without an account).
+  const isPublic = PUBLIC.includes(pathname) || pathname.startsWith("/auth/") || pathname.startsWith("/api/") || pathname.startsWith("/w/");
 
   let response;
   if (!user && !isPublic) {

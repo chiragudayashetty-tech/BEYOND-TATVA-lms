@@ -35,9 +35,11 @@ export default function ThemeToggle({ className = "" }) {
 export function ThemeSwitch() {
   const [dark, toggle] = useTheme();
   return (
-    <button role="switch" aria-checked={dark} onClick={toggle}
-      className={`relative h-6 w-11 rounded-full transition ${dark ? "bg-primary" : "bg-border"}`}>
-      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${dark ? "left-[22px]" : "left-0.5"}`} />
+    // 44×44 tap area around the 44×24 track (thumb-friendly on phones).
+    <button role="switch" aria-checked={dark} aria-label="Dark mode" onClick={toggle} className="grid h-11 w-11 place-items-center">
+      <span className={`relative h-6 w-11 rounded-full transition ${dark ? "bg-primary" : "bg-border"}`}>
+        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${dark ? "left-[22px]" : "left-0.5"}`} />
+      </span>
     </button>
   );
 }

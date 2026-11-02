@@ -72,7 +72,7 @@ export default async function PipelinePage({ searchParams }) {
       <Card pad={false}
         title={`${stage ? STAGES[stage - 1].label : "Everyone"}${stalled ? " · stopped" : ""} (${rows.length})`}
         action={
-          <Link href={href(stalled ? (stage ? `stage=${stage}` : "") : `stalled=1${stage ? `&stage=${stage}` : ""}`)} className="inline-flex items-center gap-1 text-xs text-primary">
+          <Link href={href(stalled ? (stage ? `stage=${stage}` : "") : `stalled=1${stage ? `&stage=${stage}` : ""}`)} className="inline-flex min-h-11 items-center gap-1 text-xs text-primary">
             <Filter size={14} /> {stalled ? "Show all" : `Stopped watching > ${STALL_HOURS}h (${stalledCount})`}
           </Link>
         }>

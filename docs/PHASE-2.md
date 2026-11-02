@@ -108,3 +108,11 @@ limit before choosing, a clear error for too-big files, and a progress state on 
   `leads` row with source `workshop` so it shows in Pipeline. Public page `/w/[slug]` (no sign-in; add the path to
   the proxy's public list) with the form; Studio `/admin/workshops`: create/edit, registrations list, attendance
   ticks on a phone at the door, CSV export. Tests for RLS, seats, duplicate phone, consent required.
+  **Backend done (migration `20261102000008_workshops`, proxy allows `/w/*`).** Codex UI:
+  - Public `/w/[slug]` (works signed out): `supabase.rpc("get_workshop", { p_slug })` → `{ title, starts_at, venue,
+    slug, seats_left, open }` or `null` (show "Workshop not found"). Form calls `rpc("register_workshop", { p_slug,
+    p_student_name, p_grade, p_parent_name, p_parent_phone, p_consent })` → `"registered"` or `"already"`; errors
+    come back as friendly messages (show `error.message`). Grades 8–10 only. Consent tick text: "I am the parent or
+    guardian and agree to Beyond Tatva contacting me on WhatsApp about this workshop."
+  - Studio `/admin/workshops` (admin only): plain table reads/writes on `workshops` (create/edit/publish) and
+    `workshop_registrations` (list, `attended_at` tick, CSV export). RLS already limits both to admins.
