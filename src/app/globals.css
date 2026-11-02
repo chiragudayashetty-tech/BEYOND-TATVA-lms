@@ -130,3 +130,7 @@ h1, h2, h3, h4 {
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
+
+/* Keep the compact seven-column planner grid while giving each day a wider hit area. */
+.planner-day-hit { position: relative; }
+.planner-day-hit::before { content: ""; position: absolute; inset: 0 -6px; }
