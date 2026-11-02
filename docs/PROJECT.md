@@ -90,4 +90,4 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 3. Profile page: make "Edit profile" (name, avatar) work; "Help and support" page with WhatsApp contact.
 4. Loading skeletons (`loading.js`) for /course, /watch, /admin pages.
 
-Codex tasks that turn out to need a table, an API route or auth changes: stop and hand back to Claude.
+Codex tasks that need a table, an API route or auth changes: Codex builds them under `AGENTS.md` limits (new migration + tests; "SECURITY:" title for security files).
