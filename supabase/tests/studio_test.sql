@@ -439,3 +439,28 @@ select 'W13 admin sees registrations, each linked to a workshop lead' t, count(*
 update public.workshop_registrations set attended_at = now() where student_name = 'Asha';
 select 'W14 admin marks attendance' t, count(*) = 1 as pass from public.workshop_registrations where attended_at is not null;
 reset role;
+
+-- ── Learning log and dashboard stats ─────────────────────────────────────────
+-- Student eeee watched lesson 0 in the M2 block: 120 s then a jump to the cap a moment later.
+set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+select 'G1 today logged, skipping ahead does not count as watching' t,
+  (select seconds between 60 and 120 from public.learning_days where student_id = auth.uid()) as pass;
+select 'G2 stats: week of 7 days, streak, answers' t,
+  jsonb_array_length(s -> 'week') = 7 and (s ->> 'streak')::int = 1 and (s ->> 'best_streak')::int = 1
+  and (s ->> 'checks_answered')::int >= 1 and (s ->> 'minutes_this_week')::int between 1 and 2
+  and jsonb_array_length(s -> 'active_days') = 1 as pass
+  from (select public.my_learning_stats() as s) x;
+do $$ begin insert into public.learning_days (student_id, day, seconds) values (auth.uid(), current_date - 1, 3600); raise exception 'G3 FAIL';
+exception when insufficient_privilege then raise notice 'G3 pass: no direct writes to the learning log'; end $$;
+select pg_temp.as_user('66666666-6666-6666-6666-666666666666');
+select 'G4 students cannot see another student''s days' t, count(*) = 0 as pass from public.learning_days where student_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+reset role;
+insert into public.learning_days (student_id, day, seconds) values
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', (now() at time zone 'Asia/Kolkata')::date - 1, 600),
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', (now() at time zone 'Asia/Kolkata')::date - 2, 600),
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', (now() at time zone 'Asia/Kolkata')::date - 5, 600);
+set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+select 'G5 streak counts consecutive days; best streak kept' t,
+  (s ->> 'streak')::int = 3 and (s ->> 'best_streak')::int = 3 and (s ->> 'minutes_this_week')::int between 31 and 32 as pass
+  from (select public.my_learning_stats() as s) x;
+reset role;
