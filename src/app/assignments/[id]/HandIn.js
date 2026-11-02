@@ -26,6 +26,7 @@ export default function HandIn({ assignment: a, moduleLabel, submission: sub, fi
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const previews = useRef(new Map());
+  const uploadedPaths = useRef(new Map()); // File -> storage path, so "Try again" doesn't upload twice
   const [previewSources, setPreviewSources] = useState({});
 
   useEffect(() => {
@@ -72,10 +73,12 @@ export default function HandIn({ assignment: a, moduleLabel, submission: sub, fi
     try {
       const uploaded = [];
       for (const [index, f] of added.entries()) {
+        if (uploadedPaths.current.has(f)) { uploaded.push(uploadedPaths.current.get(f)); continue; }
         setUploadProgress(`Uploading file ${index + 1} of ${added.length}…`);
         const path = `${userId}/${a.id}/${Date.now()}-${safeName(f.name)}`;
         const { error } = await supabase.storage.from("submissions").upload(path, f, { contentType: f.type || undefined, upsert: false });
         if (error) throw new Error(/mime|type/i.test(error.message) ? `${f.name}: choose a JPG, PNG, WebP, HEIC, HEIF, or PDF file.` : `Upload failed for ${f.name}. Check your internet and try again.`);
+        uploadedPaths.current.set(f, path);
         uploaded.push(path);
       }
       setUploadProgress("Saving your work…");
@@ -84,6 +87,7 @@ export default function HandIn({ assignment: a, moduleLabel, submission: sub, fi
       });
       if (error) throw new Error(error.message);
       setAdded([]);
+      uploadedPaths.current.clear();
       previews.current.forEach((url) => URL.revokeObjectURL(url));
       previews.current.clear();
       setPreviewSources({});
