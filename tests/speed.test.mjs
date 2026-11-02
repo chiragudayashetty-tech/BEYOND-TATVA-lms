@@ -31,3 +31,15 @@ test("buttons and inputs are at least 44px tall, inputs 16px on phones (no iOS z
   assert.match(css, /@utility input \{\s*@apply[^;]*min-h-11[^;]*text-base[^;]*sm:text-sm/);
   assert.match(css, /touch-action: manipulation/);
 });
+
+test("every nav icon exists in NavLinks (no silent fallback circles)", async () => {
+  const { nav } = await import("../src/lib/nav.js");
+  const links = src("components/shell/NavLinks.js");
+  for (const role of Object.values(nav)) for (const item of [...role.main, ...role.more, ...role.mobile]) {
+    assert.match(links, new RegExp(`\\b${item.icon}\\b`), item.icon);
+  }
+});
+
+test("reconciliation CSV neutralises spreadsheet formulas", () => {
+  assert.match(src("app/admin/reconcile/reconcile-controls.js"), /\^\[=\+\\-@/);
+});

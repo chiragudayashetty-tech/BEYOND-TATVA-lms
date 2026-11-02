@@ -1,4 +1,4 @@
-import { Download, ReceiptText } from "lucide-react";
+import { ReceiptText } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle, StatCard } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
@@ -30,7 +30,8 @@ export default async function ReconcilePage({ searchParams }) {
     .order("created_at", { ascending: false }).limit(2000);
   const rows = data ?? [];
   const count = (status) => rows.filter((row) => row.status === status).length;
-  const collected = rows.filter((row) => row.status === "claimed").reduce((sum, row) => sum + (row.amount_paise ?? 0), 0);
+  // Money received = everything not refunded (waiting payments are paid, just not linked to an account yet).
+  const collected = rows.filter((row) => row.status !== "revoked").reduce((sum, row) => sum + (row.amount_paise ?? 0), 0);
   const website = rows.filter((row) => row.source === "website");
   const manual = rows.filter((row) => row.source === "manual");
   const now = new Date();
@@ -49,7 +50,7 @@ export default async function ReconcilePage({ searchParams }) {
         <StatCard label="Paid / unlocked" value={count("claimed")} />
         <StatCard label="Waiting" value={count("pending")} />
         <StatCard label="Refunded" value={count("revoked")} />
-        <StatCard label="Collected" value={money(collected)} hint="Unlocked payments with an amount recorded" />
+        <StatCard label="Collected" value={money(collected)} hint="Paid and not refunded (unlocked + waiting)" />
       </div>
       <div className="grid gap-6 xl:grid-cols-[1fr_2fr]">
         <Card title="By source">
