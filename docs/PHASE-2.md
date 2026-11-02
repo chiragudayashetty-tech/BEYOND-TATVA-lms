@@ -94,6 +94,11 @@ limit before choosing, a clear error for too-big files, and a progress state on 
   redeems a roster key, link `redeemed_by` and put them in the class (`enrollments`) for that school + grade.
   UI: preview table with row errors before saving; after saving, download CSV of name + key to print or WhatsApp.
   Tests: admin only, bad rows rejected atomically, keys work once, redeem links the roster row.
+  **Backend done (migration `20261102000007_school_bulk_enroll`).** Codex UI calls
+  `supabase.rpc("admin_bulk_enroll", { p_school, p_course: COURSE_ID, p_label, p_rows })` with
+  `p_rows = [{ name, grade, parent_phone, section? }]` (max 200). Result: `{ ok: false, errors: [{ row, error }] }`
+  (nothing saved; show errors per row, row numbers start at 1) or `{ ok: true, keys: [{ name, code, grade, class }] }`
+  (offer a CSV download of name, class, code). Parse the CSV in the browser; no new dependency.
 - 8. **Claude: `claude/workshops-db` (tables, RPC, proxy public path), then Codex: `codex/workshops` (public page +
   Studio UI only).** Tables: `workshops` (title, starts_at, venue, school_id null, seats, published, slug) and
   `workshop_registrations` (workshop_id, student_name, grade, parent_name, parent_phone normalised, consent_at,

@@ -363,3 +363,44 @@ select 'C5 students cannot read notes' t, count(*) = 0 as pass from public.crm_n
 do $$ begin insert into public.crm_notes (student_id, body) values (auth.uid(), 'self note'); raise exception 'C6 FAIL';
 exception when insufficient_privilege then raise notice 'C6 pass: students cannot write notes'; end $$;
 reset role;
+
+-- ── School bulk enrollment ───────────────────────────────────────────────────
+select set_config('bt.school', (select id::text from public.schools where code = 'TEST-ABC'), false) is not null as school_set \g /dev/null
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'B1 a bad row saves nothing and reports every error' t,
+  (r ->> 'ok')::boolean = false and jsonb_array_length(r -> 'errors') = 2
+  and not exists (select 1 from public.school_rosters) as pass
+  from (select public.admin_bulk_enroll(current_setting('bt.school')::uuid, 'ai-for-students', null,
+    '[{"name":"Asha","grade":"8","parent_phone":"98450 11111"},{"name":"","grade":"11","parent_phone":"98450 22222"}]') as r) x;
+select 'B2 good list creates one key per child, grouped by class' t,
+  (r ->> 'ok')::boolean and jsonb_array_length(r -> 'keys') = 3 as pass
+  from (select public.admin_bulk_enroll(current_setting('bt.school')::uuid, 'ai-for-students', 'Udupi 2026',
+    '[{"name":"Asha","grade":8,"parent_phone":"98450 11111","section":"a"},{"name":"Ravi","grade":"8","parent_phone":"+91 98450 22222","section":"A"},{"name":"Meera","grade":9,"parent_phone":"09845033333"}]') as r) x;
+select 'B2b three roster rows, phone normalised, classes Grade 8 A and Grade 9' t,
+  (select count(*) from public.school_rosters) = 3
+  and (select parent_phone from public.school_rosters where student_name = 'Asha') = '+919845011111'
+  and (select count(*) from public.classes where name in ('Grade 8 A', 'Grade 9')) = 2 as pass;
+do $$ begin perform public.admin_bulk_enroll(current_setting('bt.school')::uuid, 'ai-for-students', null,
+  (select jsonb_agg(jsonb_build_object('name', 'Kid ' || g, 'grade', 8, 'parent_phone', '9845011111')) from generate_series(1, 201) g));
+  raise exception 'B3 FAIL';
+exception when others then if sqlerrm like 'B3%' then raise; end if; raise notice 'B3 pass: %', sqlerrm; end $$;
+select pg_temp.as_user('66666666-6666-6666-6666-666666666666');
+do $$ begin perform public.admin_bulk_enroll(current_setting('bt.school')::uuid, 'ai-for-students', null,
+  '[{"name":"X","grade":8,"parent_phone":"9845011111"}]'); raise exception 'B4 FAIL';
+exception when others then if sqlerrm like 'B4%' then raise; end if; raise notice 'B4 pass: %', sqlerrm; end $$;
+select 'B5 students cannot read rosters' t, count(*) = 0 as pass from public.school_rosters;
+reset role;
+create temp table b_codes as select r.student_name, k.code from public.school_rosters r join public.access_keys k on k.id = r.access_key_id;
+grant select on b_codes to authenticated;
+set role authenticated; select pg_temp.as_user('66666666-6666-6666-6666-666666666666');
+select 'B6 redeeming a roster key links the row and joins the class' t,
+  public.redeem_access_key((select code from b_codes where student_name = 'Asha')) = 'ai-for-students' as pass;
+reset role;
+select 'B6b roster row linked, child in Grade 8 A' t,
+  (select redeemed_by from public.school_rosters where student_name = 'Asha') = '66666666-6666-6666-6666-666666666666'
+  and exists (select 1 from public.enrollments e join public.classes c on c.id = e.class_id
+              where e.student_id = '66666666-6666-6666-6666-666666666666' and c.name = 'Grade 8 A') as pass;
+set role authenticated; select pg_temp.as_user('77777777-7777-7777-7777-777777777777');
+do $$ begin perform public.redeem_access_key((select code from b_codes where student_name = 'Asha')); raise exception 'B7 FAIL';
+exception when others then if sqlerrm like 'B7%' then raise; end if; raise notice 'B7 pass: %', sqlerrm; end $$;
+reset role;
