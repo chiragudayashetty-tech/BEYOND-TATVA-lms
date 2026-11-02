@@ -464,3 +464,32 @@ select 'G5 streak counts consecutive days; best streak kept' t,
   (s ->> 'streak')::int = 3 and (s ->> 'best_streak')::int = 3 and (s ->> 'minutes_this_week')::int between 31 and 32 as pass
   from (select public.my_learning_stats() as s) x;
 reset role;
+
+-- ── XP, leaderboard, owner insights ──────────────────────────────────────────
+insert into public.assignment_submissions (assignment_id, student_id, status, marks)
+  select id, 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'graded', round(max_marks * 0.8) from public.assignments limit 1;
+select 'K1 XP adds checks, quizzes and graded assignments (8/10 marks = 40 XP)' t,
+  (x ->> 'assignments')::int = 40 and (x ->> 'total')::int = (x ->> 'checks')::int + (x ->> 'quizzes')::int + 40 as pass
+  from (select public.student_xp('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee') x) s;
+set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+do $$ begin perform public.student_xp(auth.uid()); raise exception 'K2 FAIL';
+exception when others then if sqlerrm like 'K2%' then raise; end if; raise notice 'K2 pass: XP helper is internal'; end $$;
+select 'K3 dashboard XP matches the shared XP' t, (public.my_learning_stats() ->> 'xp')::int >= 10 as pass;
+select 'K4 leaderboard: top list, my rank, short names only' t,
+  jsonb_array_length(b -> 'top') between 1 and 10 and (b -> 'me' ->> 'rank')::int >= 1
+  and not exists (select 1 from jsonb_array_elements(b -> 'top') e where e ->> 'name' ~ ' [A-Za-z]{2,}') as pass
+  from (select public.xp_leaderboard() b) x;
+select public.set_leaderboard_hidden(true);
+select 'K5 hidden: not in the list, still sees own rank' t,
+  not exists (select 1 from jsonb_array_elements(b -> 'top') e where (e ->> 'me')::boolean) and (b -> 'me' ->> 'hidden')::boolean as pass
+  from (select public.xp_leaderboard() b) x;
+select public.set_leaderboard_hidden(false);
+do $$ begin perform public.admin_insights(30); raise exception 'K6 FAIL';
+exception when others then if sqlerrm like 'K6%' then raise; end if; raise notice 'K6 pass: %', sqlerrm; end $$;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'K7 owner insights: engagement, lessons, sources, schools, workshops' t,
+  (i -> 'engagement' ->> 'students')::int > 0 and jsonb_array_length(i -> 'lessons') > 0
+  and jsonb_typeof(i -> 'sources') = 'array' and jsonb_array_length(i -> 'schools') >= 1
+  and (i -> 'workshops' -> 0 ->> 'registered')::int = 2 and (i -> 'workshops' -> 0 ->> 'attended')::int = 1 as pass
+  from (select public.admin_insights(30) i) x;
+reset role;

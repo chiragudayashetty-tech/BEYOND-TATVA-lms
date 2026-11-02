@@ -81,13 +81,15 @@ export const getStudentStats = cache(async () => {
   return { xp, streak, answers: answers?.length ?? 0 };
 });
 
-// Dashboard analytics from my_learning_stats() (migration 9). Days are India time.
+// Dashboard stats from my_learning_stats() (migration 10): XP with breakdown, lessons, quizzes, assignments, quick checks.
 // Preview (no real student) gets a fixed sample so the screens can be built and tested.
 const PREVIEW_STATS = {
-  xp: 340, streak: 3, best_streak: 5, minutes_total: 95, minutes_this_week: 48, minutes_last_week: 30,
-  week: [0, 12, 0, 8, 15, 6, 7].map((minutes, i) => ({ day: new Date(Date.now() - (6 - i) * 864e5).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }), minutes })),
-  active_days: [6, 5, 3, 2, 1, 0].map((n) => new Date(Date.now() - n * 864e5).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })),
-  lessons_done: 7, quizzes_passed: 1, checks_answered: 12, checks_correct: 10,
+  xp: 340, xp_breakdown: { checks: 120, quizzes: 100, assignments: 120, total: 340 }, minutes_total: 95,
+  lessons_done: 7, quizzes_passed: 1, assignments_graded: 3, checks_answered: 14, checks_correct: 12,
+};
+const PREVIEW_BOARD = {
+  top: [["Asha R.", 520], ["Ravi K.", 410], ["You", 340], ["Meera S.", 300], ["Kiran P.", 260]].map(([name, xp], i) => ({ rank: i + 1, name, xp, me: name === "You" })),
+  me: { rank: 3, xp: 340, hidden: false }, players: 5,
 };
 export const getLearningStats = cache(async () => {
   const { user } = await getSession();
@@ -97,6 +99,21 @@ export const getLearningStats = cache(async () => {
   const { data, error } = await supabase.rpc("my_learning_stats");
   return error ? null : data;
 });
+
+// XP leaderboard (migration 10): { top: [{ rank, name: "Asha R.", xp, me }], me: { rank, xp, hidden } | null, players }.
+export const getLeaderboard = cache(async () => {
+  const { user } = await getSession();
+  if (!user) return null;
+  if (user.id === "preview") return PREVIEW_BOARD;
+  const { data, error } = await (await createClient()).rpc("xp_leaderboard");
+  return error ? null : data;
+});
+
+// Owner analytics for Studio (admins only, migration 10). Returns null on error or for non-admins.
+export async function getInsights(days = 30) {
+  const { data, error } = await (await createClient()).rpc("admin_insights", { p_days: days });
+  return error ? null : data;
+}
 
 // Quizzes and assignments the viewer can open, with their own results. RLS hides unpublished
 // and locked ones, so this only ever returns what the student may see.
