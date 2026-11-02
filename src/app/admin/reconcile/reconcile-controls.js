@@ -13,7 +13,12 @@ export function MonthPicker({ month }) {
 export function DownloadCsv({ month, rows }) {
   function download() {
     const columns = ["reference", "created_at_ist", "source", "status", "student_name", "email", "phone", "parent_name", "amount_paise", "claimed_by", "matched_by"];
-    const escape = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+    // Names and emails come from the public website: a leading = + - @ would run as a formula in Excel.
+    const escape = (value) => {
+      let s = String(value ?? "");
+      if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+      return `"${s.replaceAll('"', '""')}"`;
+    };
     const lines = [columns, ...rows.map((row) => [
       row.reference,
       new Date(row.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
