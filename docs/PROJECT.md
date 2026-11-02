@@ -22,6 +22,12 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Quizzes | One per module, server-side marking, answers never sent to the browser. |
 | Assignments | Text, link, photos/PDF (private bucket); mark, feedback, send back. |
 | Website → LMS | `POST /api/enrollments` and `POST /api/leads` (signed). Website side not connected yet: `docs/website-enrollment.md`. |
+| CRM notes | Pipeline "Notes (n)" per person, follow-ups due filter, due card on Studio home. |
+| School bulk enrollment | Studio → School keys → Upload class list (CSV, max 200): one key per child, classes by grade + section; redeeming joins the class. |
+| Workshops | Public `/w/<slug>` sign-up (consent, seats, one per phone) → Pipeline lead; Studio → Workshops: create/publish, check-in, CSV. |
+| Student dashboard | Course / XP + rank / quick-check rings; XP leaderboard (first name + initial, opt-out in Profile); XP = 10 per right quick check + quiz XP once + up to 50 per marked assignment. No streaks (Chirag). |
+| Studio analytics | Funnel, sources, grades, revenue, module completion, quiz health + Insights: active students, paid-but-stopped 14+ d, lesson drop-off, sources that pay, refunds, schools, workshop funnel. Daily watch log (`learning_days`) since 2026-11-02. |
+| Tests | `npm test`, `npm run test:db`, `npm run test:e2e` (Playwright smoke; 2 checks parked as TODO). |
 | Pipeline | Studio → Pipeline: one row per person, stages 1–5 (lead → bought), "stopped >24h" filter, CSV export, Parents / School enquiries tabs. Leads matched to students by parent phone; `?src=`/UTM saved at sign-up. |
 
 ## Decisions (don't reopen without Chirag)
@@ -46,8 +52,8 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 ## Road to launch (2026-11-02, timed on real pace: ~5–6 PRs/hour, migration PR 10–20 min)
 | Phase | What | Who | Time |
 |---|---|---|---|
-| A | Codex Sprint 1 tasks 4–8 (`docs/CODEX-SPRINT-1.md`) | Codex → Claude review | ~2–3 h |
-| C | CRM notes → school bulk enrollment → workshops (`docs/PHASE-2.md`) | Claude (SQL/backend) → Codex (UI) | ~2–3 h |
+| A | ~~Codex Sprint 1 tasks 4–8~~ **Done 2026-11-02** | Codex → Claude review | |
+| C | ~~CRM notes → bulk enrollment → workshops~~ **Done 2026-11-02**, plus dashboards/insights | Claude (SQL/backend) → Codex (UI) | |
 | B | Website payment → LMS, refunds (`docs/CODEX-PHASE-2.md`) | Codex (website) | ~1–2 h, **after Razorpay KYC** |
 | D | **Testing and fixing**: code freeze; automatic tests; real phones (cheap Android, iPhone, WhatsApp browser, slow 4G) with 2–3 families on the full path; Studio pass; security re-audit; backup restore drill; fix all critical/high | Everyone | ~1 day |
 | Launch | Vercel Pro, Supabase Pro, Resend sender, real Module 0 videos, Razorpay live | Chirag | 1 day |
@@ -73,10 +79,10 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - Close PR #10 (replaced by #14).
 
 ## Waiting on Chirag
-- Merge PR for `feat/planner-sync-honest-copy`, then Claude applies the `study_plans` migration.
+- **Razorpay KYC** (blocks phase B). Vercel Preview secrets (`docs/PREVIEW-SECRETS.md`), `NEXT_PUBLIC_SUPPORT_WHATSAPP` in Vercel.
+- Parent consent text: mention the XP leaderboard (first name + initial; opt-out in Profile).
 - Real Module 0 videos and real premiere dates (Studio → Content).
 - Website: add the 3 snippets in `docs/website-enrollment.md`.
-- Make the GitHub repos private.
 
 ## Backlog (owner → task)
 **Claude (lead: database, security, integrations)**
