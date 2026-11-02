@@ -81,6 +81,23 @@ export const getStudentStats = cache(async () => {
   return { xp, streak, answers: answers?.length ?? 0 };
 });
 
+// Dashboard analytics from my_learning_stats() (migration 9). Days are India time.
+// Preview (no real student) gets a fixed sample so the screens can be built and tested.
+const PREVIEW_STATS = {
+  xp: 340, streak: 3, best_streak: 5, minutes_total: 95, minutes_this_week: 48, minutes_last_week: 30,
+  week: [0, 12, 0, 8, 15, 6, 7].map((minutes, i) => ({ day: new Date(Date.now() - (6 - i) * 864e5).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }), minutes })),
+  active_days: [6, 5, 3, 2, 1, 0].map((n) => new Date(Date.now() - n * 864e5).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })),
+  lessons_done: 7, quizzes_passed: 1, checks_answered: 12, checks_correct: 10,
+};
+export const getLearningStats = cache(async () => {
+  const { user } = await getSession();
+  if (!user) return null;
+  if (user.id === "preview") return PREVIEW_STATS;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("my_learning_stats");
+  return error ? null : data;
+});
+
 // Quizzes and assignments the viewer can open, with their own results. RLS hides unpublished
 // and locked ones, so this only ever returns what the student may see.
 export const getActivities = cache(async () => {
