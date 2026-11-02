@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Bell, ChevronRight, CircleHelp, KeyRound, LogOut, Moon, ShieldCheck, UserRound } from "lucide-react";
+import { Bell, ChevronRight, CircleHelp, KeyRound, LogOut, Moon, ShieldCheck } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { ThemeSwitch } from "@/components/ThemeToggle";
 import { Avatar, Badge, Card, PageTitle } from "@/components/ui";
 import { getSession } from "@/lib/supabase/server";
+import ProfileEditor from "./ProfileEditor";
 
 export const metadata = { title: "Profile · Beyond Tatva" };
 
@@ -62,7 +63,7 @@ export default async function ProfilePage() {
           </section>
           <section className="card divide-y divide-border overflow-hidden">
             <div className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-subtle">Account</div>
-            <Row icon={UserRound} label="Edit profile" href="/profile#settings" />
+            <ProfileEditor fullName={profile.full_name} avatar={profile.avatar} />
             <Row icon={KeyRound} label="Login and security" hint="You sign in with a one-time code" href="/profile#settings" />
             <Row icon={ShieldCheck} label="Privacy and data" hint="What we collect and why, under the DPDP Act" href="/profile#settings" />
             <Row icon={CircleHelp} label="Help and support" href="/profile#settings" />
