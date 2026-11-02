@@ -6,7 +6,7 @@ const { chromium } = require("playwright");
 
 const baseURL = "http://127.0.0.1:3100";
 const studentPages = ["/browse", "/course", "/dashboard", "/progress", "/planner", "/certificates", "/profile", "/search", "/unlock", "/assignments"];
-const studioPages = ["/admin", "/admin/content", "/admin/quizzes", "/admin/assignments", "/admin/enrollments", "/admin/reconcile", "/admin/people", "/admin/access", "/admin/pipeline", "/admin/analytics", "/admin/automations"];
+const studioPages = ["/admin/workshops", "/admin", "/admin/content", "/admin/quizzes", "/admin/assignments", "/admin/enrollments", "/admin/reconcile", "/admin/people", "/admin/access", "/admin/pipeline", "/admin/analytics", "/admin/automations"];
 let server; let browser;
 
 before(async () => {

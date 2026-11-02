@@ -112,7 +112,7 @@ export function ContinueHero({ course, module: m }) {
         <p className="mt-1 text-sm text-muted">{m.title} · Lesson {next.idx} of {m.lessons.length}</p>
         <div className="mt-5 flex items-center gap-3 text-sm"><Progress value={m.progress} /><span className="shrink-0 font-semibold">{m.progress}%</span></div>
         <div className="mt-5 flex flex-wrap gap-2">
-          <Link href={`/watch/${course.id}?l=${next.n}`} className="btn-primary">{started ? "Resume lesson" : "Start lesson"}</Link>
+          <Link href={`/watch/${course.id}?l=${next.n}`} className="btn-primary w-full sm:w-auto">{started ? "Resume lesson" : "Start lesson"}</Link>
           <Link href="/course" className="btn-secondary">All modules</Link>
         </div>
       </div>

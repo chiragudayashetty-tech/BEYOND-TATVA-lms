@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ChartLine } from "lucide-react";
 import Shell from "@/components/shell/Shell";
-import { Bars, Card, Empty, PageTitle, StatCard } from "@/components/ui";
+import { Bars, Card, Empty, PageTitle, StatCard, Progress } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
+import { getInsights } from "@/lib/data";
 import { conversionPercent, funnelCounts, quizHealth, revenueByIstWeek } from "@/lib/analytics";
 import { COURSE_ID } from "@/lib/catalog";
 
@@ -21,7 +22,7 @@ export default async function AnalyticsPage({ searchParams }) {
   const startAt = utcBoundaryForIstDate(from);
   const endAt = utcBoundaryForIstDate(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 1)));
   const supabase = await createClient();
-  const [leadsResult, profilesResult, modulesResult, lessonsResult, progressResult, accessResult, purchasesResult, quizzesResult, attemptsResult] = await Promise.all([
+  const [leadsResult, profilesResult, modulesResult, lessonsResult, progressResult, accessResult, purchasesResult, quizzesResult, attemptsResult, insights] = await Promise.all([
     supabase.from("leads").select("id, created_at").eq("course_id", COURSE_ID).gte("created_at", startAt).lt("created_at", endAt),
     supabase.from("profiles").select("id, grade, signup_source, signup_utm, created_at").eq("role", "student").gte("created_at", startAt).lt("created_at", endAt),
     supabase.from("chapters").select("id, position, is_free").eq("course_id", COURSE_ID),
@@ -31,6 +32,7 @@ export default async function AnalyticsPage({ searchParams }) {
     supabase.from("purchases").select("created_at, amount_paise, status").gte("created_at", startAt).lt("created_at", endAt),
     supabase.from("quizzes").select("id, title, chapter_id").eq("published", true),
     supabase.from("quiz_attempts").select("quiz_id, score, total, passed, created_at").gte("created_at", startAt).lt("created_at", endAt),
+    getInsights(days),
   ]);
 
   const readError = [leadsResult, profilesResult, modulesResult, lessonsResult, progressResult, accessResult, purchasesResult, quizzesResult, attemptsResult].some((result) => result.error);
@@ -101,8 +103,54 @@ export default async function AnalyticsPage({ searchParams }) {
           {quizRows.length ? <ul className="divide-y divide-border">{quizRows.map((quiz) => <li key={quiz.id} className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0"><span className="min-w-0 flex-1 text-sm font-medium">{quiz.title}</span><span className="text-right text-xs text-muted">{quiz.attempts} attempts · {quiz.passRate}% passed · {quiz.averageScore}% avg score</span></li>)}</ul> : <Empty icon={ChartLine} title="No data yet" body="Published quizzes will appear here." />}
         </Card>
       </div>
+      <section className="mt-8"><h2 className="mb-4 text-xl font-semibold">Insights</h2><InsightsSection insights={insights} /></section>
     </Shell>
   );
+}
+
+function InsightsSection({ insights }) {
+  if (!insights) return <Card><Empty title="Insights unavailable" body="We couldn't load these details just now. Please try again later." /></Card>;
+  const engagement = insights.engagement;
+  const fixFirst = new Set((insights.lessons ?? []).filter((row) => row.started >= 3).slice().sort((a, b) => a.finished / a.started - b.finished / b.started).slice(0, 3).map((row) => `${row.module}-${row.lesson}`));
+  const sources = (insights.sources ?? []).slice().sort((a, b) => b.paid - a.paid);
+  return <div className="space-y-5">
+    <Card title="Engagement">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <StatCard label="Active this week" value={`${engagement.active_7d} of ${engagement.students}`} />
+        <StatCard label="Active this month" value={`${engagement.active_30d} of ${engagement.students}`} />
+        <StatCard label="Avg minutes per active student (7 days)" value={engagement.minutes_per_active_7d} />
+        <Link href="/admin/pipeline?stalled=1" className="rounded-2xl focus-visible:ring-2 focus-visible:ring-primary"><StatCard label="Paid but stopped 14+ days" value={engagement.stopped_paid} tone="danger" /></Link>
+      </div>
+      <p className="mt-3 text-sm text-muted">{engagement.never_started_paid} paid students never started.</p>
+    </Card>
+
+    <div className="grid gap-5 xl:grid-cols-2">
+      <Card title="Lesson drop-off">
+        {insights.lessons?.length ? <ol className="space-y-3">{insights.lessons.map((row) => {
+          const rate = row.started ? Math.round(row.finished / row.started * 100) : 0;
+          const key = `${row.module}-${row.lesson}`;
+          return <li key={key} className={`rounded-xl p-3 ${fixFirst.has(key) ? "border border-warning/40 bg-warning-soft" : "bg-surface-2"}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2"><span className="min-w-0 flex-1 text-sm font-medium">M{row.module} · {row.lesson}</span>{fixFirst.has(key) && <span className="text-xs font-semibold text-warning">Fix first</span>}<span className="text-xs text-muted">{row.started} started · {row.finished} finished</span></div>
+            <Progress value={rate} className="mt-2 h-2" /><span className="sr-only">{rate}% finished</span>
+          </li>;
+        })}</ol> : <Empty title="No lesson data yet" body="Lesson starts and finishes will appear here." />}
+      </Card>
+
+      <Card title="Sources that pay">
+        {sources.length ? <div className="space-y-2">{sources.map((row) => <div key={row.source} className="grid grid-cols-[1fr_auto_auto] gap-3 rounded-xl bg-surface-2 p-3 text-sm"><span className="min-w-0 break-words font-medium">{row.source}</span><span>{row.signups} sign-ups</span><span>{row.paid} paid · {row.signups ? Math.round(row.paid / row.signups * 100) : 0}%</span></div>)}</div> : <Empty title="No source data yet" body="Tagged sign-ups and payments will appear here." />}
+      </Card>
+
+      <StatCard label="Refunds" value={insights.refunds.count} hint={`${rupees(insights.refunds.paise)} returned`} tone="danger" />
+
+      <Card title="Schools">
+        {insights.schools?.length ? <ul className="space-y-2">{insights.schools.map((row) => <li key={row.school} className="rounded-xl bg-surface-2 p-3"><div className="font-medium">{row.school}</div><div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted"><span>{row.keys ?? 0} keys</span><span>{row.used ?? 0} used ({row.keys ? Math.round((row.used ?? 0) / row.keys * 100) : 0}%)</span><span>{row.students ?? 0} students</span></div></li>)}</ul> : <Empty title="No school data yet" body="School keys and students will appear here." />}
+      </Card>
+
+      <Card title="Workshops">
+        {insights.workshops?.length ? <ul className="space-y-3">{insights.workshops.map((row) => <li key={`${row.title}-${row.starts_at}`} className="rounded-xl bg-surface-2 p-3"><div className="flex flex-wrap items-baseline justify-between gap-2"><span className="font-medium">{row.title}</span><span className="text-xs text-muted">{new Date(row.starts_at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short" })}</span></div><div className="mt-2 grid grid-cols-4 gap-2 text-center text-xs"><span><b className="block text-sm">{row.registered}/{row.seats}</b>signed up</span><span><b className="block text-sm">{row.attended}</b>attended</span><span><b className="block text-sm">{row.signed_up}</b>made account</span><span><b className="block text-sm">{row.paid}</b>paid</span></div></li>)}</ul> : <Empty title="No workshop data yet" body="Workshop sign-ups and attendance will appear here." />}
+      </Card>
+    </div>
+  </div>;
 }
 
 function countBy(rows, keyOf) {

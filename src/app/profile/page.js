@@ -5,6 +5,8 @@ import { ThemeSwitch } from "@/components/ThemeToggle";
 import { Avatar, Badge, Card, PageTitle } from "@/components/ui";
 import { getSession } from "@/lib/supabase/server";
 import ProfileEditor from "./ProfileEditor";
+import LeaderboardSwitch from "./LeaderboardSwitch";
+import { getLeaderboard } from "@/lib/data";
 
 export const metadata = { title: "Profile · Beyond Tatva" };
 
@@ -27,6 +29,7 @@ function Row({ icon: Icon, label, hint, children, href }) {
 export default async function ProfilePage() {
   const { user, profile } = await getSession();
   const student = profile?.role === "student";
+  const board = student ? await getLeaderboard() : null;
   return (
     <Shell roles={["student", "teacher", "admin"]}>
       <PageTitle title="Profile" />
@@ -59,7 +62,8 @@ export default async function ProfilePage() {
           <section className="card divide-y divide-border overflow-hidden">
             <div className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-subtle">Preferences</div>
             <Row icon={Moon} label="Dark mode" hint="Easier on the eyes at night"><ThemeSwitch /></Row>
-            <Row icon={Bell} label="Notifications" hint="Class reminders, grades and streaks" href="/profile#settings" />
+            {student && <LeaderboardSwitch hidden={board?.me?.hidden ?? false} />}
+            <Row icon={Bell} label="Notifications" hint="Class reminders and grades" href="/profile#settings" />
           </section>
           <section className="card divide-y divide-border overflow-hidden">
             <div className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-subtle">Account</div>
