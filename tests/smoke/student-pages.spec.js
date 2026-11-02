@@ -36,7 +36,7 @@ async function inspectPage(path, width, cookies = []) {
   if (cookies.length) await context.addCookies(cookies.map(([name, value]) => ({ name, value, url: baseURL })));
   const page = await context.newPage();
   const consoleErrors = [];
-  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  page.on("console", (message) => { if (message.type() === "error" && !/webpack-hmr|_next\/webpack/.test(message.text())) consoleErrors.push(message.text()); }); // ignore dev-server hot-reload noise
   page.on("pageerror", (error) => consoleErrors.push(error.message));
   const response = await page.goto(`${baseURL}${path}`, { waitUntil: "networkidle", timeout: 30000 });
   assert.equal(response?.status(), 200, `${path} at ${width}px should load`);
