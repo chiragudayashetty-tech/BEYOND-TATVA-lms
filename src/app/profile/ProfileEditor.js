@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight, UserRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-// Enable only after Claude adds the protected update_my_profile database function.
-const PROFILE_EDIT_READY = false;
+// RLS + column grants let a user update only their own full_name and avatar (checked live 2026-11-02).
 const avatarColors = [
-  { value: "blue", label: "Blue", className: "bg-primary text-primary-foreground" },
+  { value: "blue", label: "Blue", className: "bg-primary text-primary-fg" },
   { value: "green", label: "Green", className: "bg-success text-white" },
   { value: "amber", label: "Amber", className: "bg-warning text-white" },
   { value: "purple", label: "Purple", className: "bg-purple-600 text-white" },
@@ -15,10 +15,12 @@ const avatarColors = [
 
 export function validDisplayName(name) {
   const value = name.trim();
-  return value.length >= 2 && value.length <= 60 && /^[\p{L} .'-]+$/u.test(value);
+  return value.length >= 2 && value.length <= 60 && /^[\p{L}\p{M} .'-]+$/u.test(value);
 }
 
-export default function ProfileEditor({ fullName, avatar }) {
+export default function ProfileEditor({ userId, fullName, avatar }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(fullName);
   const [color, setColor] = useState(avatarColors.some((item) => item.value === avatar) ? avatar : "blue");
@@ -29,10 +31,13 @@ export default function ProfileEditor({ fullName, avatar }) {
       setMessage("Use 2–60 letters, spaces, apostrophes, dots or hyphens.");
       return;
     }
-    if (!PROFILE_EDIT_READY) return;
-    const supabase = createClient();
-    const { error } = await supabase.rpc("update_my_profile", { p_full_name: name.trim(), p_avatar: color });
-    setMessage(error ? "We could not save your profile. Please try again." : "Profile saved.");
+    setBusy(true);
+    setMessage("");
+    const { error } = await createClient().from("profiles").update({ full_name: name.trim(), avatar: color }).eq("id", userId);
+    setBusy(false);
+    if (error) return setMessage("We could not save your profile. Please try again.");
+    setMessage("Profile saved.");
+    router.refresh(); // new name in the top bar and sidebar
   }
 
   return (
@@ -58,10 +63,9 @@ export default function ProfileEditor({ fullName, avatar }) {
           </div>
         </fieldset>
         {!validDisplayName(name) && <p className="text-sm text-danger">Use 2–60 letters, spaces, apostrophes, dots or hyphens.</p>}
-        {!PROFILE_EDIT_READY && <p className="text-sm text-muted">Saving profiles is coming soon.</p>}
         {message && <p role="status" className="text-sm text-muted">{message}</p>}
         <div className="flex flex-wrap gap-2">
-          <button type="submit" disabled={!PROFILE_EDIT_READY || !validDisplayName(name)} className="btn-primary min-h-11">Save</button>
+          <button type="submit" disabled={busy || !validDisplayName(name)} className="btn-primary min-h-11">{busy ? "Saving…" : "Save"}</button>
           <button type="button" onClick={() => { setName(fullName); setOpen(false); setMessage(""); }} className="btn-secondary min-h-11">Cancel</button>
         </div>
       </form>}
