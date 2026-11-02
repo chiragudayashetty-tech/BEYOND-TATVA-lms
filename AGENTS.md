@@ -8,14 +8,15 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 Two AI agents work on this repo. Read this and `docs/PROJECT.md` before every task.
 
-## Roles (changed by Chirag 2026-11-02: Codex builds everything, Claude reviews and merges)
+## Roles (changed by Chirag 2026-11-02, second change: Claude builds SQL + backend, Codex builds UI)
 - **Chirag (owner):** decides priorities, owns all accounts and secrets. Approves every **live database
   change** ("apply N") and anything touching money, accounts, secrets or paid services.
-- **Claude (lead):** architecture, security review, reviews **every** PR (runs lint, tests, build and
-  `npm run test:db`), fixes small issues on top or sends it back, **merges**, applies migrations to live
-  **only after Chirag's "apply"**, keeps `docs/PROJECT.md` current.
-- **Codex (builder):** builds all features, one scoped task per PR, **including SQL migrations and their
-  tests** (writes files only; never runs SQL against Supabase).
+- **Claude (lead + backend):** architecture; **builds all SQL and backend**: migrations and their tests, RLS,
+  RPCs, API routes, auth, server actions and every security-critical file listed below. Reviews **every** Codex PR
+  (lint, tests, build, `npm run test:db`), fixes small issues on top or sends it back, **merges**, applies
+  migrations to live **only after Chirag's "apply"**, keeps `docs/PROJECT.md` current.
+- **Codex (builder, UI):** builds pages and components, one scoped task per PR, on top of the tables, RPCs and
+  server actions Claude has already merged.
 
 ## Every task
 1. **Start from the latest `main`:** `git fetch origin && git checkout -b <agent>/<task> origin/main`.
@@ -27,14 +28,13 @@ Two AI agents work on this repo. Read this and `docs/PROJECT.md` before every ta
 5. Claude reviews and merges. Don't merge your own PR. End each PR with "Ready for Claude's review."
 
 ## Hard limits for Codex
-- **Database:** you may add **new** files in `supabase/migrations/` (name `YYYYMMDDHHMMSS_<what>.sql`, later than
-  the newest one) with tests in `supabase/tests/studio_test.sql`, and `npm run test:db` must pass. Never edit an
-  existing migration, never run SQL against Supabase. Every new table: RLS on, policies for each role, indexes on
-  foreign keys; functions `security definer set search_path = ''`, `revoke ... from public, anon`, admin checks
-  via `public.is_admin()`. Never weaken an existing policy without saying so in the PR title.
-- **Security-critical files** (`src/proxy.js`, `src/lib/supabase/*`, `src/app/api/**`, `src/app/auth/**`,
-  `src/lib/enrollments.js`, `src/app/admin/actions.js`, `vercel.json`, `.github/**`): allowed, but put
-  **"SECURITY:"** at the start of the PR title and explain the change; Claude reviews these line by line.
+- **Don't touch** `supabase/**`, `src/proxy.js`, `src/lib/supabase/*`, `src/app/api/**`, `src/app/auth/**`,
+  `src/lib/enrollments.js`, `src/app/admin/actions.js`, `vercel.json`, `.github/**`. Never run SQL against Supabase.
+  If a UI task needs a table, column, RPC, route or server action that isn't on `main` yet, **stop and describe
+  it in the PR**; Claude builds it. Call existing RPCs/actions from the UI as documented in the task.
+- **Claude's own SQL rules:** new migration files only (`YYYYMMDDHHMMSS_<what>.sql`), tests in
+  `supabase/tests/studio_test.sql`, `npm run test:db` green; RLS on every table, indexes on foreign keys;
+  functions `security definer set search_path = ''`, `revoke ... from public, anon`, admin checks via `public.is_admin()`.
 - **Secrets:** never commit keys or `.env*` files (only `.env.example`). Never paste secrets in PRs.
 - **No new paid services or dependencies** without Chirag's OK (say why in the PR).
 - **Don't change live data** (Supabase, Vercel settings, GitHub settings).

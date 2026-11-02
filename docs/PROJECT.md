@@ -45,7 +45,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Phase | What | Who | Time |
 |---|---|---|---|
 | A | Codex Sprint 1 tasks 4–8 (`docs/CODEX-SPRINT-1.md`) | Codex → Claude review | ~2–3 h |
-| C | CRM notes → school bulk enrollment → workshops (`docs/PHASE-2.md`) | Codex (DB + UI) → Claude review | ~2–3 h |
+| C | CRM notes → school bulk enrollment → workshops (`docs/PHASE-2.md`) | Claude (SQL/backend) → Codex (UI) | ~2–3 h |
 | B | Website payment → LMS, refunds (`docs/CODEX-PHASE-2.md`) | Codex (website) | ~1–2 h, **after Razorpay KYC** |
 | D | **Testing and fixing**: code freeze; automatic tests; real phones (cheap Android, iPhone, WhatsApp browser, slow 4G) with 2–3 families on the full path; Studio pass; security re-audit; backup restore drill; fix all critical/high | Everyone | ~1 day |
 | Launch | Vercel Pro, Supabase Pro, Resend sender, real Module 0 videos, Razorpay live | Chirag | 1 day |
@@ -90,4 +90,4 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 3. Profile page: make "Edit profile" (name, avatar) work; "Help and support" page with WhatsApp contact.
 4. Loading skeletons (`loading.js`) for /course, /watch, /admin pages.
 
-Codex tasks that need a table, an API route or auth changes: Codex builds them under `AGENTS.md` limits (new migration + tests; "SECURITY:" title for security files).
+Codex tasks that need a table, an API route or auth changes: stop and hand back to Claude (Claude builds all SQL/backend).

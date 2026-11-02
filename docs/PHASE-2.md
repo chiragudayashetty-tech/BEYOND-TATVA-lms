@@ -1,7 +1,7 @@
 # Phase 2: what's done, what's left, who builds it
 
-_Claude (lead), 2026-11-02._ **Next Codex batch: `docs/CODEX-SPRINT-1.md`.** **Since 2026-11-02 Codex builds everything, including
-migrations and security-critical files, under the limits in `AGENTS.md` (which wins over this file).** Codex prompt: bottom of this file.
+_Claude (lead), 2026-11-02._ **Next Codex batch: `docs/CODEX-SPRINT-1.md`.** **Since 2026-11-02 (second change): Claude builds all SQL and backend; Codex builds UI only.
+`AGENTS.md` wins over this file.** Codex prompt: bottom of this file.
 
 ## Launch checklist (status)
 | Item | Status | Left to do | Owner |
@@ -21,8 +21,8 @@ migrations and security-critical files, under the limits in `AGENTS.md` (which w
 | Payment reconciliation | **Done** (`/admin/reconcile`, PR 27 + review fixes 28) | No | done |
 | Business analytics | Studio home has counts; Pipeline has stages | No for v1 | 3. Codex: analytics page from existing data |
 | Parent/student CRM | Pipeline + `crm_notes` table (live after "apply 8") | Done | 4. **Ready for Codex** (task 6 spec below) |
-| School bulk enrollment | School keys (one per student) | CSV roster import: **yes** | 5. Codex (migration + UI), task 7 |
-| Workshop registration and attendance | Nothing | **Yes** (`workshops`, `workshop_registrations`, attendance) | 6. Codex (migration + API + UI, "SECURITY:"), task 8 |
+| School bulk enrollment | School keys (one per student) | CSV roster import: **yes** | 5. Claude (SQL) → Codex (UI), task 7 |
+| Workshop registration and attendance | Nothing | **Yes** (`workshops`, `workshop_registrations`, attendance) | 6. Claude (SQL + proxy) → Codex (UI), task 8 |
 
 ---
 
@@ -32,11 +32,10 @@ You are Codex, the builder for Beyond Tatva LMS (repo `BEYOND-TATVA-lms`). First
 `docs/PROJECT.md` and `docs/PHASE-2.md`. Follow the rules exactly:
 - One task per branch `codex/<task>` from the latest `origin/main`; one small PR each; never commit to `main`.
 - Before each PR: `npm run lint`, `npm test`, `npm run build`. Paste the results, and say what you did NOT test.
-- **Hard limits (see `AGENTS.md`):** you MAY add **new** migrations in `supabase/migrations/` with tests in
-  `supabase/tests/studio_test.sql` (`npm run test:db` must pass); never edit an existing migration; never run SQL
-  against Supabase. You MAY edit security-critical files (`src/proxy.js`, `src/lib/supabase/*`, `src/app/api/**`,
-  `src/app/auth/**`, `src/lib/enrollments.js`, `src/app/admin/actions.js`, `vercel.json`, `.github/**`) but the PR
-  title must start with "SECURITY:". No new paid services or dependencies. No secrets.
+- **Hard limits (see `AGENTS.md`):** UI only. Don't touch `supabase/**`, `src/proxy.js`, `src/lib/supabase/*`,
+  `src/app/api/**`, `src/app/auth/**`, `src/lib/enrollments.js`, `src/app/admin/actions.js`, `vercel.json`, `.github/**`.
+  No SQL against Supabase. If you need backend that isn't on `main`, stop and describe it; Claude builds it.
+  No new paid services or dependencies. No secrets.
 - UI: reuse `src/components/ui.js` and the `card`, `btn-primary`, `btn-secondary`, `input`, `label` classes.
   Mobile first: test at 320, 375 and 430px; tap targets ≥ 44px; no sideways scroll.
 - Copy: plain English for 13–15 year olds and parents. Never promise what doesn't work: say "coming soon".
@@ -74,7 +73,7 @@ bottom tabs work; Studio pages load for admin. Don't run it in `npm test`.
 **Task 5: `codex/upload-polish`.** On the assignment hand-in screen: show allowed file types and the size
 limit before choosing, a clear error for too-big files, and a progress state on phones. UI only.
 
-**Tasks 6–8: Codex builds them fully now (including migrations), per the new rules in `AGENTS.md`.**
+**Tasks 7–8: Claude builds the migration/RPC/proxy part first (`claude/...`), then Codex builds the UI on top.**
 - 6. **READY FOR CODEX: `codex/crm-notes`.** Table `public.crm_notes` (admins only via RLS): `id, student_id, lead_id`
   (one of them required: use the Pipeline row's `student_id`, else `lead_id`), `body` (1–1000 chars), `channel`
   (`call|whatsapp|email|visit|other`, optional), `follow_up_at` (optional), `done_at`, `created_by` (auto), `created_at`.
@@ -86,7 +85,7 @@ limit before choosing, a clear error for too-big files, and a progress state on 
   as a small card with links. The `crm_notes` table and its RLS are **already live** (migration
   `20261102000006`), so this task likely needs no migration. If you do need one (e.g. an index or helper), add a
   **new** migration with tests per `AGENTS.md`; editing `src/app/admin/actions.js` is allowed with "SECURITY:" in the title.
-- 7. **`codex/school-bulk-enroll`** (migration + UI). Studio → School keys: "Upload class list" (CSV: student name,
+- 7. **Claude: `claude/school-bulk-enroll-db`, then Codex: `codex/school-bulk-enroll` (UI only).** Studio → School keys: "Upload class list" (CSV: student name,
   grade 8–10, parent WhatsApp; optional section). Migration: table `school_rosters` (school_id, class name, grade,
   student_name, parent_phone normalised with `public.normalize_phone`, access_key code, redeemed_by, created_at);
   function `admin_bulk_enroll(p_school uuid, p_course text, p_label text, p_rows jsonb)` (admins only, max 200 rows,
@@ -95,8 +94,8 @@ limit before choosing, a clear error for too-big files, and a progress state on 
   redeems a roster key, link `redeemed_by` and put them in the class (`enrollments`) for that school + grade.
   UI: preview table with row errors before saving; after saving, download CSV of name + key to print or WhatsApp.
   Tests: admin only, bad rows rejected atomically, keys work once, redeem links the roster row.
-- 8. **`codex/workshops`** (migration + public page + Studio UI; title starts with "SECURITY:" because it adds a
-  public write path). Tables: `workshops` (title, starts_at, venue, school_id null, seats, published, slug) and
+- 8. **Claude: `claude/workshops-db` (tables, RPC, proxy public path), then Codex: `codex/workshops` (public page +
+  Studio UI only).** Tables: `workshops` (title, starts_at, venue, school_id null, seats, published, slug) and
   `workshop_registrations` (workshop_id, student_name, grade, parent_name, parent_phone normalised, consent_at,
   attended_at, lead_id). RLS: admins manage both; anonymous users may read **published** workshops only (no
   registrations). Public registration goes through `register_workshop(p_slug, ...)` (security definer, rate-limit
