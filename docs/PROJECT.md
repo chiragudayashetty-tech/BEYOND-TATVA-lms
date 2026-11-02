@@ -41,6 +41,16 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
   passing a course id over using the `COURSE_ID` constant in new code. The database (access, keys,
   enrollments, quizzes, assignments) is already per course; the screens assume one course today.
 
+## Road to launch (2026-11-02, timed on real pace: ~5–6 PRs/hour, migration PR 10–20 min)
+| Phase | What | Who | Time |
+|---|---|---|---|
+| A | Codex Sprint 1 tasks 4–8 (`docs/CODEX-SPRINT-1.md`) | Codex → Claude review | ~2–3 h |
+| C | CRM notes → school bulk enrollment → workshops (`docs/PHASE-2.md`) | Claude (DB) → Codex (UI) | ~2–3 h |
+| B | Website payment → LMS, refunds (`docs/CODEX-PHASE-2.md`) | Codex (website) | ~1–2 h, **after Razorpay KYC** |
+| D | **Testing and fixing**: code freeze; automatic tests; real phones (cheap Android, iPhone, WhatsApp browser, slow 4G) with 2–3 families on the full path; Studio pass; security re-audit; backup restore drill; fix all critical/high | Everyone | ~1 day |
+| Launch | Vercel Pro, Supabase Pro, Resend sender, real Module 0 videos, Razorpay live | Chirag | 1 day |
+Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, interactive video questions, a second course.
+
 ## In planning
 - **Phase 2 plan and Codex prompt: `docs/PHASE-2.md`** (2026-11-02).
 - **Backups:** nightly encrypted dump via GitHub Actions, 30 days: `docs/BACKUPS.md`. Needs Chirag's 2 GitHub secrets.
