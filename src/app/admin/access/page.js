@@ -4,16 +4,16 @@ import { Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { COURSE_ID } from "@/lib/catalog";
 import { createClient, isPreview } from "@/lib/supabase/server";
 import KeyGenerator from "../KeyGenerator";
+import RosterUpload from "./RosterUpload";
 
 export const metadata = { title: "Access keys · Admin · Beyond Tatva" };
 
 export default async function AccessPage() {
   const supabase = await createClient();
-  const { data: keys } = await supabase
-    .from("access_keys")
-    .select("code, label, created_at, redeemed_at, redeemed_by")
-    .order("created_at", { ascending: false })
-    .limit(500);
+  const [{ data: keys }, { data: schools }] = await Promise.all([
+    supabase.from("access_keys").select("code, label, created_at, redeemed_at, redeemed_by").order("created_at", { ascending: false }).limit(500),
+    supabase.rpc("admin_schools"),
+  ]);
   const ids = [...new Set((keys ?? []).map((k) => k.redeemed_by).filter(Boolean))];
   const { data: people } = ids.length ? await supabase.from("profiles").select("id, full_name").in("id", ids) : { data: [] };
   const names = Object.fromEntries((people ?? []).map((p) => [p.id, p.full_name]));
@@ -28,6 +28,7 @@ export default async function AccessPage() {
       <div className="grid gap-6 xl:grid-cols-[1fr_1.2fr]">
         <Card title="Create keys">
           <KeyGenerator courseId={COURSE_ID} preview={isPreview} />
+          <RosterUpload schools={schools ?? []} courseId={COURSE_ID} preview={isPreview} />
         </Card>
 
         <div className="space-y-4">

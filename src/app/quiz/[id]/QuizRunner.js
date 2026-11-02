@@ -97,7 +97,16 @@ export default function QuizRunner({ quiz, questions, best }) {
           {q.options.map((o, j) => {
             const on = answers[i] === j;
             return (
-              <button key={j} role="radio" aria-checked={on} onClick={() => setAnswers((a) => a.map((x, k) => (k === i ? j : x)))}
+              <button key={j} role="radio" aria-checked={on} tabIndex={on || (answers[i] === null && j === 0) ? 0 : -1}
+                onKeyDown={(event) => {
+                  const delta = ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : ["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 0;
+                  if (!delta) return;
+                  event.preventDefault();
+                  const next = (j + delta + q.options.length) % q.options.length;
+                  setAnswers((a) => a.map((x, k) => (k === i ? next : x)));
+                  event.currentTarget.parentElement.querySelectorAll('[role="radio"]')[next]?.focus();
+                }}
+                onClick={() => setAnswers((a) => a.map((x, k) => (k === i ? j : x)))}
                 className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left text-sm font-medium transition ${on ? "border-primary bg-primary-soft ring-4 ring-primary/10" : "border-border hover:bg-surface-2"}`}>
                 <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-md text-xs font-semibold ${on ? "bg-primary text-primary-fg" : "bg-surface-2"}`}>{String.fromCharCode(65 + j)}</span>
                 {o}
