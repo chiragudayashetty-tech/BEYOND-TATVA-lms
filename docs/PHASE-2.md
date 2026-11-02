@@ -20,7 +20,7 @@ to Claude first (AGENTS.md). Codex prompt: bottom of this file.
 | Website → LMS integration | Leads API live; payment → LMS not wired | No (API exists) | 1. Codex (website): `docs/CODEX-PHASE-2.md` |
 | Payment reconciliation | **Done** (`/admin/reconcile`, PR 27 + review fixes 28) | No | done |
 | Business analytics | Studio home has counts; Pipeline has stages | No for v1 | 3. Codex: analytics page from existing data |
-| Parent/student CRM | Pipeline (stages 1–5, filters, CSV) | Notes/follow-ups: **yes** | 4. Claude migration (`crm_notes`), then Codex UI |
+| Parent/student CRM | Pipeline + `crm_notes` table (live after "apply 8") | Done | 4. **Ready for Codex** (task 6 spec below) |
 | School bulk enrollment | School keys (one per student) | CSV roster import: **yes** | 5. Claude RPC (`admin_bulk_enroll`), then Codex UI |
 | Workshop registration and attendance | Nothing | **Yes** (`workshops`, `workshop_registrations`, attendance) | 6. Claude migration + API, then Codex UI |
 
@@ -75,7 +75,15 @@ limit before choosing, a clear error for too-big files, and a progress state on 
 
 **Tasks 6–8 wait for Claude's database work.** Don't start them until `docs/PHASE-2.md` says
 "ready for Codex" next to them:
-- 6. CRM notes and follow-ups on Pipeline rows (needs `crm_notes`).
+- 6. **READY FOR CODEX: `codex/crm-notes`.** Table `public.crm_notes` (admins only via RLS): `id, student_id, lead_id`
+  (one of them required: use the Pipeline row's `student_id`, else `lead_id`), `body` (1–1000 chars), `channel`
+  (`call|whatsapp|email|visit|other`, optional), `follow_up_at` (optional), `done_at`, `created_by` (auto), `created_at`.
+  Build: on `/admin/pipeline` each row gets a "Notes (n)" button that opens a panel (bottom sheet on phones) listing the
+  notes newest-first, with a form to add one (body, channel, optional follow-up date/time in IST) and a "Done" tick on
+  follow-ups. Read/write with the browser Supabase client (`createClient` from `@/lib/supabase/client`): RLS allows
+  admins only. Add a "Follow-ups due (n)" filter to Pipeline (notes with `done_at is null and follow_up_at <= now()`),
+  loaded with one extra query in the page (don't change `admin_pipeline`). Show due follow-ups on the Studio home
+  as a small card with links. Don't touch `supabase/**` or `src/app/admin/actions.js`.
 - 7. School bulk enrollment: upload a class CSV (name, grade, parent WhatsApp) → school keys per student (needs `admin_bulk_enroll`).
 - 8. Workshops: Studio creates a workshop (date, school/venue, seats), a public sign-up page, an attendance
   checklist on the day, and attendee → lead in Pipeline (needs `workshops` tables and an API route).
