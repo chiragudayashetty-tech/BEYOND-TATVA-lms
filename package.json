@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --conditions=react-server --test tests/*.test.mjs",
-    "test:db": "bash supabase/tests/run.sh"
+    "test:db": "bash supabase/tests/run.sh",
+    "test:e2e": "node --test tests/smoke/*.spec.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
