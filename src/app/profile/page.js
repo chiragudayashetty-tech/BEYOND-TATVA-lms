@@ -66,7 +66,7 @@ export default async function ProfilePage() {
             <ProfileEditor userId={user.id} fullName={profile.full_name} avatar={profile.avatar} />
             <Row icon={KeyRound} label="Login and security" hint="You sign in with a one-time code" href="/profile#settings" />
             <Row icon={ShieldCheck} label="Privacy and data" hint="What we collect and why, under the DPDP Act" href="/profile#settings" />
-            <Row icon={CircleHelp} label="Help and support" href="/profile#settings" />
+            <Row icon={CircleHelp} label="Help and support" href="/help" />
           </section>
           <form action="/auth/signout" method="post">
             <button className="btn-secondary w-full text-danger sm:w-auto"><LogOut className="h-4 w-4" /> Log out</button>
