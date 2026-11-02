@@ -143,6 +143,11 @@ export async function assignEnrollment(_, fd) {
   return run((s) => s.rpc("admin_assign_purchase", { p_purchase: purchase, p_student: student }));
 }
 
+// Teachers: revoke or restore access (ends course access and student visibility).
+export async function setTeacherRevoked(teacherId, revoked) {
+  return run((s) => s.rpc("admin_set_teacher_revoked", { p_teacher: teacherId, p_revoked: revoked }));
+}
+
 // Parent-phone match (unverified): Studio confirms the suggested student.
 export async function approveSuggestion(purchaseId) {
   return run((s) => s.rpc("admin_approve_suggestion", { p_purchase: purchaseId }));

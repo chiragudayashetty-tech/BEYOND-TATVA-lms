@@ -5,13 +5,24 @@ import { iconFor } from "@/components/course";
 import { fmtPremiere, isReleased } from "@/lib/catalog";
 import { getCourse } from "@/lib/data";
 import { createClient, getSession } from "@/lib/supabase/server";
+import AcceptTerms from "./AcceptTerms";
 
 export const metadata = { title: "Teacher · Beyond Tatva" };
 
 const daysSince = (t) => (t ? Math.floor((Date.now() - new Date(t).getTime()) / 86400000) : null);
 
 export default async function TeacherPage() {
-  const [{ user }, course] = await Promise.all([getSession(), getCourse()]);
+  const [{ user, profile }, course] = await Promise.all([getSession(), getCourse()]);
+  if (profile?.role === "teacher" && profile.teacher_revoked_at) {
+    return (
+      <Shell roles={["teacher"]}>
+        <Empty icon={Users} title="Your teacher access was removed" body="Please contact Beyond Tatva if you think this is a mistake." />
+      </Shell>
+    );
+  }
+  if (profile?.role === "teacher" && !profile.teacher_terms_at) {
+    return <Shell roles={["teacher"]}><AcceptTerms /></Shell>;
+  }
   const supabase = await createClient();
 
   let classes = [];

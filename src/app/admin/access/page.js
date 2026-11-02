@@ -24,7 +24,7 @@ export default async function AccessPage() {
 
   return (
     <Shell roles={["admin"]}>
-      <PageTitle title="Access keys" subtitle="One key per student. A key unlocks every paid module for the student who redeems it." />
+      <PageTitle title="School keys" subtitle="For school deals: one key per student. A student signs in, opens Unlock and enters the key to open every paid module. Each key works once." />
       <div className="grid gap-6 xl:grid-cols-[1fr_1.2fr]">
         <Card title="Create keys">
           <KeyGenerator courseId={COURSE_ID} preview={isPreview} />

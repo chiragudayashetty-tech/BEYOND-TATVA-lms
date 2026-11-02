@@ -42,11 +42,11 @@ const previewNames = { student: "Ananya Rao", teacher: "Meera D'Souza", admin: "
 function previewSession(role) {
   return {
     user: { id: "preview", email: "preview@example.com" },
-    profile: { id: "preview", role, full_name: previewNames[role], grade: role === "student" ? 9 : null, guardian_consent_at: null },
+    profile: { id: "preview", role, full_name: previewNames[role], grade: role === "student" ? 9 : null, guardian_consent_at: null, teacher_terms_at: "2026-11-02", teacher_revoked_at: null },
   };
 }
 
-const PROFILE_FIELDS = "id, role, full_name, avatar, grade, guardian_consent_at, school_id, guardian_phone";
+const PROFILE_FIELDS = "id, role, full_name, avatar, grade, guardian_consent_at, school_id, guardian_phone, teacher_terms_at, teacher_revoked_at";
 
 // The signed-in user from the verified session token: no network call to Supabase Auth.
 async function currentUser(supabase) {

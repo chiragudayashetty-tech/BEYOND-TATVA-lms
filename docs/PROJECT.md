@@ -29,7 +29,8 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
   everyone: marketing, posts, selling, enrolling. The LMS (planned: learn.beyondtatva.in) is only for
   enrolled students and people who choose "Try Module 0 free". No automatic redirects between them,
   only links the owner places (website: "Log in" / "Start free"; LMS: "Get the full course").
-- **The login is the key.** No access keys or codes in the funnel (2026-11-01). Access keys are hidden in Studio (page still at `/admin/access`), kept only in case a school deal needs them.
+- **The login is the key** for individual buyers. **School deals use student keys** (2026-11-02): Studio → School keys makes one key per student, redeemed on /unlock.
+- **Teachers** must accept the teacher terms (no sharing/selling, legal consequences) before their code works; Studio can revoke a teacher (2026-11-02).
 - Payments only on the website; the LMS never takes money.
 - Account = the student; parent phone stored for messages; access lives on one account (Studio can move it).
 - Free Module 0 on unlisted YouTube; paid modules move to **Bunny Stream** (signed links), on hold.

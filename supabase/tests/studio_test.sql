@@ -263,3 +263,23 @@ select 'O5 student signs up, child phone optional' t, (select signed_up_by = 'st
 reset role;
 select 'O6 no invite codes left' t, not exists (select 1 from public.profiles where invite_code is not null) as pass;
 select 'O7 link_child is gone' t, not exists (select 1 from pg_proc where proname = 'link_child') as pass;
+
+-- ── H3: teacher terms and revoke ─────────────────────────────────────────────
+insert into auth.users (id, email) values ('7eac0000-0000-0000-0000-000000000001', 'teach@x.in');
+set role authenticated; select pg_temp.as_user('7eac0000-0000-0000-0000-000000000001');
+do $$ begin perform public.complete_onboarding('teacher', 'Ms T', 'TEST-T-XYZ'); raise exception 'H3a FAIL';
+exception when others then if sqlerrm like 'H3a%' then raise; end if; raise notice 'H3a pass: %', sqlerrm; end $$;
+select public.complete_onboarding('teacher', 'Ms T', 'test-t-xyz', p_consent => true);
+select 'H3b teacher with terms can open the course' t, public.has_course_access('ai-for-students') and (select teacher_terms_at is not null from public.profiles where id = auth.uid()) as pass;
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+do $$ begin perform public.admin_set_teacher_revoked('7eac0000-0000-0000-0000-000000000001', true); raise exception 'H3c FAIL';
+exception when others then if sqlerrm like 'H3c%' then raise; end if; raise notice 'H3c pass: students cannot revoke (%)', sqlerrm; end $$;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_set_teacher_revoked('7eac0000-0000-0000-0000-000000000001', true);
+select pg_temp.as_user('7eac0000-0000-0000-0000-000000000001');
+select 'H3d revoked teacher loses access' t, not public.has_course_access('ai-for-students') and not public.is_active_teacher() as pass;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_set_teacher_revoked('7eac0000-0000-0000-0000-000000000001', false);
+select pg_temp.as_user('7eac0000-0000-0000-0000-000000000001');
+select 'H3e restored teacher has access again' t, public.has_course_access('ai-for-students') as pass;
+reset role;
