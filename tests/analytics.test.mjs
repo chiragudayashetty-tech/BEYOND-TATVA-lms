@@ -13,7 +13,7 @@ test("funnel conversions are step to step and safe with an empty prior step", ()
       { student_id: "a", lesson_id: "l1", completed_at: "2026-01-02" },
       { student_id: "b", lesson_id: "l0", completed_at: null },
     ],
-    accesses: [{ student_id: "a" }],
+    accesses: [{ student_id: "a" }, { student_id: "old-student" }],
   });
   assert.deepEqual(funnel.map(({ count, conversion }) => [count, conversion]), [[1, null], [2, 200], [2, 100], [1, 50], [1, 100]]);
 });
@@ -36,4 +36,13 @@ test("quiz health reports attempts, pass rate and average percentage score", () 
     { quiz_id: "q", passed: true, score: 4, total: 5 },
     { quiz_id: "q", passed: false, score: 2, total: 5 },
   ]), [{ id: "q", title: "Quiz", attempts: 2, passRate: 50, averageScore: 60 }]);
+});
+
+test("funnel stages after sign-up only count the sign-up cohort", () => {
+  const funnel = funnelCounts({
+    leads: [], profiles: [{ id: "new" }], lessonIds: new Set(["l0"]),
+    progress: [{ student_id: "old", lesson_id: "l0", completed_at: "2026-01-01" }],
+    accesses: [{ student_id: "old" }],
+  });
+  assert.deepEqual(funnel.map((s) => s.count), [0, 1, 0, 0, 0]);
 });

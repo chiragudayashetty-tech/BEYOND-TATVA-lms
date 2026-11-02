@@ -21,7 +21,11 @@ export function revenueByIstWeek(rows) {
   return [...weeks].sort(([a], [b]) => a.localeCompare(b)).map(([week, amountPaise]) => ({ week, amountPaise }));
 }
 
+// Stages after sign-up follow the same cohort: students who signed up in the range.
 export function funnelCounts({ leads, profiles, progress, lessonIds, accesses }) {
+  const cohort = new Set(profiles.map((row) => row.id));
+  progress = progress.filter((row) => cohort.has(row.student_id));
+  accesses = accesses.filter((row) => cohort.has(row.student_id));
   const started = new Set(progress.filter((row) => lessonIds.has(row.lesson_id)).map((row) => row.student_id));
   const completedByStudent = new Map();
   for (const row of progress) {

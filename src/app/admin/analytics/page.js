@@ -26,7 +26,7 @@ export default async function AnalyticsPage({ searchParams }) {
     supabase.from("profiles").select("id, grade, signup_source, signup_utm, created_at").eq("role", "student").gte("created_at", startAt).lt("created_at", endAt),
     supabase.from("chapters").select("id, position, is_free").eq("course_id", COURSE_ID),
     supabase.from("lessons").select("id, chapter_id").eq("course_id", COURSE_ID),
-    supabase.from("lesson_progress").select("student_id, lesson_id, seconds_watched, completed_at, updated_at").gte("updated_at", startAt).lt("updated_at", endAt),
+    supabase.from("lesson_progress").select("student_id, lesson_id, completed_at"), // all time: completion is cumulative
     supabase.from("course_access").select("student_id, granted_at").eq("course_id", COURSE_ID),
     supabase.from("purchases").select("created_at, amount_paise, status").gte("created_at", startAt).lt("created_at", endAt),
     supabase.from("quizzes").select("id, title, chapter_id").eq("published", true),
@@ -67,14 +67,14 @@ export default async function AnalyticsPage({ searchParams }) {
       <PageTitle title="Business analytics" subtitle="See how students find and use the course. Funnel and sign-up counts use the selected date range.">
         <div className="flex min-h-11 items-center gap-1 rounded-xl border border-border p-1" aria-label="Date range">
           {[7, 30, 90].map((range) => <Link key={range} href={`/admin/analytics?days=${range}`} aria-current={days === range ? "page" : undefined}
-            className={`inline-flex min-h-9 items-center rounded-lg px-3 text-sm font-medium ${days === range ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-2"}`}>{range} days</Link>)}
+            className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium ${days === range ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-2"}`}>{range} days</Link>)}
         </div>
       </PageTitle>
       {readError && <p role="alert" className="mb-4 text-sm text-danger">Some data could not be loaded. Counts below may be incomplete.</p>}
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Leads" value={funnel[0].count} hint={`Last ${days} days`} icon={ChartLine} />
         <StatCard label="Student sign-ups" value={funnel[1].count} hint={`Last ${days} days`} />
-        <StatCard label="Full access" value={accesses.length} hint="All time" />
+        <StatCard label="Full access" value={accesses.length} hint="All time (incl. school keys)" />
         <StatCard label="Revenue recorded" value={rupees(totalRevenue)} hint={`Last ${days} days`} />
       </div>
       <div className="grid gap-6 xl:grid-cols-2">
