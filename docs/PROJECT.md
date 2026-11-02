@@ -43,6 +43,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 
 ## In planning
 - **Phase 2 plan and Codex prompt: `docs/PHASE-2.md`** (2026-11-02).
+- **Backups:** nightly encrypted dump via GitHub Actions, 30 days: `docs/BACKUPS.md`. Needs Chirag's 2 GitHub secrets.
 - **Funnel: see `docs/FUNNEL-PLAN.md`.** Phase 1 approved 2026-11-01 and in progress. Payments (Razorpay KYC on hold) and WhatsApp messaging come later.
 - Open PRs at hand-off: #9 (simple homepage), #10 (Codex PWA, approved by lead: limit to phones later),
   #11 (project notes).

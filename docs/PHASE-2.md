@@ -12,7 +12,7 @@ to Claude first (AGENTS.md). Codex prompt: bottom of this file.
 | Assignment uploads | **Works**, SQL-tested (private bucket, own folder). | L1 tighter path rule. Codex: file type/size message on phones. | Claude, Codex |
 | Payments and enrollments | **LMS side done** and tested (verified match, Studio approval, refunds). | Website doesn't call the LMS yet: `docs/CODEX-PHASE-2.md`. | Codex (website) |
 | Mobile bugs | **PR 20 done** (tap speed, 44px, overlays). | Real-phone pass; planner day cells are 40px wide at 375px. | Chirag (manual), Codex |
-| Backups and recovery | **Not done.** Earlier decision: skip M5 for now. | Needs Chirag's decision: Supabase Pro (₹~2,100/mo, daily backups) or a free nightly `pg_dump` via GitHub Actions + a restore drill. | Chirag → Claude |
+| Backups and recovery | **Nightly encrypted backup built** (`docs/BACKUPS.md`), restore tested locally. | Chirag: add 2 GitHub secrets, run once; first restore drill. Supabase Pro before scale. | Chirag, Claude |
 
 ## Phase 2: business operations (status)
 | Feature | Today | Needs a database change? | Build order |
