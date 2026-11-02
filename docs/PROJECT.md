@@ -41,6 +41,8 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
   passing a course id over using the `COURSE_ID` constant in new code. The database (access, keys,
   enrollments, quizzes, assignments) is already per course; the screens assume one course today.
 
+**Live database:** migrations through `20261102000007_school_bulk_enroll` (applied 2026-11-02 after Chirag's "apply 7").
+
 ## Road to launch (2026-11-02, timed on real pace: ~5–6 PRs/hour, migration PR 10–20 min)
 | Phase | What | Who | Time |
 |---|---|---|---|
