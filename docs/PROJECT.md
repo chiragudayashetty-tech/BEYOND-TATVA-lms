@@ -55,7 +55,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | A | ~~Codex Sprint 1 tasks 4–8~~ **Done 2026-11-02** | Codex → Claude review | |
 | C | ~~CRM notes → bulk enrollment → workshops~~ **Done 2026-11-02**, plus dashboards/insights | Claude (SQL/backend) → Codex (UI) | |
 | B | Website payment → LMS, refunds (`docs/CODEX-PHASE-2.md`) | Codex (website) | ~1–2 h, **after Razorpay KYC** |
-| D | **Testing and fixing**: code freeze; automatic tests; real phones (cheap Android, iPhone, WhatsApp browser, slow 4G) with 2–3 families on the full path; Studio pass; security re-audit; backup restore drill; fix all critical/high | Everyone | ~1 day |
+| D | **Testing and fixing** (in progress, `docs/TESTING.md`): code freeze; automatic tests; real phones (cheap Android, iPhone, WhatsApp browser, slow 4G) with 2–3 families on the full path; Studio pass; security re-audit; backup restore drill; fix all critical/high | Everyone | ~1 day |
 | Launch | Vercel Pro, Supabase Pro, Resend sender, real Module 0 videos, Razorpay live | Chirag | 1 day |
 Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, interactive video questions, a second course.
 
