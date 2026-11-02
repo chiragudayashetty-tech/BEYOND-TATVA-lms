@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Inbox } from "lucide-react";
 
 // Small shared building blocks used across every role's pages.
 
@@ -11,7 +11,8 @@ const tones = {
   neutral: "bg-surface-2 text-muted",
 };
 
-export function IconTile({ icon: Icon, tone = "primary", size = "md" }) {
+// A missing icon falls back to Inbox instead of crashing the whole page (Studio Analytics bug, 2026-11-02).
+export function IconTile({ icon: Icon = Inbox, tone = "primary", size = "md" }) {
   const s = size === "lg" ? "h-12 w-12 [&>svg]:h-6 [&>svg]:w-6" : size === "sm" ? "h-8 w-8 [&>svg]:h-4 [&>svg]:w-4" : "h-10 w-10 [&>svg]:h-5 [&>svg]:w-5";
   return <span className={`grid shrink-0 place-items-center rounded-xl ${s} ${tones[tone]}`}><Icon /></span>;
 }
