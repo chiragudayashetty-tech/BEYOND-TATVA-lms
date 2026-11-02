@@ -39,6 +39,7 @@ export const nav = {
       { href: "/admin/quizzes", label: "Quizzes", icon: "ListChecks" },
       { href: "/admin/assignments", label: "Assignments", icon: "ClipboardCheck" },
       { href: "/admin/enrollments", label: "Enrollments", icon: "UserCheck" },
+      { href: "/admin/reconcile", label: "Reconciliation", icon: "ReceiptText" },
       { href: "/admin/people", label: "Schools & people", icon: "Users" },
       { href: "/admin/access", label: "School keys", icon: "KeyRound" },
       { href: "/admin/pipeline", label: "Pipeline", icon: "Contact" },
