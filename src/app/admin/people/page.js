@@ -2,7 +2,7 @@ import { School, Users } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Avatar, Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { GrantButton, MoveAccess, NewClass, NewSchool, TeacherRevoke } from "./PeopleForms";
+import { GrantButton, MoveAccess, NewClass, NewSchool, StudentDataButtons, TeacherRevoke } from "./PeopleForms";
 
 export const metadata = { title: "Schools and people · Admin · Beyond Tatva" };
 
@@ -62,9 +62,9 @@ export default async function PeoplePage() {
           <div className="p-5"><Empty icon={Users} title="No students yet" body="Students show up here as soon as they sign up." /></div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[760px] text-sm">
               <thead><tr className="border-y border-border text-left text-xs uppercase tracking-wider text-subtle">
-                <th className="px-5 py-3 font-medium">Student</th><th className="px-5 py-3 font-medium">School</th><th className="px-5 py-3 font-medium">Parent</th><th className="px-5 py-3 font-medium">Access</th>
+                <th className="px-5 py-3 font-medium">Student</th><th className="px-5 py-3 font-medium">School</th><th className="px-5 py-3 font-medium">Parent</th><th className="px-5 py-3 font-medium">Access</th><th className="px-5 py-3 font-medium">Data</th>
               </tr></thead>
               <tbody>
                 {students.map((s) => (
@@ -73,6 +73,7 @@ export default async function PeoplePage() {
                     <td className="px-5 py-3 text-muted">{schoolName[s.school_id] ?? s.school_name ?? "–"}{!s.school_id && <div className="text-xs">Individual</div>}</td>
                     <td className="px-5 py-3"><div className="text-xs text-muted">{s.guardian_phone ?? "–"}</div>{s.guardian_consent_at ? <Badge tone="success">Consent ({s.consent_by ?? "parent"})</Badge> : <Badge tone="warning">No consent</Badge>}{s.signed_up_by === "parent" && <div className="text-[11px] text-subtle">Set up by parent</div>}</td>
                     <td className="px-5 py-3">{accessBy[s.id] ? <Badge tone="success">Full · {accessBy[s.id]}</Badge> : <GrantButton studentId={s.id} />}</td>
+                    <td className="px-5 py-3"><StudentDataButtons studentId={s.id} name={s.full_name} /></td>
                   </tr>
                 ))}
               </tbody>

@@ -143,6 +143,31 @@ export async function assignEnrollment(_, fd) {
   return run((s) => s.rpc("admin_assign_purchase", { p_purchase: purchase, p_student: student }));
 }
 
+// Student data rights (DPDP): export everything we hold, or delete the account and its uploads.
+export async function exportStudent(studentId) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_export_student", { p_student: studentId });
+  return error ? { ok: false, error: error.message } : { ok: true, data };
+}
+
+export async function deleteStudent(studentId, confirmName) {
+  const supabase = await createClient();
+  const { data: files, error } = await supabase.rpc("admin_delete_student", { p_student: studentId, p_confirm_name: confirmName });
+  if (error) return { ok: false, error: error.message };
+  let filesNote = "";
+  if (files?.length) {
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const { error: rmError } = await createAdminClient().storage.from("submissions").remove(files);
+      if (rmError) filesNote = ` Uploaded files were not removed (${rmError.message}); remove the folder ${studentId}/ in Supabase Storage.`;
+    } catch {
+      filesNote = ` Uploaded files were not removed; remove the folder ${studentId}/ in Supabase Storage.`;
+    }
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: `Deleted.${filesNote}` };
+}
+
 // Teachers: revoke or restore access (ends course access and student visibility).
 export async function setTeacherRevoked(teacherId, revoked) {
   return run((s) => s.rpc("admin_set_teacher_revoked", { p_teacher: teacherId, p_revoked: revoked }));

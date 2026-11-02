@@ -54,3 +54,10 @@ test("progress and answers are written only through checked functions (M2)", () 
 test("quiz screen copes with hidden answers (M3)", () => {
   assert.match(src("app/quiz/[id]/QuizRunner.js"), /result\.revealed/);
 });
+
+test("Studio delete removes uploaded files with the server-only admin client", () => {
+  const a = src("app/admin/actions.js");
+  assert.match(a, /rpc\("admin_delete_student"/);
+  assert.match(a, /storage\.from\("submissions"\)\.remove\(files\)/);
+  assert.doesNotMatch(src("app/admin/people/PeopleForms.js"), /supabase\/admin/);
+});

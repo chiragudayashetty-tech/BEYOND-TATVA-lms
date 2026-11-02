@@ -6,10 +6,10 @@ to Claude first (AGENTS.md). Codex prompt: bottom of this file.
 ## Launch checklist (status)
 | Item | Status | Left to do | Owner |
 |---|---|---|---|
-| Database permissions and RLS | **Mostly done.** H1, H2, H3 live; M2 + M3 built (PR `checked progress`). RLS on every table. | L1 upload path rule; L6 indexes | Claude |
+| Database permissions and RLS | **Done.** H1, H2, H3, M1–M4, L1, L6 built; RLS on every table. | L3: Chirag adds Preview secrets (`docs/PREVIEW-SECRETS.md`) | Chirag |
 | Student sign-in | **Done in code**, SQL-tested (onboarding, consent, one login per child). | One real test on a phone: Google sign-in → "I'm a parent" → course. Automated browser smoke tests. | Chirag (manual), Codex (tests) |
 | Course access rules | **Done**, SQL-tested (free Module 0, release dates, paid, teacher, keys). | Browser smoke tests for locked vs unlocked. | Codex |
-| Assignment uploads | **Works**, SQL-tested (private bucket, own folder). | L1 tighter path rule. Codex: file type/size message on phones. | Claude, Codex |
+| Assignment uploads | **Done**, SQL-tested (private bucket; path must be own folder + a real open assignment). | Codex: file type/size message on phones. | Codex |
 | Payments and enrollments | **LMS side done** and tested (verified match, Studio approval, refunds). | Website doesn't call the LMS yet: `docs/CODEX-PHASE-2.md`. | Codex (website) |
 | Mobile bugs | **PR 20 done** (tap speed, 44px, overlays). | Real-phone pass; planner day cells are 40px wide at 375px. | Chirag (manual), Codex |
 | Backups and recovery | **Nightly encrypted backup built** (`docs/BACKUPS.md`), restore tested locally. | Chirag: add 2 GitHub secrets, run once; first restore drill. Supabase Pro before scale. | Chirag, Claude |
