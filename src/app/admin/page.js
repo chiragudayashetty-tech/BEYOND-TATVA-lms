@@ -21,9 +21,10 @@ const sections = [
 
 export default async function AdminPage() {
   const [course, supabase] = await Promise.all([getCourse(), createClient()]);
-  const [{ data: s }, { count: withVideo }] = await Promise.all([
+  const [{ data: s }, { count: withVideo }, { data: dueNotes }] = await Promise.all([
     supabase.rpc("admin_stats"),
     supabase.from("lesson_media").select("lesson_id", { count: "exact", head: true }),
+    supabase.from("crm_notes").select("id, student_id, lead_id, body, follow_up_at").is("done_at", null).lte("follow_up_at", new Date().toISOString()).order("follow_up_at").limit(8),
   ]);
   const stats = s ?? {};
   const next = nextPremiere(course);
@@ -64,6 +65,9 @@ export default async function AdminPage() {
         </Card>
 
         <div className="space-y-4">
+          {dueNotes?.length > 0 && <Card title={`Follow-ups due (${dueNotes.length})`}>
+            <ul className="divide-y divide-border">{dueNotes.map((note) => <li key={note.id} className="py-2 first:pt-0 last:pb-0"><Link href={`/admin/pipeline?followups=1`} className="block min-h-11 py-2"><span className="block text-sm font-medium">{note.body}</span><span className="text-xs text-muted">{new Date(note.follow_up_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}</span></Link></li>)}</ul>
+          </Card>}
           {next && (
             <div className="card flex items-center gap-4 p-5">
               <IconTile icon={CalendarClock} />
