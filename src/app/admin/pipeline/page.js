@@ -22,19 +22,21 @@ export default async function PipelinePage({ searchParams }) {
     supabase.from("crm_notes").select("*").order("created_at", { ascending: false }),
   ]);
   const byPerson = new Map();
+  // A note may carry a student id, a lead id or both; index it under each so it follows the person after sign-up.
   for (const note of notes ?? []) {
-    const key = note.student_id ?? note.lead_id;
-    byPerson.set(key, [...(byPerson.get(key) ?? []), note]);
+    for (const key of [note.student_id, note.lead_id]) if (key) byPerson.set(key, [...(byPerson.get(key) ?? []), note]);
   }
-  const duePeople = new Set((notes ?? []).filter((n) => !n.done_at && n.follow_up_at && new Date(n.follow_up_at) <= new Date()).map((n) => n.student_id ?? n.lead_id));
+  const notesFor = (r) => [...new Set([...(byPerson.get(r.student_id) ?? []), ...(byPerson.get(r.lead_id) ?? [])])];
+  const now = new Date();
+  const isDue = (r) => notesFor(r).some((n) => !n.done_at && n.follow_up_at && new Date(n.follow_up_at) <= now);
   // School enquiries (principals from the /schools form) are counted apart from parents and students.
   const all = (data ?? []).filter((r) => (view === "schools") === (r.source === "schools"));
   const rows = all
-    .filter((r) => (stage ? r.stage === stage : true) && (stalled ? r.stalled : true) && (followups ? duePeople.has(r.student_id ?? r.lead_id) : true))
+    .filter((r) => (stage ? r.stage === stage : true) && (stalled ? r.stalled : true) && (followups ? isDue(r) : true))
     .sort((a, b) => new Date(b.signed_up_at ?? b.lead_at) - new Date(a.signed_up_at ?? a.lead_at));
   const count = (id) => all.filter((r) => r.stage === id).length;
   const stalledCount = all.filter((r) => r.stalled).length;
-  const dueCount = all.filter((r) => duePeople.has(r.student_id ?? r.lead_id)).length;
+  const dueCount = all.filter(isDue).length;
   const href = (q) => {
     const qs = [view === "schools" && "view=schools", q].filter(Boolean).join("&");
     return `/admin/pipeline${qs ? `?${qs}` : ""}`;
@@ -95,7 +97,7 @@ export default async function PipelinePage({ searchParams }) {
                   <Badge tone={STAGES[r.stage - 1].tone}>{STAGES[r.stage - 1].label}</Badge>
                   {r.stalled && <Badge tone="danger">Stopped</Badge>}
                   {r.source && <span className="text-[11px] text-subtle">from {r.source}</span>}
-                  <NotesButton person={r} notes={byPerson.get(r.student_id ?? r.lead_id) ?? []} />
+                  <NotesButton person={r} notes={notesFor(r)} />
                 </div>
               </li>
             ))}

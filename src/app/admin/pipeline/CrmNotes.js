@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, MessageSquareText, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -8,7 +9,9 @@ const stamp = (value) => new Date(value).toLocaleString("en-IN", { timeZone: "As
 
 export function NotesButton({ person, notes = [] }) {
   const [open, setOpen] = useState(false);
-  return <><button type="button" onClick={() => setOpen(true)} className="btn-secondary min-h-11 px-3"><MessageSquareText size={16} /> Notes ({notes.length})</button>{open && <NotesPanel person={person} notes={notes} onClose={() => setOpen(false)} />}</>;
+  const router = useRouter();
+  const close = () => { setOpen(false); router.refresh(); }; // refresh counts and the follow-ups filter
+  return <><button type="button" onClick={() => setOpen(true)} className="btn-secondary min-h-11 px-3"><MessageSquareText size={16} /> Notes ({notes.length})</button>{open && <NotesPanel person={person} notes={notes} onClose={close} />}</>;
 }
 
 function NotesPanel({ person, notes: initial, onClose }) {
