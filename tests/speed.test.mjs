@@ -64,8 +64,11 @@ test("Studio delete removes uploaded files with the server-only admin client", (
 
 test("page skeletons share the app frame (padding, top bar, progress bar)", async () => {
   const { readdirSync, statSync } = await import("node:fs");
-  const walk = (d) => readdirSync(d).flatMap((f) => { const p = `${d}/${f}`; return statSync(p).isDirectory() ? walk(p) : [p]; });
-  const root = new URL("../src/app", import.meta.url).pathname;
-  const loaders = walk(root).filter((p) => p.endsWith("/loading.js") );
+  const { join } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  // fileURLToPath + path.join so this works on Windows too (C:\...), not only Linux/macOS.
+  const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
+  const loaders = walk(fileURLToPath(new URL("../src/app", import.meta.url))).filter((p) => /[\\/]loading\.js$/.test(p));
+  assert.ok(loaders.length >= 10);
   for (const f of loaders) assert.match(readFileSync(f, "utf8"), /LoadingState|LoadingFrame/, f);
 });
