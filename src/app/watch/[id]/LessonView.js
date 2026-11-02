@@ -18,20 +18,17 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave, 
   const [done, setDone] = useState(lesson.done);
   const [saveError, setSaveError] = useState("");
 
-  // Progress and answers are saved to Supabase; RLS lets students write only their own rows.
-  const saveProgress = useCallback(async (fields) => {
+  // Progress and answers go through checked database functions (save_progress / save_answer):
+  // the database confirms the lesson is open for this student and caps watch time.
+  const saveProgress = useCallback(async ({ seconds, completed } = {}) => {
     if (!canSave || !userId) return { error: null };
-    // userId comes from the server; RLS still checks it matches the session.
-    return createClient().from("lesson_progress").upsert(
-      { student_id: userId, lesson_id: lesson.id, updated_at: new Date().toISOString(), ...fields },
-      { onConflict: "student_id,lesson_id" },
-    );
+    return createClient().rpc("save_progress", { p_lesson: lesson.id, p_seconds: seconds ?? null, p_completed: completed ?? null });
   }, [canSave, userId, lesson.id]);
 
   async function markDone(next) {
     setDone(next);
     setSaveError("");
-    const { error } = await saveProgress({ completed_at: next ? new Date().toISOString() : null });
+    const { error } = await saveProgress({ completed: next });
     if (error) { setDone(!next); setSaveError("Couldn't save. Check your connection and try again."); }
   }
 
@@ -49,12 +46,12 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave, 
       w.saved = w.max;
       doneRef.current = true;
       setDone(true);
-      saveProgress({ seconds_watched: w.max, completed_at: new Date().toISOString() }).then(({ error }) => {
+      saveProgress({ seconds: w.max, completed: true }).then(({ error }) => {
         if (error) { w.autoDone = false; doneRef.current = false; setDone(false); }
       });
     } else if (w.max - w.saved >= 15) {
       w.saved = w.max;
-      saveProgress({ seconds_watched: w.max });
+      saveProgress({ seconds: w.max });
     }
   }, [saveProgress]);
   const autoTracked = tracksProgress(parseVideo(video));
@@ -62,7 +59,7 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave, 
   async function saveAnswer(question, correct) {
     if (correct) setXp((x) => x + 10);
     if (!canSave || !userId) return;
-    await createClient().from("checkpoint_answers").insert({ student_id: userId, lesson_id: lesson.id, question, correct });
+    await createClient().rpc("save_answer", { p_lesson: lesson.id, p_question: question, p_correct: correct });
   }
   const noteKey = `notes:${lesson.id}`;
   // The Notes tab is never server-rendered (Overview opens first), so reading storage here is safe.

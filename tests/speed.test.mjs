@@ -43,3 +43,14 @@ test("every nav icon exists in NavLinks (no silent fallback circles)", async () 
 test("reconciliation CSV neutralises spreadsheet formulas", () => {
   assert.match(src("app/admin/reconcile/reconcile-controls.js"), /\^\[=\+\\-@/);
 });
+
+test("progress and answers are written only through checked functions (M2)", () => {
+  const view = src("app/watch/[id]/LessonView.js");
+  assert.match(view, /rpc\("save_progress"/);
+  assert.match(view, /rpc\("save_answer"/);
+  assert.doesNotMatch(view, /from\("(lesson_progress|checkpoint_answers)"\)\.(upsert|insert|update)/);
+});
+
+test("quiz screen copes with hidden answers (M3)", () => {
+  assert.match(src("app/quiz/[id]/QuizRunner.js"), /result\.revealed/);
+});
