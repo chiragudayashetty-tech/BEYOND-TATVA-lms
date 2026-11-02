@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GraduationCap, House, Info, Users } from "lucide-react";
 import Logo from "@/components/Logo";
@@ -24,6 +24,26 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [terms, setTerms] = useState(false); // teacher terms pop-up
+  const termsDialog = useRef(null);
+
+  useEffect(() => {
+    if (!terms) return;
+    const dialog = termsDialog.current;
+    const previous = document.activeElement;
+    const focusable = () => [...dialog.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')];
+    focusable()[0]?.focus();
+    function onKeyDown(event) {
+      if (event.key === "Escape") { event.preventDefault(); setTerms(false); return; }
+      if (event.key !== "Tab") return;
+      const nodes = focusable();
+      if (!nodes.length) { event.preventDefault(); return; }
+      const first = nodes[0], last = nodes[nodes.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+    }
+    dialog.addEventListener("keydown", onKeyDown);
+    return () => { dialog.removeEventListener("keydown", onKeyDown); previous?.focus?.(); };
+  }, [terms]);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
   const parent = by === "parent";
   const teacher = by === "teacher";
@@ -175,7 +195,7 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
         </div>
       </div>
       {terms && (
-        <div role="dialog" aria-modal="true" aria-labelledby="terms-title" className="fixed inset-0 z-50 grid place-items-end bg-black/50 p-0 sm:place-items-center sm:p-4">
+        <div ref={termsDialog} role="dialog" aria-modal="true" aria-labelledby="terms-title" tabIndex={-1} className="fixed inset-0 z-50 grid place-items-end bg-black/50 p-0 sm:place-items-center sm:p-4">
           <div className="w-full max-w-lg animate-[pop_.15s_ease-out] rounded-t-2xl bg-surface p-6 shadow-2xl sm:rounded-2xl">
             <h2 id="terms-title" className="text-lg font-semibold">Teacher terms</h2>
             <p className="mt-1 text-sm text-muted">Your teacher code works only after you agree.</p>

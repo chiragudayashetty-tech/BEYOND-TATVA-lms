@@ -10,7 +10,7 @@
   --border: #e6e8f0;
   --fg: #0f172a;
   --muted: #64748b;
-  --subtle: #94a3b8;
+  --subtle: #64748b;
   --primary: #4f46e5;
   --primary-fg: #ffffff;
   --primary-soft: #eef0ff;
@@ -31,7 +31,7 @@
   --border: #242a3a;
   --fg: #e9ebf3;
   --muted: #8c94a8;
-  --subtle: #5d6578;
+  --subtle: #9aa3b8;
   --primary: #6d67f0;
   --primary-fg: #ffffff;
   --primary-soft: #1f1f3d;
@@ -71,6 +71,11 @@ body {
   background: var(--bg);
   color: var(--fg);
   transition: background-color 0.2s ease;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* Touch: no double-tap-zoom wait, no grey flash, instant pressed feedback on every tappable thing. */
