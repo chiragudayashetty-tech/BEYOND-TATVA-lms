@@ -77,7 +77,7 @@ export default function PlannerView({ serverPlan = {}, userId = null }) {
               const on = k === dayKey;
               return (
                 <button key={k} onClick={() => setSelected(d)}
-                  className={`flex flex-col items-center gap-1 rounded-xl py-2.5 text-sm transition ${on ? "bg-primary text-primary-fg" : k === key(today) ? "ring-1 ring-primary" : "hover:bg-surface-2"}`}>
+                  className={`planner-day-hit flex flex-col items-center gap-1 rounded-xl py-2.5 text-sm transition ${on ? "bg-primary text-primary-fg" : k === key(today) ? "ring-1 ring-primary" : "hover:bg-surface-2"}`}>
                   <span className={`text-[11px] uppercase ${on ? "text-primary-fg/80" : "text-subtle"}`}>{d.toLocaleDateString("en-IN", { weekday: "short" })}</span>
                   <span className="font-semibold">{d.getDate()}</span>
                   <span className={`h-1 w-1 rounded-full ${plan[k]?.length ? (on ? "bg-primary-fg" : "bg-primary") : "bg-transparent"}`} />
@@ -152,7 +152,7 @@ export default function PlannerView({ serverPlan = {}, userId = null }) {
             const k = key(d);
             return (
               <button key={k} onClick={() => setSelected(d)}
-                className={`relative grid aspect-square place-items-center rounded-lg text-sm transition ${k === dayKey ? "bg-primary font-semibold text-primary-fg" : k === key(today) ? "font-semibold text-primary ring-1 ring-primary" : "hover:bg-surface-2"}`}>
+                className={`planner-day-hit relative grid aspect-square place-items-center rounded-lg text-sm transition ${k === dayKey ? "bg-primary font-semibold text-primary-fg" : k === key(today) ? "font-semibold text-primary ring-1 ring-primary" : "hover:bg-surface-2"}`}>
                 {d.getDate()}
                 {plan[k]?.length > 0 && k !== dayKey && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-primary" />}
               </button>
