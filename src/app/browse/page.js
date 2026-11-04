@@ -1,25 +1,23 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, ClipboardList, Crown, Gift, KeyRound, Play, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Crown, Gift, KeyRound, Play } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Card, IconTile, Ring, ViewAll } from "@/components/ui";
 import { ContinueHero, ModuleCard, PremiereCard, firstLesson } from "@/components/course";
 import { canWatch, nextPremiere } from "@/lib/catalog";
-import { getActivities, getCourse, getLearningStats, getLeaderboard } from "@/lib/data";
+import { getCourse, getLearningStats, getLeaderboard } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 import InstallPrompt from "@/components/InstallPrompt";
 
 export const metadata = { title: "Dashboard · Beyond Tatva" };
 
 export default async function Dashboard() {
-  const [{ hasAccess, profile }, course, stats, board, activities] = await Promise.all([getSession(), getCourse(), getLearningStats(), getLeaderboard(), getActivities()]);
+  const [{ hasAccess, profile }, course, stats, board] = await Promise.all([getSession(), getCourse(), getLearningStats(), getLeaderboard()]);
   const next = nextPremiere(course);
   const current = course.modules.find((m) => m.progress < 100 && m.lessons.length && canWatch(m, hasAccess)) ?? course.modules[0];
   const done = course.lessons.filter((l) => l.done).length;
   const nextLesson = current ? firstLesson(current) : null;
   const firstModule = course.modules[0];
   const firstModuleLesson = firstLesson(firstModule);
-  const firstModuleQuiz = activities.quizzes.find((quiz) => quiz.chapter_id === firstModule?.id);
-  const firstModuleAssignment = activities.assignments.find((assignment) => assignment.chapter_id === firstModule?.id);
   const firstName = profile?.full_name?.trim().split(/\s+/)[0] || "there";
   // Friendly nudge: the XP gap to the next rank, from the leaderboard (only real numbers).
   const me = board?.me;
@@ -68,11 +66,7 @@ export default async function Dashboard() {
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">Start here · Module {firstModule.n}</p>
             <h2 id="start-module-title" className="mt-0.5 text-lg font-semibold">{firstModule.title}</h2>
-            <p className="mt-1 text-sm text-muted">Watch the first lesson, try the quick checks, then finish this module&apos;s quiz and assignment.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {firstModuleQuiz && <Link href={`/quiz/${firstModuleQuiz.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-warning-soft px-3 text-xs font-semibold text-warning"><Sparkles className="h-3.5 w-3.5" /> Quiz</Link>}
-              {firstModuleAssignment && <Link href={`/assignments/${firstModuleAssignment.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-success-soft px-3 text-xs font-semibold text-success"><ClipboardList className="h-3.5 w-3.5" /> Assignment</Link>}
-            </div>
+            <p className="mt-1 text-sm text-muted">Watch the first lesson and try the quick checks. You can find the quiz and assignment in Learning tasks.</p>
           </div>
         </div>
         {firstModuleLesson && <Link href={`/watch/${course.id}?l=${firstModuleLesson.n}`} className="btn-primary mt-4 w-full sm:mt-0 sm:w-auto"><Play className="h-4 w-4 fill-current" /> {firstModule.progress > 0 ? `Continue Module ${firstModule.n}` : `Start Module ${firstModule.n}`} <ArrowRight className="h-4 w-4" /></Link>}
