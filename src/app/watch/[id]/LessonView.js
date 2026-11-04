@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CalendarClock, Check, CircleCheck, Lock, PlayCircle, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarClock, Check, CircleCheck, ClipboardList, Lock, PlayCircle, Sparkles, Zap } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
 import { Avatar, Badge } from "@/components/ui";
+import { quizBadge, submissionBadge } from "@/components/activity";
 import { canWatch, isComingSoon, isReleased } from "@/lib/catalog";
 import { parseVideo, tracksProgress } from "@/lib/video";
 import { createClient } from "@/lib/supabase/client";
@@ -12,7 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 const tabs = ["Overview", "Notes"];
 const COMPLETE_AT = 0.9; // a lesson counts as watched at 90%
 
-export default function LessonView({ course, lesson, hasAccess, video, canSave, userId }) {
+export default function LessonView({ course, lesson, hasAccess, video, activities, canSave, userId }) {
   const [tab, setTab] = useState("Overview");
   const [xp, setXp] = useState(0);
   const [done, setDone] = useState(lesson.done);
@@ -76,6 +77,8 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave, 
 
   const prev = course.lessons.find((l) => l.n === lesson.n - 1);
   const mod = course.modules.find((m) => m.n === lesson.module);
+  const moduleQuizzes = activities.quizzes.filter((quiz) => quiz.chapter_id === mod?.id);
+  const moduleAssignments = activities.assignments.filter((assignment) => assignment.chapter_id === mod?.id);
   const nextRaw = course.lessons.find((l) => l.n === lesson.n + 1);
   const next = nextRaw && canWatch(course.modules.find((m) => m.n === nextRaw.module), hasAccess) ? nextRaw : null;
 
@@ -84,6 +87,29 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave, 
       <div className="min-w-0">
         <Link href="/course" className="btn-ghost -ml-3 mb-3"><ArrowLeft className="h-4 w-4" /> {course.title}</Link>
         <VideoPlayer src={video} title={lesson.title} onAnswer={saveAnswer} onProgress={onProgress} />
+
+        {(moduleQuizzes.length > 0 || moduleAssignments.length > 0) && <section className="mt-5 rounded-2xl border border-border bg-surface p-4 sm:p-5" aria-labelledby="lesson-tasks-title">
+          <h2 id="lesson-tasks-title" className="text-base font-semibold">After this video</h2>
+          <p className="mt-1 text-sm text-muted">Continue with the quiz or assignment for this module.</p>
+          <ul className="mt-3 divide-y divide-border">
+            {moduleQuizzes.map((quiz) => <li key={quiz.id}>
+              <Link href={`/quiz/${quiz.id}`} className="flex min-h-12 items-center gap-3 rounded-xl px-2 py-3 hover:bg-surface-2">
+                <Sparkles className="h-5 w-5 shrink-0 text-warning" />
+                <span className="min-w-0 flex-1 font-medium">{quiz.title}</span>
+                {quizBadge(activities.best[quiz.id])}
+                <ArrowRight className="h-4 w-4 shrink-0 text-subtle" />
+              </Link>
+            </li>)}
+            {moduleAssignments.map((assignment) => <li key={assignment.id}>
+              <Link href={`/assignments/${assignment.id}`} className="flex min-h-12 items-center gap-3 rounded-xl px-2 py-3 hover:bg-surface-2">
+                <ClipboardList className="h-5 w-5 shrink-0 text-primary" />
+                <span className="min-w-0 flex-1 font-medium">{assignment.title}</span>
+                {submissionBadge(activities.submissions[assignment.id], assignment)}
+                <ArrowRight className="h-4 w-4 shrink-0 text-subtle" />
+              </Link>
+            </li>)}
+          </ul>
+        </section>}
 
         <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
           <div>

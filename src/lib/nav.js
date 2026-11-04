@@ -6,7 +6,7 @@ export const nav = {
       { href: "/browse", label: "Dashboard", icon: "LayoutDashboard" },
       { href: "/course", label: "Course", icon: "BookOpen" },
       { href: "/assignments", label: "Assignments", icon: "ClipboardList" },
-      { href: "/planner", label: "Study Planner", icon: "CalendarDays" },
+      { href: "/activities", label: "Learning tasks", icon: "ClipboardList" },
       { href: "/progress", label: "Progress", icon: "ChartLine" },
       { href: "/certificates", label: "Certificate", icon: "BadgeCheck" },
     ],
@@ -14,7 +14,7 @@ export const nav = {
     mobile: [
       { href: "/browse", label: "Home", icon: "House" },
       { href: "/course", label: "Course", icon: "BookOpen" },
-      { href: "/planner", label: "Planner", icon: "CalendarDays" },
+      { href: "/activities", label: "Tasks", icon: "ClipboardList" },
       { href: "/progress", label: "Progress", icon: "ChartLine" },
       { href: "/profile", label: "Profile", icon: "User" },
     ],
