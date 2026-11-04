@@ -40,7 +40,7 @@ export default async function Dashboard() {
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 lg:mb-6">
           <IconTile icon={Gift} />
           <div className="min-w-0 flex-1 basis-52">
-            <div className="text-sm font-semibold">You&apos;re on the free plan: AI 101 is yours</div>
+            <div className="text-sm font-semibold">You&apos;re on the free plan: Module 0 is yours</div>
             <div className="text-sm text-muted">Unlock the other modules with your school&apos;s access key or a one-time payment.</div>
           </div>
           <Link href="/unlock" className="btn-primary w-full sm:w-auto"><KeyRound className="h-4 w-4" /> Unlock course</Link>
@@ -97,7 +97,7 @@ export default async function Dashboard() {
         <div className="mb-4 flex items-end justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold">Your journey</h2>
-            <p className="text-sm text-muted">A new module premieres every Sunday at 6 PM.</p>
+            <p className="text-sm text-muted">A new module premieres every Sunday at 10 AM.</p>
           </div>
           <ViewAll href="/course">Course page</ViewAll>
         </div>

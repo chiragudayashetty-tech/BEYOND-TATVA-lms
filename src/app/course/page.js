@@ -36,7 +36,7 @@ export default async function CoursePage({ searchParams }) {
               <IconTile icon={CircleCheck} tone="success" />
               <div>
                 <h2 className="font-semibold">Payment successful. The full course is yours.</h2>
-                <p className="mt-1 text-sm text-muted">Every module unlocks on this account as it premieres, every Sunday at 6 PM. Sign in with this same account on any device.</p>
+                <p className="mt-1 text-sm text-muted">Every module unlocks on this account as it premieres, every Sunday at 10 AM. Sign in with this same account on any device.</p>
               </div>
             </div>
           )}
@@ -47,7 +47,7 @@ export default async function CoursePage({ searchParams }) {
                 <h1 className="mt-3 text-3xl font-semibold">{course.title}</h1>
                 <p className="mt-2 text-muted">{course.description}</p>
                 <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-                  {[[`0–${course.modules.length - 1}`, "Modules"], [String(course.lessonCount), "Lessons"], ["Sun", "6 PM weekly"]].map(([v, l]) => (
+                  {[[`0–${course.modules.length - 1}`, "Modules"], [String(course.lessonCount), "Lessons"], ["Sun", "10 AM weekly"]].map(([v, l]) => (
                     <div key={l} className="rounded-xl bg-surface-2 py-3">
                       <div className="font-display text-xl font-semibold">{v}</div>
                       <div className="text-xs text-muted">{l}</div>
@@ -66,7 +66,7 @@ export default async function CoursePage({ searchParams }) {
             <div className="card flex items-center gap-3 p-4 xl:hidden">
               <IconTile icon={Gift} tone="success" />
               <div className="min-w-0 flex-1">
-                <div className="font-semibold">AI 101 is free</div>
+                <div className="font-semibold">Module 0 is free</div>
                 <div className="text-sm text-muted">Modules 1–6 for ₹{course.price}, one time</div>
               </div>
               <Link href="/unlock" className="btn-primary shrink-0 px-4">Unlock</Link>
@@ -172,12 +172,12 @@ export default async function CoursePage({ searchParams }) {
               <>
                 <IconTile icon={CircleCheck} tone="success" />
                 <h2 className="mt-3 font-semibold">Full course unlocked</h2>
-                <p className="mt-1 text-sm text-muted">New modules appear here every Sunday at 6 PM.</p>
+                <p className="mt-1 text-sm text-muted">New modules appear here every Sunday at 10 AM.</p>
               </>
             ) : (
               <>
                 <IconTile icon={Gift} tone="success" />
-                <h2 className="mt-3 font-semibold">AI 101 is free</h2>
+                <h2 className="mt-3 font-semibold">Module 0 is free</h2>
                 <p className="mt-1 text-sm text-muted">Unlock modules 1–6 with a key from your school, or pay once online.</p>
                 <div className="mt-4 flex items-baseline gap-1"><span className="font-display text-3xl font-semibold">₹{course.price}</span><span className="text-sm text-muted">one time</span></div>
                 <Link href="/unlock" className="btn-primary mt-4 w-full">Unlock full course</Link>
