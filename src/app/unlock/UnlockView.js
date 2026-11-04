@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, CircleCheck, CreditCard, ExternalLink, KeyRound, RefreshCw, School, ShieldCheck } from "lucide-react";
 import { IconTile } from "@/components/ui";
@@ -57,6 +57,16 @@ export default function UnlockView({ price, hasAccess, preview, enrollUrl, signe
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [ok, setOk] = useState(hasAccess);
+  const keyDetails = useRef(null);
+
+  useEffect(() => {
+    const syncKeyDisclosure = () => {
+      if (keyDetails.current) keyDetails.current.open = window.location.hash === "#key";
+    };
+    syncKeyDisclosure();
+    window.addEventListener("hashchange", syncKeyDisclosure);
+    return () => window.removeEventListener("hashchange", syncKeyDisclosure);
+  }, []);
 
   async function redeem(e) {
     e.preventDefault();
@@ -88,24 +98,29 @@ export default function UnlockView({ price, hasAccess, preview, enrollUrl, signe
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <section id="key" className="card scroll-mt-24 p-6">
-        <IconTile icon={School} />
-        <h2 className="mt-4 text-lg font-semibold">My school gave me a key</h2>
-        <p className="mt-1 text-sm text-muted">Enter the access key from your teacher. It looks like BT-XXXX-XXXX.</p>
-        <form onSubmit={redeem} className="mt-5 space-y-3">
-          <input className="input font-mono uppercase tracking-widest" value={code} onChange={(e) => setCode(e.target.value)} placeholder="BT-XXXX-XXXX" required={!preview} autoComplete="off" />
-          {error && <p role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
-          <button disabled={busy} className="btn-primary w-full"><KeyRound className="h-4 w-4" /> {busy ? "Checking…" : "Unlock with key"}</button>
-        </form>
-        <p className="mt-4 text-xs text-muted">Each key works for one student only.</p>
-      </section>
-
       <section className="card p-6">
         <IconTile icon={CreditCard} tone="success" />
         <h2 className="mt-4 text-lg font-semibold">{upi ? "Pay by UPI" : "Enroll online"}</h2>
         <p className="mt-1 text-sm text-muted">One payment unlocks modules 1–6, including the ones still to premiere.</p>
         {upi ? <UpiPay price={price} {...upi} /> : <EnrollOnWebsite price={price} enrollUrl={enrollUrl} signedInAs={signedInAs} />}
       </section>
+
+      <details ref={keyDetails} id="key" className="card scroll-mt-24 p-5 sm:p-6">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden">
+          <IconTile icon={School} />
+          <span className="flex-1 font-semibold">Have a school key?</span>
+          <span className="text-sm font-medium text-primary">Enter key</span>
+        </summary>
+        <div className="mt-3 border-t border-border pt-4">
+          <p className="text-sm text-muted">Enter the access key from your teacher. It looks like BT-XXXX-XXXX.</p>
+          <form onSubmit={redeem} className="mt-4 space-y-3">
+            <input className="input font-mono uppercase tracking-widest" value={code} onChange={(e) => setCode(e.target.value)} placeholder="BT-XXXX-XXXX" required={!preview} autoComplete="off" />
+            {error && <p role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
+            <button disabled={busy} className="btn-primary w-full"><KeyRound className="h-4 w-4" /> {busy ? "Checking…" : "Unlock with key"}</button>
+          </form>
+          <p className="mt-4 text-xs text-muted">Each key works for one student only.</p>
+        </div>
+      </details>
     </div>
   );
 }
