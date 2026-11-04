@@ -5,7 +5,7 @@ import Shell from "@/components/shell/Shell";
 import Countdown from "@/components/Countdown";
 import { Thumb } from "@/components/course";
 import { canWatch, fmtPremiere, isComingSoon, isReleased, moduleOfLesson } from "@/lib/catalog";
-import { getCourse, getLessonVideo } from "@/lib/data";
+import { getActivities, getCourse, getLessonVideo } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 import LessonView from "./LessonView";
 
@@ -44,7 +44,7 @@ function LockScreen({ module: m, price }) {
 export default async function WatchPage({ params, searchParams }) {
   const { id } = await params;
   const { l } = await searchParams;
-  const [{ user, hasAccess }, course] = await Promise.all([getSession(), getCourse()]);
+  const [{ user, hasAccess }, course, activities] = await Promise.all([getSession(), getCourse(), getActivities()]);
   if (id !== course.id || !course.lessons.length) notFound();
   const lesson = course.lessons.find((x) => x.n === Number(l)) ?? course.lessons.find((x) => x.current) ?? course.lessons[0];
   const m = moduleOfLesson(course, lesson);
@@ -54,7 +54,7 @@ export default async function WatchPage({ params, searchParams }) {
   return (
     <Shell roles={["student", "teacher"]}>
       {allowed
-        ? <LessonView key={lesson.id} course={course} lesson={lesson} hasAccess={hasAccess} video={video} canSave={Boolean(user) && user.id !== "preview"} userId={user?.id} />
+        ? <LessonView key={lesson.id} course={course} lesson={lesson} hasAccess={hasAccess} video={video} activities={activities} canSave={Boolean(user) && user.id !== "preview"} userId={user?.id} />
         : <LockScreen module={m} price={course.price} />}
     </Shell>
   );
