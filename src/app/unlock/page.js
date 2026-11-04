@@ -24,7 +24,7 @@ export default async function UnlockPage() {
   }
   return (
     <Shell roles={["student"]}>
-      <PageTitle title={`Unlock ${course.title}`} subtitle="Module 0 (Introduction to the AI World) is free. Unlock modules 1–5 with a school key or a one-time payment." />
+      <PageTitle title={`Unlock ${course.title}`} subtitle="Module 0 (Introduction to the AI World, AI 101) is free. Unlock modules 1–5 with a school key or a one-time payment." />
       <UnlockView price={course.price} hasAccess={hasAccess} preview={isPreview} enrollUrl={process.env.NEXT_PUBLIC_ENROLL_URL || "https://www.beyondtatva.in"} signedInAs={user?.email || user?.phone || ""} upi={upi} />
     </Shell>
   );
