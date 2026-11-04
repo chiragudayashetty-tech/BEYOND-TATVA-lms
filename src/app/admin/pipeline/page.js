@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Download, Filter } from "lucide-react";
+import { CopyCheck, Download, Filter } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { COURSE_ID } from "@/lib/catalog";
 import { STAGES, STALL_HOURS } from "@/lib/pipeline";
 import { createClient } from "@/lib/supabase/server";
 import { NotesButton } from "./CrmNotes";
+import { ClearLeadsButton, DeleteLeadButton } from "./LeadActions";
 
 export const metadata = { title: "Pipeline · Studio · Beyond Tatva" };
 
@@ -46,6 +47,8 @@ export default async function PipelinePage({ searchParams }) {
     <Shell roles={["admin"]}>
       <PageTitle title="Pipeline" subtitle="Everyone from website lead to paid, one row per person. A website lead and a student are matched by the parent's phone.">
         <a href={`/admin/pipeline/export?view=${view}${stage ? `&stage=${stage}` : ""}`} className="btn-secondary"><Download size={16} /> Export CSV</a>
+        <Link href="/admin/pipeline/duplicates" className="btn-secondary"><CopyCheck size={16} /> Duplicates</Link>
+        <ClearLeadsButton source={view === "schools" ? "schools" : null} label={view === "schools" ? "Clear school enquiries" : "Clear all leads"} />
       </PageTitle>
 
       {error && <p role="alert" className="mb-4 rounded-xl bg-danger-soft p-3 text-sm text-danger">Couldn&apos;t load the pipeline: {error.message}</p>}
@@ -98,6 +101,7 @@ export default async function PipelinePage({ searchParams }) {
                   {r.stalled && <Badge tone="danger">Stopped</Badge>}
                   {r.source && <span className="text-[11px] text-subtle">from {r.source}</span>}
                   <NotesButton person={r} notes={notesFor(r)} />
+                  <DeleteLeadButton leadId={r.lead_id} name={r.name} />
                 </div>
               </li>
             ))}

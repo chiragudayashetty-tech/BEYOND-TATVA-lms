@@ -562,3 +562,23 @@ select 'V4b claim stored at 499 with the code' t, coalesce((select amount_paise 
 do $$ begin insert into public.coupons (code, price_inr, valid_until) values ('FREE1', 1, now() + interval '1 day'); raise exception 'V5 FAIL';
 exception when insufficient_privilege then raise notice 'V5 pass: students cannot create coupons'; end $$;
 reset role;
+
+-- ── Leads: delete, clear, duplicates ─────────────────────────────────────────
+reset role;
+set role service_role;
+select 'Y0 two leads, same phone' t, public.record_lead('dup-1', '9111111111', 'qr') = 'saved' and public.record_lead('dup-2', '91111 11111', 'loki') in ('saved', 'duplicate') as pass;
+reset role;
+insert into public.leads (reference, phone, source) values ('dup-3', '+919111111111', 'schools');
+select 'Y1 email key folds Gmail dots and +tags' t, public.email_key('A.B+x@Gmail.com') = 'ab@gmail.com' and public.email_key('A@x.in') = 'a@x.in' and public.phone_key('+91 91111-11111') = '9111111111' as pass;
+set role authenticated; select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+do $$ begin perform public.admin_duplicates(); raise exception 'Y2 FAIL'; exception when others then if sqlerrm like 'Y2%' then raise; end if; raise notice 'Y2 pass: %', sqlerrm; end $$;
+do $$ begin perform public.admin_clear_leads('DELETE ALL LEADS'); raise exception 'Y3 FAIL'; exception when others then if sqlerrm like 'Y3%' then raise; end if; raise notice 'Y3 pass: %', sqlerrm; end $$;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'Y4 duplicate phone found' t, count(*) >= 2 as pass from public.admin_duplicates() where match = 'phone' and match_key = '9111111111';
+select 'Y5 dedupe removes extra copies' t, public.admin_dedupe_leads() >= 1 as pass;
+select 'Y5b one lead left for that phone' t, count(*) = 1 as pass from public.leads where public.phone_key(phone) = '9111111111';
+select 'Y6 delete lead by id' t, public.admin_delete_leads(array(select id from public.leads where public.phone_key(phone) = '9111111111')) = 1 as pass;
+do $$ begin perform public.admin_clear_leads('yes'); raise exception 'Y7 FAIL'; exception when others then if sqlerrm like 'Y7%' then raise; end if; raise notice 'Y7 pass: %', sqlerrm; end $$;
+select 'Y8 clear all leads' t, public.admin_clear_leads('DELETE ALL LEADS') >= 0 as pass;
+select 'Y8b no leads left' t, count(*) = 0 as pass from public.leads where course_id = 'ai-for-students';
+reset role;
