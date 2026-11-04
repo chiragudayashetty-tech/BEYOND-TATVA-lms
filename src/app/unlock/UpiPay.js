@@ -16,7 +16,22 @@ export default function UpiPay({ price, upiId, payee, note, pending, userId }) {
   const [error, setError] = useState("");
   const [done, setDone] = useState(Boolean(pending));
   const [copied, setCopied] = useState(false);
-  const link = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payee)}&am=${price}&cu=INR&tn=${encodeURIComponent(note)}`;
+  const [code, setCode] = useState("");
+  const [coupon, setCoupon] = useState(null); // { code, price } once the server accepts it
+  const [checking, setChecking] = useState(false);
+  const amount = coupon?.price ?? price;
+  const link = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payee)}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
+
+  async function applyCoupon(e) {
+    e.preventDefault(); setError("");
+    const clean = code.trim().toUpperCase();
+    if (!clean) return;
+    setChecking(true);
+    const { data, error: rpcError } = await createClient().rpc("coupon_price", { p_code: clean });
+    setChecking(false);
+    if (rpcError || !data) { setCoupon(null); return setError("That coupon code is not valid or has expired."); }
+    setCoupon({ code: clean, price: data });
+  }
 
   async function copy() {
     try { await navigator.clipboard.writeText(upiId); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* the ID is shown as text to copy by hand */ }
@@ -32,7 +47,7 @@ export default function UpiPay({ price, upiId, payee, note, pending, userId }) {
     const path = `${userId}/${Date.now()}.${ext}`;
     const { error: upErr } = await supabase.storage.from("payment-proofs").upload(path, proof, { contentType: proof.type || undefined, upsert: false });
     if (upErr) { setBusy(false); return setError(/mime|type/i.test(upErr.message) ? "Please upload a photo (JPG, PNG, HEIC) or PDF." : "Upload failed. Check your internet and try again."); }
-    const { data, error: rpcError } = await supabase.rpc("submit_upi_claim", { p_proof: path, p_utr: utr || null, p_payer_name: payer });
+    const { data, error: rpcError } = await supabase.rpc("submit_upi_claim", { p_proof: path, p_utr: utr || null, p_payer_name: payer, p_coupon: coupon?.code ?? null });
     setBusy(false);
     if (rpcError) return setError(rpcError.message);
     if (data === "already_unlocked") return router.refresh();
@@ -50,11 +65,26 @@ export default function UpiPay({ price, upiId, payee, note, pending, userId }) {
 
   return (
     <div className="mt-5 space-y-4">
-      <div className="flex items-baseline gap-1.5"><span className="font-display text-4xl font-semibold">₹{price}</span><span className="text-sm text-muted">one time</span></div>
+      <div className="flex flex-wrap items-baseline gap-2">
+        <span className="font-display text-4xl font-semibold">₹{amount}</span>
+        {coupon && <span className="text-lg text-muted line-through">₹{price}</span>}
+        <span className="text-sm text-muted">one time</span>
+      </div>
+      {coupon ? (
+        <p className="flex flex-wrap items-center gap-2 rounded-xl bg-success-soft p-3 text-sm font-semibold text-success">
+          <Check className="h-4 w-4" /> Coupon {coupon.code} applied
+          <button type="button" onClick={() => { setCoupon(null); setCode(""); }} className="ml-auto min-h-11 px-2 text-xs font-medium text-muted underline">Remove</button>
+        </p>
+      ) : (
+        <form onSubmit={applyCoupon} className="flex gap-2">
+          <input id="coupon" value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" placeholder="Coupon code (optional)" aria-label="Coupon code" className="input min-w-0 flex-1 uppercase" />
+          <button disabled={checking || !code.trim()} className="btn-secondary shrink-0 px-4">{checking ? "Checking…" : "Apply"}</button>
+        </form>
+      )}
       <ol className="space-y-3 text-sm">
         <li className="flex gap-3"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary-soft text-xs font-bold text-primary">1</span>
           <div className="min-w-0 flex-1">
-            <p className="font-semibold">Pay ₹{price} by UPI</p>
+            <p className="font-semibold">Pay ₹{amount} by UPI</p>
             <a href={link} className="btn-primary mt-2 w-full sm:hidden"><Smartphone className="h-4 w-4" /> Pay with a UPI app</a>
             <p className="mt-2 text-muted">Or pay from any UPI app to:</p>
             <div className="mt-1 flex items-center gap-2 rounded-xl bg-surface-2 p-2 pl-3">

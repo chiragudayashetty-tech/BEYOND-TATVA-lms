@@ -445,10 +445,9 @@ reset role;
 set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
 select 'G1 today logged, skipping ahead does not count as watching' t,
   (select seconds between 60 and 120 from public.learning_days where student_id = auth.uid()) as pass;
-select 'G2 stats: week of 7 days, streak, answers' t,
-  jsonb_array_length(s -> 'week') = 7 and (s ->> 'streak')::int = 1 and (s ->> 'best_streak')::int = 1
-  and (s ->> 'checks_answered')::int >= 1 and (s ->> 'minutes_this_week')::int between 1 and 2
-  and jsonb_array_length(s -> 'active_days') = 1 as pass
+select 'G2 dashboard stats: XP, answers, watch time (no streaks since migration 10)' t,
+  (s ->> 'xp')::int >= 10 and (s ->> 'checks_answered')::int >= 1 and (s ->> 'minutes_total')::int >= 1
+  and s ? 'xp_breakdown' and not s ? 'streak' as pass
   from (select public.my_learning_stats() as s) x;
 do $$ begin insert into public.learning_days (student_id, day, seconds) values (auth.uid(), current_date - 1, 3600); raise exception 'G3 FAIL';
 exception when insufficient_privilege then raise notice 'G3 pass: no direct writes to the learning log'; end $$;
@@ -460,9 +459,8 @@ insert into public.learning_days (student_id, day, seconds) values
   ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', (now() at time zone 'Asia/Kolkata')::date - 2, 600),
   ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', (now() at time zone 'Asia/Kolkata')::date - 5, 600);
 set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
-select 'G5 streak counts consecutive days; best streak kept' t,
-  (s ->> 'streak')::int = 3 and (s ->> 'best_streak')::int = 3 and (s ->> 'minutes_this_week')::int between 31 and 32 as pass
-  from (select public.my_learning_stats() as s) x;
+select 'G5 daily log keeps one row per day for the student' t,
+  (select count(*) = 4 and sum(seconds) between 1860 and 1920 from public.learning_days where student_id = auth.uid()) as pass;
 reset role;
 
 -- ── XP, leaderboard, owner insights ──────────────────────────────────────────
@@ -544,3 +542,23 @@ reset role;
 select 'U9 access + purchase rows exist' t,
   exists (select 1 from public.course_access where student_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee' and reference = 'upi-432156789012')
   and exists (select 1 from public.purchases where reference = 'upi-432156789012' and status = 'claimed' and amount_paise > 0) as pass;
+
+-- ── Coupons ──────────────────────────────────────────────────────────────────
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+insert into public.coupons (code, price_inr, valid_until) values ('WORKSHOP499', 499, now() + interval '2 days');
+insert into public.coupons (code, price_inr, valid_from, valid_until) values ('OLD199', 199, now() - interval '5 days', now() - interval '3 days');
+reset role;
+insert into storage.objects (bucket_id, name) values ('payment-proofs', '77777777-7777-7777-7777-777777777777/pay.jpg');
+delete from public.course_access where student_id = '77777777-7777-7777-7777-777777777777';
+set role authenticated; select pg_temp.as_user('77777777-7777-7777-7777-777777777777');
+select 'V1 valid code gives the coupon price, expired and unknown give nothing' t,
+  public.coupon_price('workshop499') = 499 and public.coupon_price('OLD199') is null and public.coupon_price('NOPE') is null as pass;
+select 'V2 students cannot list coupons' t, count(*) = 0 as pass from public.coupons;
+do $$ begin perform public.submit_upi_claim('77777777-7777-7777-7777-777777777777/pay.jpg', null, null, 'ai-for-students', 'OLD199'); raise exception 'V3 FAIL';
+exception when others then if sqlerrm like 'V3%' then raise; end if; raise notice 'V3 pass: %', sqlerrm; end $$;
+select 'V4 claim with a valid code is priced by the server at 499' t,
+  public.submit_upi_claim('77777777-7777-7777-7777-777777777777/pay.jpg', null, null, 'ai-for-students', ' workshop499 ') = 'submitted' as pass;
+select 'V4b claim stored at 499 with the code' t, coalesce((select amount_paise = 49900 and coupon_code = 'WORKSHOP499' from public.upi_claims where student_id = auth.uid()), false) as pass;
+do $$ begin insert into public.coupons (code, price_inr, valid_until) values ('FREE1', 1, now() + interval '1 day'); raise exception 'V5 FAIL';
+exception when insufficient_privilege then raise notice 'V5 pass: students cannot create coupons'; end $$;
+reset role;

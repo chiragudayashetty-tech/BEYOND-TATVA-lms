@@ -28,7 +28,7 @@ export default function UpiClaims({ claims }) {
         {claims.map((c) => (
           <li key={c.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-3">
             <div className="min-w-0 flex-1 basis-56 text-sm">
-              <div className="font-semibold">{c.student} <span className="font-normal text-muted">· ₹{c.amount_paise / 100}</span></div>
+              <div className="font-semibold">{c.student} <span className="font-normal text-muted">· ₹{c.amount_paise / 100}{c.coupon_code ? ` with ${c.coupon_code}` : ""}</span></div>
               <div className="text-xs text-muted">{when(c.created_at)} · parent {c.phone || "–"}{c.payer_name ? ` · paid by ${c.payer_name}` : ""}{c.utr ? ` · UTR ${c.utr}` : ""}</div>
             </div>
             {c.proof && <a href={c.proof} target="_blank" rel="noopener noreferrer" className="btn-secondary min-h-11 px-3 text-sm"><ExternalLink className="h-4 w-4" /> Screenshot</a>}
