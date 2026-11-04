@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Bot, Brain, CalendarClock, Gift, Lock, MessageSquareText, Palette, PenLine, PlayCircle, Sparkles, Wrench } from "lucide-react";
 import Countdown from "./Countdown";
 import { Badge, IconTile, Progress } from "./ui";
-import { canWatch, fmtPremiere, isReleased } from "@/lib/catalog";
+import { canWatch, fmtPremiere, isComingSoon, isReleased } from "@/lib/catalog";
 
 const moduleIcons = [Sparkles, Brain, PenLine, Wrench, MessageSquareText, Palette, Bot];
 export const iconFor = (m) => moduleIcons[m?.n ?? 0] ?? Brain;
@@ -57,7 +57,7 @@ export function ModuleCard({ module: m, hasAccess, courseId }) {
           {state === "progress" || state === "done" ? (
             <div className="flex items-center gap-3"><Progress value={m.progress} tone={state === "done" ? "success" : "primary"} className="h-1.5" /><span className="font-medium text-fg">{m.progress}%</span></div>
           ) : state === "upcoming" ? (
-            m.release ? <span>Premieres in <span className="font-semibold text-fg"><Countdown to={m.release} compact /></span></span> : <span>Coming soon</span>
+            m.release && !isComingSoon(m) ? <span>Premieres in <span className="font-semibold text-fg"><Countdown to={m.release} compact /></span></span> : <span>Coming soon</span>
           ) : state === "locked" ? (
             <span className="font-medium text-primary">Unlock the full course</span>
           ) : (

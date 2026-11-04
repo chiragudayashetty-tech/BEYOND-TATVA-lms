@@ -53,12 +53,17 @@ export const moduleOfLesson = (course, lesson) => course.modules.find((m) => m.n
 
 // A module with no release date counts as released (drafts are simply not published).
 export const isReleased = (m, now = Date.now()) => !m.release || new Date(m.release).getTime() <= now;
-export const nextPremiere = (course, now = Date.now()) => course.modules.find((m) => !isReleased(m, now)) ?? null;
+// A module dated in or after 2099 is a placeholder: shown as "Coming soon" and locked for everyone.
+export const COMING_SOON_YEAR = 2099;
+export const isComingSoon = (m) => !!m?.release && new Date(m.release).getUTCFullYear() >= COMING_SOON_YEAR;
+export const nextPremiere = (course, now = Date.now()) => course.modules.find((m) => !isReleased(m, now) && !isComingSoon(m)) ?? null;
 
 // A student can watch a module when it has premiered and is free or they have full access.
 export const canWatch = (m, hasAccess, now = Date.now()) => isReleased(m, now) && (m.free || hasAccess);
 
 export const fmtPremiere = (iso) =>
-  iso
+  iso && new Date(iso).getUTCFullYear() >= COMING_SOON_YEAR
+    ? "Coming soon"
+    : iso
     ? new Date(iso).toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" })
     : "Not scheduled";

@@ -5,7 +5,7 @@ import Shell from "@/components/shell/Shell";
 import { Badge, Card, IconTile, Progress } from "@/components/ui";
 import { PremiereCard, Thumb, iconFor, moduleState } from "@/components/course";
 import Countdown from "@/components/Countdown";
-import { fmtPremiere, isReleased, nextPremiere } from "@/lib/catalog";
+import { fmtPremiere, isComingSoon, isReleased, nextPremiere } from "@/lib/catalog";
 import { getActivities, getCourse, getModuleResources } from "@/lib/data";
 import ModuleResources from "@/components/ModuleResources";
 import { getSession } from "@/lib/supabase/server";
@@ -100,7 +100,9 @@ export default async function CoursePage({ searchParams }) {
                           <h3 className="mt-1 text-lg font-semibold">{m.title}</h3>
                           <p className="mt-0.5 text-sm text-muted">{m.blurb}</p>
                           <div className="mt-2 text-xs text-muted">
-                            {state === "upcoming"
+                            {state === "upcoming" && isComingSoon(m)
+                              ? <>Coming soon</>
+                              : state === "upcoming"
                               ? <>Premieres {fmtPremiere(m.release)} · in <span className="font-semibold text-fg"><Countdown to={m.release} compact /></span></>
                               : <>{m.lessons.length} lessons · {m.mins} min</>}
                           </div>
