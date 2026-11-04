@@ -28,7 +28,7 @@ export default async function Home() {
             <Link href="/login?next=/course" className="flex items-center gap-3 rounded-xl border border-border p-4 transition hover:bg-surface-2">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-success-soft text-success"><Gift className="h-5 w-5" /></span>
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold">New here? Start AI 101 free</span>
+                <span className="block font-semibold">New here? Start Module 0 free</span>
                 <span className="text-sm text-muted">Sign in with Google or email: Module 0 is free.</span>
               </span>
               <ArrowRight className="h-4 w-4 text-subtle" />

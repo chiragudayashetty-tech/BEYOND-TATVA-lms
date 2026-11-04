@@ -80,7 +80,7 @@ export default function UnlockView({ price, hasAccess, preview, enrollUrl, signe
       <div className="card mx-auto max-w-lg p-8 text-center">
         <div className="flex justify-center"><IconTile icon={CircleCheck} tone="success" size="lg" /></div>
         <h2 className="mt-4 text-2xl font-semibold">Full course unlocked</h2>
-        <p className="mt-2 text-muted">You can watch every module as it premieres, every Sunday at 6 PM.</p>
+        <p className="mt-2 text-muted">You can watch every module as it premieres, every Sunday at 10 AM.</p>
         <Link href="/course" className="btn-primary mt-6">Go to the course</Link>
       </div>
     );

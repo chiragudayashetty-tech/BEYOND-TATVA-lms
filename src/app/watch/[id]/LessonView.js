@@ -161,7 +161,7 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave, 
                   </Link>
                 )) : (
                   <Link href={isReleased(m) ? "/unlock" : `/course#m${m.n}`} className="mx-2 block rounded-xl border border-dashed border-border px-3 py-2 text-xs text-muted hover:bg-surface-2">
-                    {isReleased(m) ? "Unlock to watch" : `Premieres Sun ${new Date(m.release).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}, 6 PM`}
+                    {isReleased(m) ? "Unlock to watch" : `Premieres Sun ${new Date(m.release).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}, 10 AM`}
                   </Link>
                 )}
               </div>
