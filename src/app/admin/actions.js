@@ -245,3 +245,22 @@ export async function gradeSubmission(_, fd) {
     p_submission: str(fd, "id"), p_marks: back ? null : num(fd, "marks"), p_feedback: str(fd, "feedback"), p_return: back,
   }));
 }
+
+// Leads. Deleting a lead also removes every other lead with the same phone and its CRM notes.
+async function leadRpc(fn, args, label) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(fn, args);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/pipeline", "layout");
+  return { ok: true, message: `${label}: ${data ?? 0} lead${data === 1 ? "" : "s"} removed.` };
+}
+export async function deleteLeads(ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return { ok: false, error: "Nothing selected." };
+  return leadRpc("admin_delete_leads", { p_ids: ids }, "Deleted");
+}
+export async function clearLeads(confirm, source = null) {
+  return leadRpc("admin_clear_leads", { p_confirm: confirm, p_course: COURSE_ID, p_source: source }, "Cleared");
+}
+export async function dedupeLeads() {
+  return leadRpc("admin_dedupe_leads", { p_course: COURSE_ID }, "Duplicates removed");
+}
