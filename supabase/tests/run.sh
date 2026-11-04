@@ -11,5 +11,6 @@ $P -d "$DB" -f supabase/tests/supabase_stub.sql
 for f in supabase/migrations/*.sql; do $P -d "$DB" -1 -f "$f"; done
 out=$($P -d "$DB" -t -A -F ' | ' -f supabase/tests/studio_test.sql 2>&1)
 echo "$out" | grep -E '^[A-Z][0-9]+|NOTICE' | sed 's/^psql:[^ ]* //'
-if echo "$out" | grep -qE '^[A-Z][0-9]+[a-z]? .* \| f$|FAIL|ERROR'; then echo "SQL TESTS FAILED"; exit 1; fi
+# A test line ending in "| f" or in an empty result (null) fails, as do FAIL notices and SQL errors.
+if echo "$out" | grep -qE '^[A-Z][0-9]+[a-z]? .* \| (f)?$|FAIL|ERROR'; then echo "SQL TESTS FAILED"; exit 1; fi
 echo "All SQL tests passed"
