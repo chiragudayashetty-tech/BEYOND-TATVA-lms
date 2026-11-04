@@ -517,3 +517,30 @@ exception when insufficient_privilege then raise notice 'R5 pass: students canno
 do $$ begin insert into storage.objects (bucket_id, name) values ('module-resources', pg_temp.chapter(0) || '/evil.pdf'); raise exception 'R6 FAIL';
 exception when insufficient_privilege then raise notice 'R6 pass: students cannot upload module files'; end $$;
 reset role;
+
+-- ── UPI claims (interim payments) ────────────────────────────────────────────
+insert into storage.objects (bucket_id, name) values
+  ('payment-proofs', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee/pay.jpg'), ('payment-proofs', '66666666-6666-6666-6666-666666666666/pay.jpg');
+set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+do $$ begin perform public.submit_upi_claim('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee/missing.jpg'); raise exception 'U1 FAIL';
+exception when others then if sqlerrm like 'U1%' then raise; end if; raise notice 'U1 pass: %', sqlerrm; end $$;
+do $$ begin perform public.submit_upi_claim('66666666-6666-6666-6666-666666666666/pay.jpg'); raise exception 'U1b FAIL';
+exception when others then if sqlerrm like 'U1b%' then raise; end if; raise notice 'U1b pass: cannot use another student''s screenshot'; end $$;
+select 'U2 student submits screenshot + UTR' t, public.submit_upi_claim('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee/pay.jpg', '4321 5678 9012', 'Mum') = 'submitted' as pass;
+select 'U3 a second claim while one is pending is not added' t, (select count(*) from public.upi_claims) = 1 as pass;
+do $$ begin insert into public.upi_claims (student_id, course_id, amount_paise, proof_path) values (auth.uid(), 'ai-for-students', 1, auth.uid() || '/x.jpg'); raise exception 'U4 FAIL';
+exception when insufficient_privilege then raise notice 'U4 pass: no direct claim writes'; end $$;
+do $$ begin perform public.admin_decide_upi_claim((select id from public.upi_claims limit 1), true); raise exception 'U5 FAIL';
+exception when others then if sqlerrm like 'U5%' then raise; end if; raise notice 'U5 pass: %', sqlerrm; end $$;
+select 'U5b student sees only own screenshots' t, (select count(*) from storage.objects where bucket_id = 'payment-proofs') = 1 as pass;
+select pg_temp.as_user('66666666-6666-6666-6666-666666666666');
+select 'U6 other students cannot see the claim' t, count(*) = 0 as pass from public.upi_claims;
+do $$ begin perform public.submit_upi_claim('66666666-6666-6666-6666-666666666666/pay.jpg', '432156789012'); raise exception 'U7 FAIL';
+exception when others then if sqlerrm like 'U7%' then raise; end if; raise notice 'U7 pass: %', sqlerrm; end $$;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'U8 admin sees screenshots and approves' t, (select count(*) from storage.objects where bucket_id = 'payment-proofs') = 2
+  and public.admin_decide_upi_claim((select id from public.upi_claims where utr = '432156789012'), true) = 'approved' as pass;
+reset role;
+select 'U9 access + purchase rows exist' t,
+  exists (select 1 from public.course_access where student_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee' and reference = 'upi-432156789012')
+  and exists (select 1 from public.purchases where reference = 'upi-432156789012' and status = 'claimed' and amount_paise > 0) as pass;
