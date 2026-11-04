@@ -27,7 +27,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Workshops | Public `/w/<slug>` sign-up (consent, seats, one per phone) → Pipeline lead; Studio → Workshops: create/publish, check-in, CSV. |
 | Student dashboard | Course / XP + rank / quick-check rings; XP leaderboard (first name + initial, opt-out in Profile); XP = 10 per right quick check + quiz XP once + up to 50 per marked assignment. No streaks (Chirag). |
 | Studio analytics | Funnel, sources, grades, revenue, module completion, quiz health + Insights: active students, paid-but-stopped 14+ d, lesson drop-off, sources that pay, refunds, schools, workshop funnel. Daily watch log (`learning_days`) since 2026-11-02. |
-| Interim UPI payments | Until Razorpay: Unlock → Pay by UPI (`NEXT_PUBLIC_UPI_ID` in Vercel) → screenshot upload → Studio → Enrollments → Approve (unlocks + records purchase `upi-…`). |
+| Interim UPI payments | Until Razorpay: Unlock → Pay by UPI (`NEXT_PUBLIC_UPI_ID` in Vercel) → screenshot upload → Studio → Enrollments → Approve (unlocks + records purchase `upi-…`). Coupons (Studio → Enrollments → Coupons): code + price + time window, priced on the server. |
 | Module attachments | Studio → Content → module → Attachments (PDF/images ≤ 25 MB); students View/Download/Download all on open modules. |
 | Tests | `npm test`, `npm run test:db`, `npm run test:e2e` (Playwright smoke; 2 checks parked as TODO). |
 | Pipeline | Studio → Pipeline: one row per person, stages 1–5 (lead → bought), "stopped >24h" filter, CSV export, Parents / School enquiries tabs. Leads matched to students by parent phone; `?src=`/UTM saved at sign-up. |
@@ -49,7 +49,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
   passing a course id over using the `COURSE_ID` constant in new code. The database (access, keys,
   enrollments, quizzes, assignments) is already per course; the screens assume one course today.
 
-**Live database:** migrations through `20261104000002_upi_claims` (applied 2026-11-04 after Chirag's "apply 12").
+**Live database:** migrations through `20261104000003_coupons` (applied 2026-11-04 after Chirag's "apply 13").
 
 ## Road to launch (2026-11-02, timed on real pace: ~5–6 PRs/hour, migration PR 10–20 min)
 | Phase | What | Who | Time |
