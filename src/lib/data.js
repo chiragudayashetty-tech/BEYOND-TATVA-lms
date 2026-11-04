@@ -115,6 +115,24 @@ export async function getInsights(days = 30) {
   return error ? null : data;
 }
 
+// Module attachments (migration 11), grouped by chapter id. RLS returns only modules open to the viewer
+// (admins: all). Each file gets short-lived signed links: one to view, one that downloads.
+export const getModuleResources = cache(async () => {
+  const { user } = await getSession();
+  if (!user || user.id === "preview") return {};
+  const supabase = await createClient();
+  const { data: rows } = await supabase.from("module_resources").select("id, chapter_id, title, file_path, mime, size_bytes, position, created_at").order("position").order("created_at");
+  if (!rows?.length) return {};
+  const paths = rows.map((r) => r.file_path);
+  const bucket = supabase.storage.from("module-resources");
+  const [{ data: views }, { data: downloads }] = await Promise.all([bucket.createSignedUrls(paths, 3600), bucket.createSignedUrls(paths, 3600, { download: true })]);
+  const view = Object.fromEntries((views ?? []).map((v) => [v.path, v.signedUrl]));
+  const down = Object.fromEntries((downloads ?? []).map((v) => [v.path, v.signedUrl]));
+  const out = {};
+  for (const r of rows) (out[r.chapter_id] ??= []).push({ ...r, view: view[r.file_path] ?? null, download: down[r.file_path] ?? null });
+  return out;
+});
+
 // Quizzes and assignments the viewer can open, with their own results. RLS hides unpublished
 // and locked ones, so this only ever returns what the student may see.
 export const getActivities = cache(async () => {

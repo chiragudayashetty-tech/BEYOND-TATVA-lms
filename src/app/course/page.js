@@ -6,7 +6,8 @@ import { Badge, Card, IconTile, Progress } from "@/components/ui";
 import { PremiereCard, Thumb, iconFor, moduleState } from "@/components/course";
 import Countdown from "@/components/Countdown";
 import { fmtPremiere, isReleased, nextPremiere } from "@/lib/catalog";
-import { getActivities, getCourse } from "@/lib/data";
+import { getActivities, getCourse, getModuleResources } from "@/lib/data";
+import ModuleResources from "@/components/ModuleResources";
 import { getSession } from "@/lib/supabase/server";
 
 export const metadata = { title: "Course · Beyond Tatva" };
@@ -21,7 +22,7 @@ const stateLabel = {
 
 export default async function CoursePage({ searchParams }) {
   const { welcome } = await searchParams;
-  const [{ hasAccess }, course, activities] = await Promise.all([getSession(), getCourse(), getActivities()]);
+  const [{ hasAccess }, course, activities, resources] = await Promise.all([getSession(), getCourse(), getActivities(), getModuleResources()]);
   const quizByChapter = Object.fromEntries(activities.quizzes.map((q) => [q.chapter_id, q]));
   const next = nextPremiere(course);
   const released = course.modules.filter((m) => isReleased(m)).length;
@@ -156,6 +157,7 @@ export default async function CoursePage({ searchParams }) {
                       {state === "locked" && (
                         <Link href="/unlock" className="btn-secondary mt-3"><KeyRound className="h-4 w-4" /> Unlock module {m.n}</Link>
                       )}
+                      {playable && <ModuleResources files={resources[m.id]} />}
                     </div>
                   </li>
                 );

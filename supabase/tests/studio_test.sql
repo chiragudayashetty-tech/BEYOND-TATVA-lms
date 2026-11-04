@@ -493,3 +493,27 @@ select 'K7 owner insights: engagement, lessons, sources, schools, workshops' t,
   and (i -> 'workshops' -> 0 ->> 'registered')::int = 2 and (i -> 'workshops' -> 0 ->> 'attended')::int = 1 as pass
   from (select public.admin_insights(30) i) x;
 reset role;
+
+-- ── Module resources ─────────────────────────────────────────────────────────
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+insert into public.module_resources (chapter_id, title, file_path, mime, size_bytes) values
+  (pg_temp.chapter(0), 'AI 101 worksheet', pg_temp.chapter(0) || '/worksheet.pdf', 'application/pdf', 1000),
+  (pg_temp.chapter(1), 'Module 1 notes', pg_temp.chapter(1) || '/notes.pdf', 'application/pdf', 1000);
+insert into storage.objects (bucket_id, name) values
+  ('module-resources', pg_temp.chapter(0) || '/worksheet.pdf'), ('module-resources', pg_temp.chapter(1) || '/notes.pdf');
+select 'R1 admin adds resources and files' t, (select count(*) from public.module_resources) = 2
+  and (select count(*) from storage.objects where bucket_id = 'module-resources') = 2 as pass;
+do $$ begin insert into public.module_resources (chapter_id, title, file_path, mime, size_bytes)
+  values (pg_temp.chapter(0), 'Wrong folder', pg_temp.chapter(1) || '/x.pdf', 'application/pdf', 10); raise exception 'R2 FAIL';
+exception when check_violation then raise notice 'R2 pass: file must sit in its module folder'; end $$;
+select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+select 'R3 student sees only resources of open modules' t,
+  (select count(*) from public.module_resources) = 1 and (select title from public.module_resources) = 'AI 101 worksheet' as pass;
+select 'R4 and can read only those files' t,
+  (select count(*) from storage.objects where bucket_id = 'module-resources') = 1 as pass;
+do $$ begin insert into public.module_resources (chapter_id, title, file_path, mime, size_bytes)
+  values (pg_temp.chapter(0), 'Mine', pg_temp.chapter(0) || '/mine.pdf', 'application/pdf', 10); raise exception 'R5 FAIL';
+exception when insufficient_privilege then raise notice 'R5 pass: students cannot add resources'; end $$;
+do $$ begin insert into storage.objects (bucket_id, name) values ('module-resources', pg_temp.chapter(0) || '/evil.pdf'); raise exception 'R6 FAIL';
+exception when insufficient_privilege then raise notice 'R6 pass: students cannot upload module files'; end $$;
+reset role;

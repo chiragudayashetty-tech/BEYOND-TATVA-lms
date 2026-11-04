@@ -6,6 +6,7 @@ import { useActionState, useState, useTransition } from "react";
 import { CalendarClock, ChevronDown, CircleCheck, Film, Gift, Plus, Save, Trash2, Video } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { deleteLesson, deleteModule, saveCourse, saveLesson, saveModule } from "../actions";
+import ResourceManager from "./ResourceManager";
 
 // "2026-11-01T12:30:00Z" → "2026-11-01T18:00" (IST wall time for datetime-local inputs)
 const toIstInput = (iso) => {
@@ -88,7 +89,7 @@ function LessonForm({ lesson, chapterId, video, onDone }) {
   );
 }
 
-function ModuleEditor({ m, videos, open, onToggle }) {
+function ModuleEditor({ m, videos, files, open, onToggle }) {
   const [state, action, pending] = useActionState(saveModule, null);
   const [adding, setAdding] = useState(false);
   const [deleting, startDelete] = useTransition();
@@ -129,6 +130,8 @@ function ModuleEditor({ m, videos, open, onToggle }) {
             </div>
           </form>
 
+          <ResourceManager chapterId={m.id} files={files} />
+
           <div>
             <div className="mb-2 text-sm font-semibold">Lessons</div>
             <div className="space-y-2">
@@ -156,14 +159,14 @@ function NewModule() {
   );
 }
 
-export default function ContentEditor({ course, videos }) {
+export default function ContentEditor({ course, videos, resources = {} }) {
   const [open, setOpen] = useState(null);
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
       <div className="space-y-4">
         <ul className="space-y-3">
           {course.modules.map((m) => (
-            <ModuleEditor key={m.id} m={m} videos={videos} open={open === m.id} onToggle={() => setOpen(open === m.id ? null : m.id)} />
+            <ModuleEditor key={m.id} m={m} videos={videos} files={resources[m.id] ?? []} open={open === m.id} onToggle={() => setOpen(open === m.id ? null : m.id)} />
           ))}
         </ul>
         <NewModule />
