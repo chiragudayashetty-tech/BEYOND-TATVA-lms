@@ -1,3 +1,4 @@
+import SocialLinks from "@/components/SocialLinks";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, CreditCard, Gift, LogIn } from "lucide-react";
@@ -57,6 +58,7 @@ export default async function Home({ searchParams }) {
           </div>
         </div>
         <p className="mt-6 text-center text-xs text-muted">Students under 18 need a parent or guardian&apos;s consent to join.</p>
+        <SocialLinks className="mt-4 justify-center" />
       </div>
     </div>
   );

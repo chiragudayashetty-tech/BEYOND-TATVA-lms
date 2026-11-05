@@ -58,7 +58,7 @@ export default function UnlockView({ price, hasAccess, preview, pay }) {
       <section className="card p-6">
         <IconTile icon={CreditCard} tone="success" />
         <h2 className="mt-4 text-lg font-semibold">Pay online</h2>
-        <p className="mt-1 text-sm text-muted">One payment unlocks modules 1–6, including the ones still to premiere.</p>
+        <p className="mt-1 text-sm text-muted">One payment unlocks modules 1–5, including the ones still to premiere.</p>
         <RazorpayPay price={price} {...pay} />
       </section>
 

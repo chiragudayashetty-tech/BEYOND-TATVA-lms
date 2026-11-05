@@ -1,3 +1,4 @@
+import SocialLinks from "@/components/SocialLinks";
 import Link from "next/link";
 import { ArrowLeft, MessageCircle } from "lucide-react";
 import Shell from "@/components/shell/Shell";
@@ -59,6 +60,11 @@ export default function HelpPage() {
             {supportUrl ? <a href={supportUrl} target="_blank" rel="noopener noreferrer" className="btn-primary mt-4 min-h-11 w-full sm:w-auto">
               <MessageCircle className="h-4 w-4" /> Chat with us on WhatsApp
             </a> : <p className="mt-4 text-sm text-muted">WhatsApp support is coming soon.</p>}
+          </Card>
+
+          <Card title="Follow us">
+            <p className="mb-3 text-sm text-muted">AI tips, new modules and student projects.</p>
+            <SocialLinks />
           </Card>
 
           <Card title="Your privacy">

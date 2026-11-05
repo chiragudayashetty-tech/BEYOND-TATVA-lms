@@ -133,6 +133,22 @@ export const getModuleResources = cache(async () => {
   return out;
 });
 
+// Monthly newsletters (migration 20261106000001), newest first, with signed view/download links.
+// RLS returns them only to enrolled students, teachers and admins.
+export const getNewsletters = cache(async () => {
+  const { user } = await getSession();
+  if (!user || user.id === "preview") return [];
+  const supabase = await createClient();
+  const { data: rows } = await supabase.from("newsletters").select("id, title, issue_date, file_path, mime, size_bytes").order("issue_date", { ascending: false });
+  if (!rows?.length) return [];
+  const paths = rows.map((r) => r.file_path);
+  const bucket = supabase.storage.from("newsletters");
+  const [{ data: views }, { data: downloads }] = await Promise.all([bucket.createSignedUrls(paths, 3600), bucket.createSignedUrls(paths, 3600, { download: true })]);
+  const view = Object.fromEntries((views ?? []).map((v) => [v.path, v.signedUrl]));
+  const down = Object.fromEntries((downloads ?? []).map((v) => [v.path, v.signedUrl]));
+  return rows.map((r) => ({ ...r, view: view[r.file_path] ?? null, download: down[r.file_path] ?? null }));
+});
+
 // Quizzes and assignments the viewer can open, with their own results. RLS hides unpublished
 // and locked ones, so this only ever returns what the student may see.
 export const getActivities = cache(async () => {
