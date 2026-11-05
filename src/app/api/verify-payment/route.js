@@ -36,7 +36,7 @@ export async function POST(request) {
   const { error } = await createAdminClient().rpc("record_purchase", {
     p_reference: paymentId,
     p_email: user.email || null,
-    p_phone: user.phone || null,
+    p_phone: order.notes?.phone || user.phone || null,
     p_student_name: profile.full_name?.slice(0, 80) || null,
     p_amount_paise: Number.isInteger(order.amount) ? order.amount : null,
   });
