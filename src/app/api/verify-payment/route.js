@@ -33,10 +33,12 @@ export async function POST(request) {
     return NextResponse.json({ verified: false, error: "This payment belongs to a different account" }, { status: 400 });
   }
 
-  const { error } = await createAdminClient().rpc("record_purchase", {
+  // Match only on this student's own login (email, or phone for phone sign-ins). The parent's mobile stays
+  // in the Razorpay order notes: matching on it could unlock someone else's account with that number.
+  const { data: status, error } = await createAdminClient().rpc("record_purchase", {
     p_reference: paymentId,
     p_email: user.email || null,
-    p_phone: order.notes?.phone || user.phone || null,
+    p_phone: user.email ? null : user.phone || null,
     p_student_name: profile.full_name?.slice(0, 80) || null,
     p_amount_paise: Number.isInteger(order.amount) ? order.amount : null,
   });
@@ -44,6 +46,13 @@ export async function POST(request) {
     console.error("record_purchase failed", paymentId, error.message);
     return NextResponse.json({ verified: true, unlocked: false, error: "Payment received; unlocking is delayed. We'll sort it out, or message us with your payment ID." }, { status: 500 });
   }
-  const { data: claimed } = await (await createClient()).rpc("claim_purchases");
-  return NextResponse.json({ verified: true, unlocked: claimed > 0, payment_id: paymentId });
+  // record_purchase usually unlocks straight away ("claimed"); claim_purchases covers the rest.
+  const supabase = await createClient();
+  if (status !== "claimed" && status !== "already_claimed") await supabase.rpc("claim_purchases");
+  const { data: access } = await supabase.from("course_access").select("course_id").eq("student_id", user.id).eq("course_id", COURSE_ID).maybeSingle();
+  if (!access) {
+    console.error("paid but not unlocked", paymentId, status);
+    return NextResponse.json({ verified: true, unlocked: false, error: "Payment received. Unlocking needs a quick check from us." }, { status: 202 });
+  }
+  return NextResponse.json({ verified: true, unlocked: true, payment_id: paymentId });
 }
