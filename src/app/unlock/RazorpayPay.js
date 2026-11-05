@@ -41,7 +41,7 @@ export default function RazorpayPay({ price, enabled, name, email, phone, whatsa
     ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(paymentId ? `Hi! My course payment needs help. Payment ID: ${paymentId}` : `Hi! I want to unlock the Beyond Tatva course but the online payment isn't working.`)}`
     : null;
 
-  const payOnWhatsApp = () => `https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hi! I'd like to pay for the Beyond Tatva AI course (₹${price}) on WhatsApp.${email ? ` My login email: ${email}.` : ""}`)}`;
+  const payOnWhatsApp = () => `https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hi! I'd like to pay for the Beyond Tatva AI course on WhatsApp.${email ? ` My login email: ${email}.` : ""}`)}`;
 
   async function applyCoupon(e) {
     e.preventDefault();
