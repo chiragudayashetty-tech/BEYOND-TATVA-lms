@@ -1,5 +1,5 @@
 -- Module posters (square images in public/media/modules), shown on course and dashboard cards.
-Can be changed any time in Studio → Content.
+-- Can be changed any time in Studio → Content.
 update public.chapters set thumbnail_url = '/media/modules/module-' || position || '.jpg'
 where course_id = 'ai-for-students' and position between 0 and 5;
 
