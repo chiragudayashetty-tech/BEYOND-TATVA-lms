@@ -267,3 +267,30 @@ export async function clearLeads(confirm, source = null) {
 export async function dedupeLeads() {
   return leadRpc("admin_dedupe_leads", { p_course: COURSE_ID }, "Duplicates removed");
 }
+
+// Offline leads (typed in or pasted) and registering existing leads for a workshop.
+export async function addLead(_, fd) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_add_lead", {
+    p_phone: str(fd, "phone"), p_source: str(fd, "source") ?? "manual",
+    p_parent_name: str(fd, "parent_name"), p_student_name: str(fd, "student_name"),
+    p_grade: num(fd, "grade") || null, p_school_name: str(fd, "school_name"), p_note: str(fd, "note"), p_course: COURSE_ID,
+  });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/pipeline", "layout");
+  return { ok: true, message: data === "saved" ? "Lead added." : "That phone is already a lead from this source." };
+}
+export async function importLeads(rows, source) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_import_leads", { p_rows: rows, p_source: source || "import", p_course: COURSE_ID });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/pipeline", "layout");
+  return { ok: true, data };
+}
+export async function registerLeads(workshopId, leadIds, consentConfirmed) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_register_leads", { p_workshop: workshopId, p_lead_ids: leadIds, p_parent_consent_confirmed: consentConfirmed });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/workshops");
+  return { ok: true, data };
+}

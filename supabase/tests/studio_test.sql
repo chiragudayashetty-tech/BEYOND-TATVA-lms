@@ -587,3 +587,20 @@ reset role;
 select 'F1 list price set' t, list_price_inr = 2499 as pass from public.courses where id = 'ai-for-students';
 do $$ begin update public.courses set price_inr = 0 where id = 'ai-for-students'; raise exception 'F2 FAIL'; exception when check_violation then raise notice 'F2 pass: price 0 rejected'; end $$;
 do $$ begin update public.courses set list_price_inr = 10 where id = 'ai-for-students'; raise exception 'F3 FAIL'; exception when check_violation then raise notice 'F3 pass: original price below price rejected'; end $$;
+
+-- ── Admin lead entry, import, workshop invites ───────────────────────────────
+reset role;
+insert into public.workshops (id, slug, title, starts_at, seats) values ('abababab-abab-abab-abab-abababababab', 'test-ws', 'Test', now() + interval '1 day', 2);
+set role authenticated; select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+do $$ begin perform public.admin_add_lead('9222222222'); raise exception 'J1 FAIL'; exception when others then if sqlerrm like 'J1%' then raise; end if; raise notice 'J1 pass: %', sqlerrm; end $$;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'J2 admin adds a lead' t, public.admin_add_lead('92222 22222', 'manual', 'Ravi', 'Anu', 9::smallint, 'SVS', 'met at fair') = 'saved' as pass;
+select 'J3 same phone again counts once' t, public.admin_add_lead('9222222222') = 'duplicate' as pass;
+select 'J4 import saves good rows, reports bad ones' t,
+  r -> 'saved' = '2' and jsonb_array_length(r -> 'invalid') = 1 as pass
+  from (select public.admin_import_leads('[{"phone":"9333333333","parent_name":"A","student_name":"B","grade":"8"},{"phone":"123"},{"phone":"9444444444"}]', 'fair') r) x;
+do $$ begin perform public.admin_register_leads('abababab-abab-abab-abab-abababababab', array(select id from public.leads), false); raise exception 'J5 FAIL'; exception when others then if sqlerrm like 'J5%' then raise; end if; raise notice 'J5 pass: %', sqlerrm; end $$;
+select 'J6 complete leads registered, incomplete skipped' t,
+  (r ->> 'added')::int = 2 and jsonb_array_length(r -> 'skipped') >= 1 as pass
+  from (select public.admin_register_leads('abababab-abab-abab-abab-abababababab', array(select id from public.leads where phone in ('+919222222222', '+919333333333', '+919444444444')), true) r) x;
+reset role;

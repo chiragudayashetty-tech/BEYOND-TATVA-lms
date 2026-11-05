@@ -7,6 +7,7 @@ import { STAGES, STALL_HOURS } from "@/lib/pipeline";
 import { createClient } from "@/lib/supabase/server";
 import { NotesButton } from "./CrmNotes";
 import { ClearLeadsButton, DeleteLeadButton } from "./LeadActions";
+import AddLeads from "./AddLeads";
 
 export const metadata = { title: "Pipeline · Studio · Beyond Tatva" };
 
@@ -52,6 +53,8 @@ export default async function PipelinePage({ searchParams }) {
       </PageTitle>
 
       {error && <p role="alert" className="mb-4 rounded-xl bg-danger-soft p-3 text-sm text-danger">Couldn&apos;t load the pipeline: {error.message}</p>}
+
+      <AddLeads />
 
       <div className="mb-4 flex gap-2" role="tablist">
         {[["parents", "Parents & students", ""], ["schools", "School enquiries", "view=schools"]].map(([id, label, q]) => (

@@ -3,12 +3,14 @@
 import { useMemo, useState } from "react";
 import { Check, Download, ExternalLink, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import InviteLeads from "./InviteLeads";
 
 const inputTime = (iso) => iso ? new Date(new Date(iso).getTime() + 330 * 60000).toISOString().slice(0, 16) : "";
 const safeCell = (value) => { const text = String(value ?? ""); return `"${(/^[=+\-@\t\r]/.test(text) ? `'${text}` : text).replaceAll('"', '""')}"`; };
 const slugify = (value) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
 
-export default function WorkshopsStudio({ workshops: initial, registrations, schools }) {
+export default function WorkshopsStudio({ workshops: initial, registrations, schools, leads = [] }) {
+  const [inviting, setInviting] = useState(null);
   const [workshops, setWorkshops] = useState(initial); const [registrationRows, setRegistrationRows] = useState(registrations); const [form, setForm] = useState({ title: "", slug: "", starts_at: "", venue: "", school_id: "", seats: 30 });
   const [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
@@ -68,7 +70,9 @@ export default function WorkshopsStudio({ workshops: initial, registrations, sch
           <button type="button" onClick={() => setEditing(editing?.id === workshop.id ? null : { id: workshop.id, title: workshop.title, slug: workshop.slug, starts_at: inputTime(workshop.starts_at), venue: workshop.venue ?? "", school_id: workshop.school_id ?? "", seats: workshop.seats })} className="btn-secondary min-h-11">{editing?.id === workshop.id ? "Close edit" : "Edit"}</button>
           <button type="button" onClick={() => patch(workshop, { published: !workshop.published })} className="btn-secondary min-h-11">{workshop.published ? "Published · unpublish" : "Publish signup"}</button>
           <button type="button" onClick={() => downloadCsv(workshop)} className="btn-secondary min-h-11"><Download size={16} /> CSV</button>
+          <button type="button" onClick={() => setInviting(inviting === workshop.id ? null : workshop.id)} className="btn-secondary min-h-11"><Plus size={16} /> {inviting === workshop.id ? "Close" : "Add from leads"}</button>
         </div>
+        {inviting === workshop.id && <InviteLeads workshop={workshop} leads={leads} registeredPhones={new Set(attendees.map((a) => a.parent_phone))} />}
         {editing?.id === workshop.id && <form onSubmit={(event) => saveEdit(event, workshop)} className="grid gap-3 border-t border-border p-5 sm:grid-cols-2">
           <label><span className="label">Title</span><input required maxLength={120} className="input" value={editing.title} onChange={(event) => setEditing({ ...editing, title: event.target.value })} /></label>
           <label><span className="label">Signup link name</span><input required maxLength={60} className="input" value={editing.slug} onChange={(event) => setEditing({ ...editing, slug: event.target.value })} /></label>

@@ -55,7 +55,7 @@ export default async function ActivitiesPage() {
           ))}
           <div className="card flex items-start gap-3 p-4 text-sm text-muted">
             <Badge tone="neutral">Files</Badge>
-            <p>Lesson files and updates are coming soon.</p>
+            <p>Module PDFs and files are on the <a href="/course" className="text-primary underline">Course page</a>, under each module. Course updates come on WhatsApp.</p>
           </div>
         </div>
       )}
