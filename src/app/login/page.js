@@ -7,11 +7,11 @@ import { safeNext } from "@/lib/safe-next";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
 
-// Phone/WhatsApp codes need DLT registration in India; the tab appears once NEXT_PUBLIC_PHONE_LOGIN=1 is set.
+// Phone login sends the code on WhatsApp (api/auth/send-otp). The tab appears once NEXT_PUBLIC_PHONE_LOGIN=1 is set.
 const PHONE_LOGIN = process.env.NEXT_PUBLIC_PHONE_LOGIN === "1";
 
 const friendly = (msg = "") => {
-  if (/phone|sms/i.test(msg)) return "Phone login isn't switched on yet. Use email or Google for now.";
+  if (/phone|sms/i.test(msg)) return "WhatsApp login isn't switched on yet. Use Google or email for now.";
   if (/provider is not enabled|Unsupported provider/i.test(msg)) return "Google sign-in isn't switched on yet. Use email for now.";
   if (/expired|invalid/i.test(msg)) return "That code didn't work. Check it, or send a new one.";
   if (/rate|seconds/i.test(msg)) return "Too many tries. Wait a minute and try again.";
@@ -163,7 +163,7 @@ function LoginForm() {
         {["email", "phone"].map((m) => (
           <button key={m} onClick={() => { setMethod(m); setSent(false); setError(""); setContact(""); }}
             className={`rounded-lg py-2 capitalize transition ${method === m ? "bg-surface text-fg shadow-sm" : "text-muted"}`}>
-            {m}
+            {m === "phone" ? "WhatsApp" : "Email"}
           </button>
         ))}
       </div>}
@@ -183,7 +183,7 @@ function LoginForm() {
       ) : (
         <form onSubmit={verify} className="space-y-3">
           <p className="text-sm text-muted">
-            We sent a {codeLength}-digit code to <b className="text-fg">{method === "email" ? contact : phone()}</b>.
+            We sent a {codeLength}-digit code {method === "email" ? "to" : "on WhatsApp to"} <b className="text-fg">{method === "email" ? contact : phone()}</b>.
             {method === "email" && " You can also just tap the link in the email."}
           </p>
           <input className="input text-center text-2xl tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={codeLength} value={code} onChange={(e) => onCode(e.target.value)} onPaste={(e) => { e.preventDefault(); onCode(e.clipboardData.getData("text")); }} placeholder={"•".repeat(codeLength)} aria-label={`${codeLength}-digit code`} autoFocus required />
