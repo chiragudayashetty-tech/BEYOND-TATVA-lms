@@ -67,7 +67,7 @@ export default async function CoursePage({ searchParams }) {
               <IconTile icon={Gift} tone="success" />
               <div className="min-w-0 flex-1">
                 <div className="font-semibold">Module 0 is free</div>
-                <div className="text-sm text-muted">Modules 1–6 for ₹{course.price}, one time</div>
+                <div className="text-sm text-muted">Modules 1–5 for ₹{course.price}, one time</div>
               </div>
               <Link href="/unlock" className="btn-primary shrink-0 px-4">Unlock</Link>
             </div>
@@ -180,7 +180,7 @@ export default async function CoursePage({ searchParams }) {
               <>
                 <IconTile icon={Gift} tone="success" />
                 <h2 className="mt-3 font-semibold">Module 0 is free</h2>
-                <p className="mt-1 text-sm text-muted">Unlock modules 1–6 with a key from your school, or pay once online.</p>
+                <p className="mt-1 text-sm text-muted">Unlock modules 1–5 with a key from your school, or pay once online.</p>
                 <div className="mt-4 flex items-baseline gap-1"><span className="font-display text-3xl font-semibold">₹{course.price}</span><span className="text-sm text-muted">one time</span></div>
                 <Link href="/unlock" className="btn-primary mt-4 w-full">Unlock full course</Link>
                 <Link href="/unlock#key" className="btn-ghost mt-1 w-full">I have an access key</Link>
