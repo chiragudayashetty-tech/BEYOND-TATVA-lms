@@ -81,7 +81,12 @@ function LoginForm() {
   const callback = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback?next=${encodeURIComponent(next)}`;
   const phone = () => `+91${contact.replace(/\D/g, "").slice(-10)}`;
 
+  // Backup of where to go after sign-in. If Supabase drops the ?next= from the return address
+  // (not on its Redirect URLs allowlist), the callback and the front page still find it here.
+  const rememberNext = () => { document.cookie = `bt_next=${encodeURIComponent(next)}; path=/; max-age=1800; samesite=lax; secure`; };
+
   async function google() {
+    rememberNext();
     if (googleBusy) return;
     setGoogleBusy(true);
     setError("");
@@ -98,6 +103,7 @@ function LoginForm() {
   }
 
   async function sendCode(e) {
+    rememberNext();
     e.preventDefault();
     setBusy(true);
     setError("");

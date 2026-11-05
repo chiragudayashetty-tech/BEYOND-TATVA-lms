@@ -8,7 +8,9 @@ export async function GET(request) {
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
-  const next = searchParams.get("next");
+  // ?next= from the login page, or the bt_next cookie it set (in case Supabase dropped the query).
+  const remembered = request.cookies.get("bt_next")?.value;
+  const next = searchParams.get("next") || (remembered ? decodeURIComponent(remembered) : null);
   const supabase = await createClient();
 
   let error = null;
@@ -20,5 +22,7 @@ export async function GET(request) {
   // Paid on the website before signing in? Unlock now (no-op for non-students and new accounts).
   await supabase.rpc("claim_purchases");
   const dest = safeNext(next);
-  return NextResponse.redirect(`${origin}${dest}`);
+  const res = NextResponse.redirect(`${origin}${dest}`);
+  res.cookies.delete("bt_next");
+  return res;
 }

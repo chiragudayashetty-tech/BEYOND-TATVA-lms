@@ -3,15 +3,29 @@ import { redirect } from "next/navigation";
 import { ArrowRight, CreditCard, Gift, LogIn } from "lucide-react";
 import Logo from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
+import { cookies } from "next/headers";
 import { getSession, homeFor } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/safe-next";
 
 export const metadata = { title: "Beyond Tatva · Learn" };
 
 // The LMS front door. Marketing and payments live on the website (beyondtatva.in); this page only
 // gets people into their account. Signed-in visitors go straight to their home screen.
-export default async function Home() {
+export default async function Home({ searchParams }) {
+  // Supabase sends people to the plain site address when the full return address isn't on its
+  // allowlist. Finish the sign-in here instead of leaving them on the front page.
+  const sp = await searchParams;
+  if (sp.code || sp.token_hash) {
+    const q = new URLSearchParams(Object.entries(sp).filter(([k]) => ["code", "token_hash", "type", "next"].includes(k)));
+    redirect(`/auth/callback?${q}`);
+  }
   const { user, profile } = await getSession();
-  if (user) redirect(profile ? homeFor(profile.role) : "/onboarding");
+  if (user) {
+    const remembered = (await cookies()).get("bt_next")?.value;
+    const back = remembered ? safeNext(decodeURIComponent(remembered), null) : null;
+    if (back && back !== "/") redirect(back);
+    redirect(profile ? homeFor(profile.role) : "/onboarding");
+  }
 
   return (
     <div className="grid min-h-screen place-items-center bg-bg px-4 py-10">
