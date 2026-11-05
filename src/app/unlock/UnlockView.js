@@ -65,11 +65,11 @@ export default function UnlockView({ price, hasAccess, preview, pay }) {
       <details ref={keyDetails} id="key" className="card scroll-mt-24 p-5 sm:p-6">
         <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden">
           <IconTile icon={School} />
-          <span className="flex-1 font-semibold">Have a school key?</span>
+          <span className="flex-1 font-semibold">Have an access key?</span>
           <span className="text-sm font-medium text-primary">Enter key</span>
         </summary>
         <div className="mt-3 border-t border-border pt-4">
-          <p className="text-sm text-muted">Enter the access key from your teacher. It looks like BT-XXXX-XXXX.</p>
+          <p className="text-sm text-muted">Enter the key from your school, or the one we sent you on WhatsApp after paying. It looks like BT-XXXX-XXXX.</p>
           <form onSubmit={redeem} className="mt-4 space-y-3">
             <input className="input font-mono uppercase tracking-widest" value={code} onChange={(e) => setCode(e.target.value)} placeholder="BT-XXXX-XXXX" required={!preview} autoComplete="off" />
             {error && <p role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}

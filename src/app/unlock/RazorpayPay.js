@@ -41,6 +41,8 @@ export default function RazorpayPay({ price, enabled, name, email, phone, whatsa
     ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(paymentId ? `Hi! My course payment needs help. Payment ID: ${paymentId}` : `Hi! I want to unlock the Beyond Tatva course but the online payment isn't working.`)}`
     : null;
 
+  const payOnWhatsApp = () => `https://wa.me/${whatsapp}?text=${encodeURIComponent("Hi! I'd like to pay for the Beyond Tatva AI course on WhatsApp.")}`;
+
   async function applyCoupon(e) {
     e.preventDefault();
     setCouponError("");
@@ -141,6 +143,13 @@ export default function RazorpayPay({ price, enabled, name, email, phone, whatsa
             <a href={waLink(msg.paymentId)} target="_blank" rel="noopener" className="btn-secondary mt-3 w-full"><MessageCircle className="h-4 w-4" /> Get help on WhatsApp</a>
           )}
         </div>
+      )}
+      {waLink() && (
+        <>
+          <div className="mt-4 flex items-center gap-3 text-xs text-subtle"><span className="h-px flex-1 bg-border" />or<span className="h-px flex-1 bg-border" /></div>
+          <a href={payOnWhatsApp()} target="_blank" rel="noopener" className="btn-secondary mt-3 w-full"><MessageCircle className="h-4 w-4" /> Pay via WhatsApp</a>
+          <p className="mt-1.5 text-center text-xs text-muted">Pay us on WhatsApp and we&apos;ll send you an access key to unlock the course.</p>
+        </>
       )}
       <p className="mt-3 flex items-center gap-1.5 text-xs text-muted"><ShieldCheck className="h-3.5 w-3.5" /> Secure checkout by Razorpay: UPI, cards and netbanking. Ask a parent before paying.</p>
     </>
