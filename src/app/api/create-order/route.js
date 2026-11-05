@@ -16,6 +16,8 @@ export async function POST(request) {
   const supabase = await createClient();
   const body = await request.json().catch(() => ({}));
   const code = typeof body?.coupon === "string" ? body.coupon.trim().toUpperCase().slice(0, 20) : "";
+  const phone = String(body?.phone || "").replace(/\D/g, "").slice(-10);
+  if (!/^[6-9]\d{9}$/.test(phone)) return NextResponse.json({ error: "Enter a valid 10-digit mobile number" }, { status: 400 });
   let rupees;
   if (code) {
     const { data } = await supabase.rpc("coupon_price", { p_code: code, p_course: COURSE_ID });
@@ -33,7 +35,7 @@ export async function POST(request) {
       amount,
       currency: "INR",
       receipt: `lms_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
-      notes: { course: COURSE_ID, student_id: user.id, source: "lms", coupon: code },
+      notes: { course: COURSE_ID, student_id: user.id, source: "lms", coupon: code, phone },
     });
     if (r.status === 401) return NextResponse.json({ error: "Razorpay authentication failed" }, { status: 401 });
     if (!r.ok) {

@@ -34,6 +34,7 @@ export default function RazorpayPay({ price, enabled, name, email, phone, whatsa
   const [code, setCode] = useState("");
   const [coupon, setCoupon] = useState(null); // { code, price }
   const [couponError, setCouponError] = useState("");
+  const [mobile, setMobile] = useState((phone || "").replace(/\D/g, "").slice(-10));
   const amount = coupon?.price ?? price;
 
   const waLink = (paymentId) => whatsapp
@@ -53,10 +54,11 @@ export default function RazorpayPay({ price, enabled, name, email, phone, whatsa
   const fail = (text, paymentId) => { setBusy(false); setMsg({ tone: "error", text, paymentId }); };
 
   async function pay() {
+    if (!/^[6-9]\d{9}$/.test(mobile)) return setMsg({ tone: "error", text: "Enter a parent's 10-digit mobile number to continue." });
     setBusy(true);
     setMsg(null);
     if (!(await loadCheckout())) return fail("Couldn't load the payment window.");
-    const { ok, data: order } = await post("/api/create-order", { coupon: coupon?.code });
+    const { ok, data: order } = await post("/api/create-order", { coupon: coupon?.code, phone: mobile });
     if (!ok) return fail(order.error || "Couldn't start the payment.");
 
     let failedReason = null;
@@ -67,7 +69,7 @@ export default function RazorpayPay({ price, enabled, name, email, phone, whatsa
       currency: order.currency,
       name: "Beyond Tatva",
       description: "AI course: full access",
-      prefill: { name: name || "", email: email || "", contact: phone || "" },
+      prefill: { name: name || "", email: email || "", contact: `+91${mobile}` },
       theme: { color: "#2563eb" },
       handler: async (resp) => {
         setMsg({ tone: "info", text: "Payment received. Unlocking your course…" });
@@ -122,6 +124,10 @@ export default function RazorpayPay({ price, enabled, name, email, phone, whatsa
       )}
       {couponError && <p role="alert" className="mt-2 text-sm text-danger">{couponError}</p>}
 
+      <label className="mt-4 block">
+        <span className="label">Parent&apos;s mobile number</span>
+        <input className="input" type="tel" inputMode="numeric" maxLength={10} value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="98450 12345" autoComplete="tel-national" required />
+      </label>
       <button onClick={pay} disabled={busy} className="btn-primary mt-4 w-full"><CreditCard className="h-4 w-4" /> {busy ? "Opening payment…" : `Pay ₹${amount} and unlock`}</button>
 
       {msg && (
