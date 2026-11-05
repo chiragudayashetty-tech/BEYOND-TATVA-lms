@@ -110,14 +110,23 @@ function LoginForm() {
     else setSent(true);
   }
 
-  async function verify(e) {
-    e.preventDefault();
+  // Email codes are 8 digits (Supabase setting), SMS codes 6. Full code typed, pasted or autofilled → verify.
+  const codeLength = method === "email" ? 8 : 6;
+  function onCode(value) {
+    const digits = value.replace(/\D/g, "").slice(0, codeLength);
+    setCode(digits);
+    if (digits.length === codeLength && !busy) verify(null, digits);
+  }
+
+  async function verify(e, typed) {
+    e?.preventDefault();
+    const token = (typed ?? code).trim();
     setBusy(true);
     setError("");
     const { error } =
       method === "email"
-        ? await supabase.auth.verifyOtp({ email: contact.trim(), token: code.trim(), type: "email" })
-        : await supabase.auth.verifyOtp({ phone: phone(), token: code.trim(), type: "sms" });
+        ? await supabase.auth.verifyOtp({ email: contact.trim(), token, type: "email" })
+        : await supabase.auth.verifyOtp({ phone: phone(), token, type: "sms" });
     setBusy(false);
     if (error) return setError(friendly(error.message));
     router.replace(next);
@@ -174,10 +183,10 @@ function LoginForm() {
       ) : (
         <form onSubmit={verify} className="space-y-3">
           <p className="text-sm text-muted">
-            We sent a 6-digit code to <b className="text-fg">{method === "email" ? contact : phone()}</b>.
+            We sent a {codeLength}-digit code to <b className="text-fg">{method === "email" ? contact : phone()}</b>.
             {method === "email" && " You can also just tap the link in the email."}
           </p>
-          <input className="input text-center text-2xl tracking-[0.5em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value)} placeholder="••••••" required />
+          <input className="input text-center text-2xl tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={codeLength} value={code} onChange={(e) => onCode(e.target.value)} onPaste={(e) => { e.preventDefault(); onCode(e.clipboardData.getData("text")); }} placeholder={"•".repeat(codeLength)} aria-label={`${codeLength}-digit code`} autoFocus required />
           <button disabled={busy} className="btn-primary w-full py-3">{busy ? "Checking…" : "Verify and continue"}</button>
           <button type="button" onClick={() => { setSent(false); setCode(""); }} className="w-full text-sm text-muted hover:text-fg">
             Use a different {method}
