@@ -20,7 +20,11 @@ export function moduleState(m, hasAccess, now = Date.now()) {
 export function Thumb({ module: m, className = "", dim = false, children }) {
   return (
     <div className={`${/\babsolute\b/.test(className) ? "" : "relative"} overflow-hidden bg-surface-2 ${className}`}>
-      {m?.thumb ? <img src={m.thumb} alt="" loading="lazy" className={`h-full w-full object-cover ${dim ? "grayscale-[60%] opacity-60" : ""}`} />
+      {m?.thumb ? <>
+        {/* Square posters: blurred copy fills the 16:9 frame, the full image sits on top so no text is cropped. */}
+        <img src={m.thumb} alt="" aria-hidden="true" loading="lazy" className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl" />
+        <img src={m.thumb} alt="" loading="lazy" className={`relative h-full w-full object-contain ${dim ? "grayscale-[60%] opacity-60" : ""}`} />
+      </>
         : <div className="grid h-full w-full place-items-center"><IconTile icon={iconFor(m)} size="lg" /></div>}
       {children}
     </div>

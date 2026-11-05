@@ -584,7 +584,7 @@ select 'Y8b no leads left' t, count(*) = 0 as pass from public.leads where cours
 reset role;
 
 -- ── Course price and original price ──────────────────────────────────────────
-select 'F1 list price set' t, list_price_inr = 2499 as pass from public.courses where id = 'ai-for-students';
+select 'F1 list price set' t, list_price_inr = 3000 as pass from public.courses where id = 'ai-for-students';
 do $$ begin update public.courses set price_inr = 0 where id = 'ai-for-students'; raise exception 'F2 FAIL'; exception when check_violation then raise notice 'F2 pass: price 0 rejected'; end $$;
 do $$ begin update public.courses set list_price_inr = 10 where id = 'ai-for-students'; raise exception 'F3 FAIL'; exception when check_violation then raise notice 'F3 pass: original price below price rejected'; end $$;
 
@@ -603,4 +603,26 @@ do $$ begin perform public.admin_register_leads('abababab-abab-abab-abab-abababa
 select 'J6 complete leads registered, incomplete skipped' t,
   (r ->> 'added')::int = 2 and jsonb_array_length(r -> 'skipped') >= 1 as pass
   from (select public.admin_register_leads('abababab-abab-abab-abab-abababababab', array(select id from public.leads where phone in ('+919222222222', '+919333333333', '+919444444444')), true) r) x;
+reset role;
+
+-- ── Newsletters ──────────────────────────────────────────────────────────────
+reset role;
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+insert into public.newsletters (title, issue_date, file_path, mime, size_bytes) values ('November 2026', '2026-11-01', '2026-11/nov.pdf', 'application/pdf', 1000);
+insert into storage.objects (bucket_id, name) values ('newsletters', '2026-11/nov.pdf');
+select 'N1 admin uploads a newsletter' t, (select count(*) from public.newsletters) = 1 as pass;
+do $$ begin insert into public.newsletters (title, file_path, mime, size_bytes) values ('Bad', 'nov.pdf', 'application/pdf', 1); raise exception 'N2 FAIL';
+exception when check_violation then raise notice 'N2 pass: file must sit in a yyyy-mm folder'; end $$;
+reset role;
+delete from public.course_access where student_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+select 'N3 student without access sees no newsletters' t, (select count(*) from public.newsletters) = 0
+  and (select count(*) from storage.objects where bucket_id = 'newsletters') = 0 as pass;
+do $$ begin insert into public.newsletters (title, file_path, mime, size_bytes) values ('Mine', '2026-11/mine.pdf', 'application/pdf', 1); raise exception 'N4 FAIL';
+exception when insufficient_privilege then raise notice 'N4 pass: students cannot add newsletters'; end $$;
+reset role;
+insert into public.course_access (student_id, course_id, source) values ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'ai-for-students', 'admin');
+set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+select 'N5 enrolled student reads newsletters and files' t, (select count(*) from public.newsletters) = 1
+  and (select count(*) from storage.objects where bucket_id = 'newsletters') = 1 as pass;
 reset role;

@@ -1,5 +1,6 @@
 "use client";
 
+import SocialLinks from "@/components/SocialLinks";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
@@ -215,6 +216,7 @@ export default function LoginPage() {
           <LoginForm />
         </Suspense>
         <p className="mt-6 text-center text-xs text-muted">Students under 18 need a parent or guardian&apos;s consent to join.</p>
+        <SocialLinks className="mt-4 justify-center" />
       </div>
     </div>
   );
