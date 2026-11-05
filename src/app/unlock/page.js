@@ -22,10 +22,14 @@ export default async function UnlockPage() {
     const { data: pending } = isPreview ? { data: null } : await (await createClient()).from("upi_claims").select("id").eq("status", "pending").limit(1).maybeSingle();
     upi = { upiId, payee: process.env.NEXT_PUBLIC_UPI_NAME || "Beyond Tatva", note: `BT ${(session.profile?.full_name || "").slice(0, 20)}`.trim(), pending: Boolean(pending), userId: user?.id };
   }
+  // Razorpay checkout inside the LMS: on when both Razorpay keys are set on the server.
+  const razorpay = !hasAccess && session.profile?.role === "student" && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
+    ? { name: session.profile?.full_name || "", email: user?.email || "", phone: user?.phone || "" }
+    : null;
   return (
     <Shell roles={["student"]}>
       <PageTitle title={`Unlock ${course.title}`} subtitle="Module 0 (Introduction to the AI World, AI 101) is free. Unlock modules 1–5 with a school key or a one-time payment." />
-      <UnlockView price={course.price} hasAccess={hasAccess} preview={isPreview} enrollUrl={process.env.NEXT_PUBLIC_ENROLL_URL || "https://www.beyondtatva.in"} signedInAs={user?.email || user?.phone || ""} upi={upi} />
+      <UnlockView price={course.price} hasAccess={hasAccess} preview={isPreview} enrollUrl={process.env.NEXT_PUBLIC_ENROLL_URL || "https://www.beyondtatva.in"} signedInAs={user?.email || user?.phone || ""} upi={upi} razorpay={razorpay} />
     </Shell>
   );
 }

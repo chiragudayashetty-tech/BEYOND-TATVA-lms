@@ -7,6 +7,7 @@ import { Check, CircleCheck, CreditCard, ExternalLink, KeyRound, RefreshCw, Scho
 import { IconTile } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import UpiPay from "./UpiPay";
+import RazorpayPay from "./RazorpayPay";
 
 // Payments happen on the website. After paying there, the course unlocks here automatically when the
 // student signs in with the email used at checkout. Parent-phone-only matches are approved in Studio.
@@ -51,7 +52,7 @@ function EnrollOnWebsite({ price, enrollUrl, signedInAs }) {
   );
 }
 
-export default function UnlockView({ price, hasAccess, preview, enrollUrl, signedInAs, upi }) {
+export default function UnlockView({ price, hasAccess, preview, enrollUrl, signedInAs, upi, razorpay }) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -100,9 +101,9 @@ export default function UnlockView({ price, hasAccess, preview, enrollUrl, signe
     <div className="grid gap-6 lg:grid-cols-2">
       <section className="card p-6">
         <IconTile icon={CreditCard} tone="success" />
-        <h2 className="mt-4 text-lg font-semibold">{upi ? "Pay by UPI" : "Enroll online"}</h2>
+        <h2 className="mt-4 text-lg font-semibold">{razorpay ? "Pay online" : upi ? "Pay by UPI" : "Enroll online"}</h2>
         <p className="mt-1 text-sm text-muted">One payment unlocks modules 1–6, including the ones still to premiere.</p>
-        {upi ? <UpiPay price={price} {...upi} /> : <EnrollOnWebsite price={price} enrollUrl={enrollUrl} signedInAs={signedInAs} />}
+        {razorpay ? <RazorpayPay price={price} {...razorpay} /> : upi ? <UpiPay price={price} {...upi} /> : <EnrollOnWebsite price={price} enrollUrl={enrollUrl} signedInAs={signedInAs} />}
       </section>
 
       <details ref={keyDetails} id="key" className="card scroll-mt-24 p-5 sm:p-6">
