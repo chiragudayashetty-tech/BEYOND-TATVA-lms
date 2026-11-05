@@ -43,14 +43,15 @@ export default async function UnlockPage() {
               </div>
             ) : <RazorpayPay price={course.price} {...pay} />}
           </section>
-          <p className="mt-4 text-center text-sm text-muted">Just want to try first? <a href="/onboarding?next=%2Fcourse" className="font-medium text-primary">Start Module 0 free</a></p>
+          <p className="mt-4 text-center text-sm text-muted">Got an access key from your school or from us on WhatsApp? <a href="/onboarding?next=%2Funlock%23key" className="font-medium text-primary">Enter it here</a></p>
+          <p className="mt-2 text-center text-sm text-muted">Just want to try first? <a href="/onboarding?next=%2Fcourse" className="font-medium text-primary">Start Module 0 free</a></p>
         </div>
       </main>
     );
   }
   return (
     <Shell roles={["student"]}>
-      <PageTitle title={`Unlock ${course.title}`} subtitle="Module 0 (Introduction to the AI World, AI 101) is free. Unlock modules 1–5 with a one-time payment or a school key." />
+      <PageTitle title={`Unlock ${course.title}`} subtitle="Module 0 (Introduction to the AI World, AI 101) is free. Unlock modules 1–5 with a one-time payment or an access key." />
       <UnlockView price={course.price} hasAccess={hasAccess} preview={isPreview} pay={pay} />
     </Shell>
   );
