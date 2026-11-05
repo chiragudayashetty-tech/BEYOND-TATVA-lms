@@ -6,7 +6,7 @@ import { SUPABASE_KEY, SUPABASE_URL } from "./supabase/config";
 import { COURSE_ID, buildCourse } from "./catalog";
 
 const CATALOG = {
-  course: "id, title, tagline, description, grade, hero_url, price_inr",
+  course: "id, title, tagline, description, grade, hero_url, price_inr, list_price_inr",
   chapters: "id, title, blurb, position, release_at, is_free, thumbnail_url",
   lessons: "id, chapter_id, title, description, position, minutes",
 };
