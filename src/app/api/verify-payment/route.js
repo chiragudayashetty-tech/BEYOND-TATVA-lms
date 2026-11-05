@@ -9,7 +9,7 @@ import { fetchOrder, paymentSignatureValid, razorpayKeys } from "@/lib/razorpay"
 // Records the purchase (reference = payment id, so retries count once), then claims it for this account.
 export async function POST(request) {
   const { user, profile } = await getSession();
-  if (!user || profile?.role !== "student") return NextResponse.json({ error: "Sign in as a student first" }, { status: 401 });
+  if (!user || (profile && profile.role !== "student")) return NextResponse.json({ error: "Sign in as a student first" }, { status: 401 });
   const keys = razorpayKeys();
   if (!keys) return NextResponse.json({ error: "Online payments aren't set up yet" }, { status: 500 });
 
@@ -39,13 +39,15 @@ export async function POST(request) {
     p_reference: paymentId,
     p_email: user.email || null,
     p_phone: user.email ? null : user.phone || null,
-    p_student_name: profile.full_name?.slice(0, 80) || null,
+    p_student_name: (profile?.full_name || user.user_metadata?.full_name || "").slice(0, 80) || null,
     p_amount_paise: Number.isInteger(order.amount) ? order.amount : null,
   });
   if (error) {
     console.error("record_purchase failed", paymentId, error.message);
     return NextResponse.json({ verified: true, unlocked: false, error: "Payment received; unlocking is delayed. We'll sort it out, or message us with your payment ID." }, { status: 500 });
   }
+  // Paid before filling in their details: the purchase waits (matched to this email) and onboarding claims it.
+  if (!profile) return NextResponse.json({ verified: true, unlocked: false, paid: true, next: "/onboarding?next=%2Fcourse", payment_id: paymentId });
   // record_purchase usually unlocks straight away ("claimed"); claim_purchases covers the rest.
   const supabase = await createClient();
   if (status !== "claimed" && status !== "already_claimed") await supabase.rpc("claim_purchases");

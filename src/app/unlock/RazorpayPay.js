@@ -75,6 +75,10 @@ export default function RazorpayPay({ price, enabled, name, email, phone, whatsa
         setMsg({ tone: "info", text: "Payment received. Unlocking your course…" });
         const { ok: verified, data } = await post("/api/verify-payment", resp);
         if (verified && data.unlocked) { setBusy(false); return router.refresh(); }
+        if (verified && data.paid && data.next) {
+          setMsg({ tone: "info", text: "Payment done! Now one minute of details and your course opens." });
+          return router.replace(data.next);
+        }
         fail(`${data.error || "We couldn't confirm the payment."} Don't worry, message us and we'll unlock it.`, resp.razorpay_payment_id);
       },
       modal: {
