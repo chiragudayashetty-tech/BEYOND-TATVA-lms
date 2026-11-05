@@ -22,6 +22,8 @@ const istToIso = (v) => (v ? new Date(`${v}:00+05:30`).toISOString() : null);
 async function run(fn) {
   const supabase = await createClient();
   const { error } = await fn(supabase);
+  if (error?.message.includes("courses_list_price_range")) return { ok: false, error: "The original price must be at least the price (or leave it empty)." };
+  if (error?.message.includes("courses_price_range") || error?.message.includes("price_inr")) return { ok: false, error: "Price must be between ₹1 and ₹1,00,000." };
   if (error) return { ok: false, error: error.message.includes("row-level security") ? "Only an admin can do this. Sign in with your admin account." : error.message };
   updateTag(COURSE_TAG); // course content is cached across requests (lib/data.js)
   revalidatePath("/", "layout");
@@ -33,7 +35,8 @@ export async function saveCourse(_, fd) {
     title: str(fd, "title"),
     tagline: str(fd, "tagline"),
     description: str(fd, "description"),
-    price_inr: num(fd, "price") ?? 0,
+    price_inr: num(fd, "price") || null, // empty or 0 is rejected by the database
+    list_price_inr: num(fd, "list_price") || null,
     hero_url: str(fd, "hero"),
   }).eq("id", COURSE_ID));
 }

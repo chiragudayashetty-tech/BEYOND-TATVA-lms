@@ -40,6 +40,7 @@ export function buildCourse(courseRow, chapterRows, lessonRows, done = new Set()
     grade: courseRow.grade ?? "",
     hero: courseRow.hero_url,
     price: courseRow.price_inr,
+    listPrice: courseRow.list_price_inr ?? null,
     modules,
     lessons,
     lessonCount: lessons.length,

@@ -582,3 +582,8 @@ do $$ begin perform public.admin_clear_leads('yes'); raise exception 'Y7 FAIL'; 
 select 'Y8 clear all leads' t, public.admin_clear_leads('DELETE ALL LEADS') >= 0 as pass;
 select 'Y8b no leads left' t, count(*) = 0 as pass from public.leads where course_id = 'ai-for-students';
 reset role;
+
+-- ── Course price and original price ──────────────────────────────────────────
+select 'F1 list price set' t, list_price_inr = 2499 as pass from public.courses where id = 'ai-for-students';
+do $$ begin update public.courses set price_inr = 0 where id = 'ai-for-students'; raise exception 'F2 FAIL'; exception when check_violation then raise notice 'F2 pass: price 0 rejected'; end $$;
+do $$ begin update public.courses set list_price_inr = 10 where id = 'ai-for-students'; raise exception 'F3 FAIL'; exception when check_violation then raise notice 'F3 pass: original price below price rejected'; end $$;
