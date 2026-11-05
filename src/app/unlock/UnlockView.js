@@ -3,56 +3,12 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, CircleCheck, CreditCard, ExternalLink, KeyRound, RefreshCw, School, ShieldCheck } from "lucide-react";
+import { CircleCheck, CreditCard, KeyRound, School } from "lucide-react";
 import { IconTile } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
-import UpiPay from "./UpiPay";
 import RazorpayPay from "./RazorpayPay";
 
-// Payments happen on the website. After paying there, the course unlocks here automatically when the
-// student signs in with the email used at checkout. Parent-phone-only matches are approved in Studio.
-function EnrollOnWebsite({ price, enrollUrl, signedInAs }) {
-  const router = useRouter();
-  const [checking, setChecking] = useState(false);
-  const [checked, setChecked] = useState(false);
-
-  async function checkAgain() {
-    setChecking(true);
-    const { data } = await createClient().rpc("claim_purchases");
-    setChecking(false);
-    setChecked(true);
-    if (data > 0) router.refresh();
-  }
-
-  return (
-    <>
-      <div className="mt-5 flex items-baseline gap-1.5">
-        <span className="font-display text-4xl font-semibold">₹{price}</span>
-        <span className="text-sm text-muted">one time · incl. GST</span>
-      </div>
-      <ul className="mt-4 space-y-2 text-sm">
-        {["Every paid module and its lessons", "Quizzes, assignments and feedback", "Certificate at the end"].map((t) => (
-          <li key={t} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />{t}</li>
-        ))}
-      </ul>
-      <a href={enrollUrl} target="_blank" rel="noopener" className="btn-primary mt-5 w-full"><ExternalLink className="h-4 w-4" /> Enroll on beyondtatva.in</a>
-      <div className="mt-5 rounded-xl border border-border bg-surface-2 p-4 text-sm">
-        <p className="font-semibold">Already paid?</p>
-        <p className="mt-1 text-muted">
-          The course unlocks on this account when the email used at checkout matches it. If you paid with a parent&apos;s phone only, we check and unlock it for you, usually within a day.
-          {signedInAs && <> You&apos;re signed in as <b className="text-fg">{signedInAs}</b>.</>}
-        </p>
-        <button onClick={checkAgain} disabled={checking} className="btn-secondary mt-3 w-full"><RefreshCw className={`h-4 w-4 ${checking ? "animate-spin" : ""}`} /> {checking ? "Checking…" : "Check for my payment"}</button>
-        {checked && !checking && (
-          <p role="status" className="mt-2 text-muted">Not unlocked yet. If you paid with a parent&apos;s phone or a different email, we&apos;ll check and unlock it soon. You can also message us.</p>
-        )}
-      </div>
-      <p className="mt-3 flex items-center gap-1.5 text-xs text-muted"><ShieldCheck className="h-3.5 w-3.5" /> Secure checkout on our website: UPI, cards and netbanking.</p>
-    </>
-  );
-}
-
-export default function UnlockView({ price, hasAccess, preview, enrollUrl, signedInAs, upi, razorpay }) {
+export default function UnlockView({ price, hasAccess, preview, pay }) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -101,9 +57,9 @@ export default function UnlockView({ price, hasAccess, preview, enrollUrl, signe
     <div className="grid gap-6 lg:grid-cols-2">
       <section className="card p-6">
         <IconTile icon={CreditCard} tone="success" />
-        <h2 className="mt-4 text-lg font-semibold">{razorpay ? "Pay online" : upi ? "Pay by UPI" : "Enroll online"}</h2>
+        <h2 className="mt-4 text-lg font-semibold">Pay online</h2>
         <p className="mt-1 text-sm text-muted">One payment unlocks modules 1–6, including the ones still to premiere.</p>
-        {razorpay ? <RazorpayPay price={price} {...razorpay} /> : upi ? <UpiPay price={price} {...upi} /> : <EnrollOnWebsite price={price} enrollUrl={enrollUrl} signedInAs={signedInAs} />}
+        <RazorpayPay price={price} {...pay} />
       </section>
 
       <details ref={keyDetails} id="key" className="card scroll-mt-24 p-5 sm:p-6">
