@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import { createClient, getSession } from "@/lib/supabase/server";
 import { COURSE_ID } from "@/lib/catalog";
 import { createOrder, razorpayKeys } from "@/lib/razorpay";
+import { hasPendingPurchase } from "@/lib/pending-purchase";
 
 // POST /api/create-order { coupon? } → { order_id, amount, currency, key_id }
 // Signed-in students without access only. The price comes from the database (Admin → Content),
 // or a Studio coupon (coupon_price), never from the browser. The student id goes in the order notes so verify-payment can check it.
 export async function POST(request) {
   const { user, profile, hasAccess } = await getSession();
-  if (!user || profile?.role !== "student") return NextResponse.json({ error: "Sign in as a student first" }, { status: 401 });
+  // Students, or a brand-new Google sign-in who hasn't filled in their details yet (pay first, details later).
+  if (!user || (profile && profile.role !== "student")) return NextResponse.json({ error: "Sign in as a student first" }, { status: 401 });
   if (hasAccess) return NextResponse.json({ error: "The course is already unlocked" }, { status: 409 });
+  if (!profile && (await hasPendingPurchase(user.email))) return NextResponse.json({ error: "You've already paid. Fill in your details to open the course.", next: "/onboarding?next=%2Fcourse" }, { status: 409 });
   const keys = razorpayKeys();
   if (!keys) return NextResponse.json({ error: "Online payments aren't set up yet" }, { status: 500 });
 

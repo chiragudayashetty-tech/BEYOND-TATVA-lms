@@ -31,3 +31,4 @@ async function call(keys, method, path, body) {
 
 export const createOrder = (keys, payload) => call(keys, "POST", "/orders", payload);
 export const fetchOrder = (keys, orderId) => call(keys, "GET", `/orders/${encodeURIComponent(orderId)}`);
+
