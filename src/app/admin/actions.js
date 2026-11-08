@@ -332,3 +332,29 @@ export async function logOutreach(id, kind, note) {
 export async function deleteOutreachSchool(id) {
   return outreach((s) => s.from("outreach_schools").delete().eq("id", id));
 }
+
+// Studio → Today: one Log form for schools and leads.
+//   school: a call/visit through logOutreach (WhatsApp counts as a call), then only the fields given.
+//   lead:   admin_log_lead_contact (CRM note + lead fields; marks the lead 'studio' so the sheet picks it up).
+const isDay = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v ?? "") ? v : null);
+export async function logContact(_, fd) {
+  const id = str(fd, "id"), channel = str(fd, "channel"), note = str(fd, "note");
+  const fields = { status: str(fd, "status"), next_step: str(fd, "next_step"), next_date: isDay(str(fd, "next_date")) };
+  if (str(fd, "kind") === "school") {
+    if (!["call", "visit", "whatsapp"].includes(channel)) return { ok: false, error: "Choose call, WhatsApp or visit." };
+    const logged = await logOutreach(id, channel === "visit" ? "visit" : "call", channel === "whatsapp" ? `WhatsApp${note ? `: ${note}` : ""}` : note);
+    if (!logged.ok) return logged;
+    const changes = Object.fromEntries(Object.entries(fields).filter(([, v]) => v));
+    const saved = Object.keys(changes).length ? await outreach((s) => s.from("outreach_schools").update(changes).eq("id", id)) : logged;
+    if (!saved.ok) return saved;
+  } else {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("admin_log_lead_contact", {
+      p_lead: id, p_channel: channel, p_note: note, p_status: fields.status, p_next_step: fields.next_step, p_next_date: fields.next_date,
+      p_do_not_contact: fd.get("do_not_contact") === "on" ? true : null,
+    });
+    if (error) return { ok: false, error: error.message === "Admins only" ? "Only an admin can do this." : error.message };
+  }
+  revalidatePath("/admin/today");
+  return { ok: true, message: "Saved. The Google Sheet updates within 5 minutes." };
+}
