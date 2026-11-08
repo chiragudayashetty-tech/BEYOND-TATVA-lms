@@ -302,11 +302,11 @@ do $$ begin perform public.save_progress(pg_temp.lesson(1), 100, true); raise ex
 exception when others then if sqlerrm like 'M2c%' then raise; end if; raise notice 'M2c pass: locked lesson refused (%)', sqlerrm; end $$;
 select public.save_progress(pg_temp.lesson(0), 120);
 select public.save_progress(pg_temp.lesson(0), 60);
-select public.save_progress(pg_temp.lesson(0), 99999999, true);
+select public.save_progress(pg_temp.lesson(0), 99999999, true, p_duration => 600);
 select 'M2d free lesson saved, watch time never goes down and is capped' t,
   (select seconds_watched between 120 and 14400 and completed_at is not null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 select public.save_progress(pg_temp.lesson(0), null, false);
-select 'M2e can un-mark done' t, (select completed_at is null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select 'M2e students cannot un-mark a finished lesson' t, (select completed_at is not null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 select 'M2f first answer counts' t, public.save_answer(pg_temp.lesson(0), 'Which tool?', true) and not public.save_answer(pg_temp.lesson(0), 'Which tool?', true) as pass;
 select 'M2g one row' t, (select count(*) = 1 from public.checkpoint_answers where student_id = auth.uid()) as pass;
 do $$ begin perform public.save_answer(pg_temp.lesson(1), 'x', true); raise exception 'M2h FAIL';
@@ -784,3 +784,23 @@ select 'Z30 full push without touched is the sheet' t,
 select 'Z30b source sheet' t, (select updated_source = 'sheet' and do_not_contact from public.leads where id = l) as pass from f_ids;
 select 'Z11 school started_module0 never exceeds students' t,
   (select bool_and((e->>'started_module0')::int <= (e->>'students')::int) from jsonb_array_elements(public.admin_school_scores()) e) as pass;
+
+-- ── Real progress: server decides completion, resume position, honest score ──
+reset role;
+insert into auth.users (id, email) values ('abababab-0000-0000-0000-000000000001', 'watch@x.in');
+set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000001');
+select public.complete_onboarding('student', 'Watcher', null, 9::smallint, 'Mum', '9811122233', 'Typed School', p_consent => true);
+select public.save_progress(pg_temp.lesson(0), 30, true, p_position => 30, p_duration => 600);
+select 'Z12 "complete" from the client is ignored before 90%' t,
+  (select completed_at is null and last_position_seconds = 30 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select public.save_progress(pg_temp.lesson(0), 545, null, p_position => 545, p_duration => 600);
+select 'Z13 reaching 90% completes it automatically' t,
+  (select completed_at is not null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select public.save_progress(pg_temp.lesson(0), 545, null, p_position => 100, p_duration => 600);
+select 'Z14 resume position follows the player, furthest point stays' t,
+  (select last_position_seconds = 100 and seconds_watched = 545 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+reset role;
+select 'Z15 typed school name is used' t, (select school = 'Typed School' from public.student_score_rows(null, 30) where student_id = 'abababab-0000-0000-0000-000000000001') as pass;
+select 'Z16 a student with no activity scores 0' t,
+  (select bool_and(score = 0) from public.student_score_rows(null, 30) r where lessons_started = 0 and quiz_attempts = 0
+     and checkpoints_answered = 0 and assignments_submitted = 0 and resources_opened = 0 and active_days_30 = 0) as pass;
