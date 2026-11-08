@@ -53,7 +53,7 @@ export function OutreachRow({ school, statuses }) {
     if (res.ok) setNote("");
   });
   const remove = () => {
-    if (!confirm(`Delete ${school.name} from outreach? If it is still in the School Outreach sheet, it comes back the next time that row is edited there.`)) return;
+    if (!confirm(`Delete ${school.name} from outreach? It is also removed from the School Outreach sheet within 5 minutes.`)) return;
     start(async () => { const res = await deleteOutreachSchool(school.id); if (!res.ok) setError(res.error); });
   };
   return (

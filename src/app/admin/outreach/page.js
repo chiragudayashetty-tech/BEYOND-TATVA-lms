@@ -28,7 +28,7 @@ export default async function OutreachPage({ searchParams }) {
 
   return (
     <Shell roles={["admin"]}>
-      <PageTitle title="School outreach" subtitle="Every school you approach: who to talk to, calls and visits so far, and the next follow-up. Edits made in the School Outreach Google Sheet also show up here." />
+      <PageTitle title="School outreach" subtitle="Every school you approach: who to talk to, calls and visits so far, and the next follow-up. This is the main record: the School Outreach Google Sheet copies it every 5 minutes." />
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Schools" value={all.length} />

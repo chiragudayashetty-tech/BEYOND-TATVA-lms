@@ -646,7 +646,7 @@ select 'E5 bad phone reports an error, saves nothing' t,
   from (select public.sheet_upsert_leads('[{"row":4,"student":"No Phone","phone":"123"}]') r) x;
 select 'E6 schools upsert creates a school' t,
   (public.sheet_upsert_schools('[{"row":2,"name":"Test School","calls":"3","visits":"x","next_date":"2026-11-11"}]') -> 0 ->> 'result') = 'created' as pass;
-select 'E6b numbers and date parsed' t, calls = 3 and visits = 0 and next_date = '2026-11-11' as pass from public.outreach_schools where name = 'Test School';
+select 'E6b sheet cannot set calls/visits; date parsed' t, calls = 0 and visits = 0 and next_date = '2026-11-11' as pass from public.outreach_schools where name = 'Test School';
 select 'E7 snapshot lists leads with system columns' t,
   jsonb_array_length(s -> 'leads') >= 2 and (s -> 'leads' -> 0) ? 'paid' and jsonb_array_length(s -> 'schools') = 1 as pass
   from (select public.sheet_snapshot() s) x;
@@ -687,3 +687,34 @@ select 'E18c both kept' t, count(*) = 2 as pass from public.leads where phone = 
 select 'E19 sibling note names the other child' t,
   r -> 0 ->> 'siblings' like 'Ravi (SRVK)%' as pass
   from (select public.sheet_upsert_leads('[{"row":5,"tab":"SRVK","student":"Asha","phone":"9845088888"}]') r) x;
+
+-- ── School outreach: Studio is the main record ──────────────────────────────
+reset role;
+insert into public.outreach_schools (name, calls, visits, history) values ('Studio School', 2, 1, '8 Nov: call');
+create temp table g1 as select public.sheet_upsert_schools(jsonb_build_array(jsonb_build_object('row', 2, 'name', 'Studio School', 'status', 'Called',
+    'calls', '99', 'visits', '99', 'history', 'wiped', 'id', id, 'version', updated_at))) r
+  from public.outreach_schools where name = 'Studio School';
+select 'I1 sheet edit with the current version saves, but not calls/visits/history' t,
+  r -> 0 ->> 'result' = 'updated' and o.status = 'Called' and o.calls = 2 and o.visits = 1 and o.history = '8 Nov: call'
+  and (r -> 0 ->> 'version')::timestamptz = o.updated_at as pass
+  from g1, public.outreach_schools o where o.name = 'Studio School';
+-- Studio changes the row after the sheet's last pull.
+update public.outreach_schools set updated_at = now() + interval '1 minute', next_step = 'Studio step' where name = 'Studio School';
+select 'I2 older sheet version is skipped' t, r -> 0 ->> 'result' = 'stale' as pass
+  from (select public.sheet_upsert_schools(jsonb_build_array(jsonb_build_object('row', 2, 'name', 'Studio School', 'next_step', 'Sheet step',
+          'id', id, 'version', updated_at - interval '1 minute'))) r from public.outreach_schools where name = 'Studio School') x;
+select 'I2b Studio value kept' t, next_step = 'Studio step' as pass from public.outreach_schools where name = 'Studio School';
+select 'I3 ID without a version is skipped' t, r -> 0 ->> 'result' = 'stale' as pass
+  from (select public.sheet_upsert_schools(jsonb_build_array(jsonb_build_object('row', 2, 'name', 'Studio School', 'id', id))) r
+        from public.outreach_schools where name = 'Studio School') x;
+select 'I4 same name without ID links, does not overwrite' t,
+  r -> 0 ->> 'result' = 'exists' and (select next_step from public.outreach_schools where name = 'Studio School') = 'Studio step' as pass
+  from (select public.sheet_upsert_schools('[{"row":3,"name":"studio school","next_step":"x"}]') r) x;
+select 'I5 new row typed in the sheet is created with a version' t,
+  r -> 0 ->> 'result' = 'created' and r -> 0 ->> 'version' is not null as pass
+  from (select public.sheet_upsert_schools('[{"row":4,"name":"Sheet New School","status":"Not contacted"}]') r) x;
+select 'I6 snapshot carries updated_at for the version column' t,
+  (select bool_and(e ? 'updated_at') from jsonb_array_elements(public.sheet_snapshot() -> 'schools') e) as pass;
+select 'I7 edit to a school deleted in Studio does not bring it back' t,
+  r -> 0 ->> 'result' = 'deleted' and not exists (select 1 from public.outreach_schools where name = 'Gone School') as pass
+  from (select public.sheet_upsert_schools('[{"row":5,"name":"Gone School","id":"00000000-0000-0000-0000-00000000dead","version":"2026-11-08T00:00:00+00:00"}]') r) x;
