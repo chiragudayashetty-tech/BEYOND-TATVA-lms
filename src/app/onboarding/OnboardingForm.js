@@ -20,11 +20,20 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
   const [step, setStep] = useState(1);
   const [by, setBy] = useState(null);
   const [form, setForm] = useState({ name: "", code: "", school: "", grade: "", gName: "", gPhone: "", kidPhone: "", consent: false });
+  const [schoolChoices, setSchoolChoices] = useState(null);
   const done = () => { router.replace(next ?? "/dashboard"); router.refresh(); };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [terms, setTerms] = useState(false); // teacher terms pop-up
   const termsDialog = useRef(null);
+
+  useEffect(() => {
+    let active = true;
+    createClient().rpc("signup_schools").then(({ data, error }) => {
+      if (active) setSchoolChoices(error ? [] : data ?? []);
+    }).catch(() => { if (active) setSchoolChoices([]); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!terms) return;
@@ -76,7 +85,8 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
           p_grade: Number(form.grade),
           p_guardian_name: form.gName,
           p_guardian_phone: form.gPhone,
-          p_school_name: form.school,
+          p_school_name: schoolChoices?.length && form.schoolPick !== "other" ? null : form.school || null,
+          p_school_pick: schoolChoices?.length && form.schoolPick && form.schoolPick !== "other" ? form.schoolPick : null,
           p_signed_up_by: by,
           p_student_phone: form.kidPhone || null,
           p_consent: form.consent,
@@ -157,10 +167,25 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
                       ))}
                     </div>
                   </label>
-                  <label className="block">
-                    <span className="label">School name</span>
-                    <input className="input" value={form.school} onChange={set("school")} maxLength={120} placeholder="e.g. Vidyodaya Public School, Udupi" />
-                  </label>
+                  <div>
+                    <label className="block">
+                      <span className="label">School name</span>
+                      {schoolChoices === null ? (
+                        <div role="status" className="input flex items-center text-sm text-muted">Loading school choices…</div>
+                      ) : schoolChoices.length > 0 ? (
+                        <select className="input" value={form.schoolPick ?? ""} onChange={(e) => setForm((f) => ({ ...f, schoolPick: e.target.value, school: e.target.value === "other" ? f.school : "" }))}>
+                          <option value="">Choose a school (optional)</option>
+                          {schoolChoices.map((school) => <option key={school.id} value={school.id}>{school.name}</option>)}
+                          <option value="other">Other</option>
+                        </select>
+                      ) : (
+                        <input className="input" value={form.school} onChange={set("school")} maxLength={120} placeholder="e.g. Vidyodaya Public School, Udupi" />
+                      )}
+                    </label>
+                    {schoolChoices?.length > 0 && form.schoolPick === "other" && (
+                      <input className="input mt-2" aria-label="Enter your school name" value={form.school} onChange={set("school")} maxLength={120} placeholder="Enter your school name" />
+                    )}
+                  </div>
                   <label className="block">
                     <span className="label">School code (only if the school gave one)</span>
                     <input className="input uppercase tracking-wider" value={form.code} onChange={set("code")} placeholder="Leave empty if you joined on your own" />

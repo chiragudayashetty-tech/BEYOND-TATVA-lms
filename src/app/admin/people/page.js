@@ -2,19 +2,21 @@ import { School, Users } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Avatar, Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { GrantButton, MoveAccess, NewClass, NewSchool, StudentDataButtons, TeacherRevoke } from "./PeopleForms";
+import { GrantButton, MoveAccess, NewClass, NewSchool, SignupSchoolToggle, StudentDataButtons, TeacherRevoke } from "./PeopleForms";
 
 export const metadata = { title: "Schools and people · Admin · Beyond Tatva" };
 
 export default async function PeoplePage() {
   const supabase = await createClient();
-  const [{ data: schools }, { data: classes }, { data: people }, { data: access }] = await Promise.all([
+  const [{ data: schools }, { data: signupSchools, error: signupSchoolsError }, { data: classes }, { data: people }, { data: access }] = await Promise.all([
     supabase.rpc("admin_schools"),
+    supabase.rpc("signup_schools"),
     supabase.from("classes").select("id, name, grade, school_id, teacher_id"),
     supabase.from("profiles").select("id, role, full_name, grade, school_id, school_name, guardian_phone, guardian_consent_at, consent_by, teacher_terms_at, teacher_revoked_at, signed_up_by, student_phone, created_at").order("created_at", { ascending: false }),
     supabase.from("course_access").select("student_id, source"),
   ]);
   const schoolName = Object.fromEntries((schools ?? []).map((s) => [s.id, s.name]));
+  const signupSchoolIds = new Set((signupSchools ?? []).map((school) => school.id));
   const teachers = (people ?? []).filter((p) => p.role === "teacher");
   const teacherName = Object.fromEntries(teachers.map((t) => [t.id, t.full_name]));
   const accessBy = Object.fromEntries((access ?? []).map((a) => [a.student_id, a.source]));
@@ -34,9 +36,12 @@ export default async function PeoplePage() {
                   <div className="font-semibold">{s.name}</div>
                   <div className="text-xs text-muted">{s.city ?? "–"} · {s.students} students</div>
                 </div>
-                <div className="text-right text-xs">
-                  <div>Student code <span className="font-mono font-semibold">{s.code}</span></div>
-                  <div className="text-muted">Teacher code <span className="font-mono">{s.teacher_code}</span></div>
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
+                  <div className="text-right text-xs">
+                    <div>Student code <span className="font-mono font-semibold">{s.code}</span></div>
+                    <div className="text-muted">Teacher code <span className="font-mono">{s.teacher_code}</span></div>
+                  </div>
+                  <SignupSchoolToggle schoolId={s.id} schoolName={s.name} initialShow={signupSchoolIds.has(s.id)} statusAvailable={!signupSchoolsError} />
                 </div>
               </li>
             ))}
