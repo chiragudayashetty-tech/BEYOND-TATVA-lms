@@ -255,6 +255,7 @@ function pull() {
   // Rows whose lead is gone (merged into another row, or deleted in Studio), and rows moving tabs.
   var drop = [];
   ts.forEach(function (t) { (t.values || []).forEach(function (v, i) { var id = v[t.col['ID']]; if (id && !live[id]) drop.push({ t: t, row: i + 2 }); }); });
+  if (!safeToDelete_(drop.length, Object.keys(at).length, data.leads.length, 'leads')) drop = [];
   moves.forEach(function (m) {
     var from = {}; m.hit.t.head.forEach(function (h, j) { if (h) from[h] = m.hit.t.values[m.hit.i][j]; });
     m.rec._from = from;                                   // keep every column when a lead changes tab
@@ -307,6 +308,7 @@ function pullSchools_(t, schools) {
   // Schools deleted in Studio (and duplicate rows that point at an existing school) leave the sheet.
   var drop = [];
   values.forEach(function (v, i) { var id = v[t.col['ID']]; if (id && !live[id]) drop.push(i + 2); });
+  if (!safeToDelete_(drop.length, Object.keys(at).length, schools.length, 'schools')) drop = [];
   var seen = {};
   values.forEach(function (v, i) { var id = v[t.col['ID']]; if (id && seen[id]) drop.push(i + 2); seen[id] = true; });
   drop.sort(function (a, b) { return b - a; }).filter(function (r, i, a) { return a.indexOf(r) === i; }).forEach(function (r) { t.sheet.deleteRow(r); });
@@ -326,6 +328,17 @@ function syncAll() {
 }
 
 // ── Lead write-back helpers (Studio → sheet) ────────────────────────────────
+// Safety net: a bad or empty LMS answer must never wipe the sheet. Skip removals when the LMS sent
+// nothing, or when one pull would remove more than 10 rows and more than 20% of the linked rows.
+function safeToDelete_(gone, linked, received, what) {
+  if (!gone) return true;
+  if (received === 0 || (gone > 10 && gone > linked * 0.2)) {
+    console.warn('Sync: skipped removing ' + gone + ' ' + what + ' rows (LMS sent ' + received + ', sheet has ' + linked + '). Check the LMS, then delete by hand if intended.');
+    return false;
+  }
+  return true;
+}
+
 function cellText_(x) { return x instanceof Date ? Utilities.formatDate(x, 'Asia/Kolkata', 'yyyy-MM-dd') : String(x === null || x === undefined ? '' : x).trim(); }
 
 // One cell, only when it differs (formulas and formatting elsewhere in the row stay as they are).
