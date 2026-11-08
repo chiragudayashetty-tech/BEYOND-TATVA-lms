@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CalendarClock, Check, CircleCheck, Lock, PlayCircle, Zap } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
@@ -17,6 +18,9 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave, 
   const [xp, setXp] = useState(0);
   const [done, setDone] = useState(lesson.done);
   const [saveError, setSaveError] = useState("");
+  // Visited pages are kept in the browser for 30 s (next.config.mjs). Refresh after saving so the
+  // dashboard, progress and XP show this lesson right away instead of a cached copy.
+  const router = useRouter();
 
   // Progress and answers go through checked database functions (save_progress / save_answer):
   // the database confirms the lesson is open for this student and caps watch time.
@@ -30,6 +34,7 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave, 
     setSaveError("");
     const { error } = await saveProgress({ completed: next });
     if (error) { setDone(!next); setSaveError("Couldn't save. Check your connection and try again."); }
+    else router.refresh();
   }
 
   // Watch time from players that report it (MP4, YouTube). Saved every 15 s of new viewing;
@@ -48,18 +53,20 @@ export default function LessonView({ course, lesson, hasAccess, video, canSave, 
       setDone(true);
       saveProgress({ seconds: w.max, completed: true }).then(({ error }) => {
         if (error) { w.autoDone = false; doneRef.current = false; setDone(false); }
+        else router.refresh();
       });
     } else if (w.max - w.saved >= 15) {
       w.saved = w.max;
       saveProgress({ seconds: w.max });
     }
-  }, [saveProgress]);
+  }, [saveProgress, router]);
   const autoTracked = tracksProgress(parseVideo(video));
 
   async function saveAnswer(question, correct) {
     if (correct) setXp((x) => x + 10);
     if (!canSave || !userId) return;
-    await createClient().rpc("save_answer", { p_lesson: lesson.id, p_question: question, p_correct: correct });
+    const { error } = await createClient().rpc("save_answer", { p_lesson: lesson.id, p_question: question, p_correct: correct });
+    if (!error) router.refresh();
   }
   const noteKey = `notes:${lesson.id}`;
   // The Notes tab is never server-rendered (Overview opens first), so reading storage here is safe.
