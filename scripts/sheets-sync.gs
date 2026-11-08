@@ -8,11 +8,12 @@
  * Rows are matched by the "ID" column (added on set-up; don't edit or delete it). Never copy the sheet:
  * keep one sheet and add new schools/students as new rows.
  * Columns "Signed up", "Module 0" and "Paid?" are filled from the LMS. Typing in them is undone.
+ * "LMS email": the student's login email, when their account doesn't use the parent phone on the slip.
  */
 var API = 'https://learn.beyondtatva.in/api/sheets';
 var LEAD_SYSTEM = ['Signed up', 'Module 0', 'Paid?'];
-var LEAD_ADD = ['School', 'Next step', 'Next date', 'Do not contact', 'Signed up', 'Module 0', 'Paid?', 'Last synced', 'ID'];
-var LEAD_FIELDS = { 'Student': 'student', 'Class': 'grade', 'Parent WhatsApp': 'phone', 'School': 'school', 'Status': 'status', 'Next step': 'next_step', 'Next date': 'next_date' };
+var LEAD_ADD = ['School', 'Next step', 'Next date', 'Do not contact', 'LMS email', 'Signed up', 'Module 0', 'Paid?', 'Last synced', 'ID'];
+var LEAD_FIELDS = { 'Student': 'student', 'Class': 'grade', 'Parent WhatsApp': 'phone', 'School': 'school', 'Status': 'status', 'Next step': 'next_step', 'Next date': 'next_date', 'LMS email': 'lms_email' };
 var SCHOOL_FIELDS = { 'School': 'name', 'Area': 'area', 'Contact': 'contact', 'Phone': 'phone', 'Status': 'status', 'Calls': 'calls', 'Visits': 'visits', 'History (short)': 'history', 'Next step': 'next_step', 'Next date': 'next_date', 'Notes': 'notes' };
 
 function onOpen() {
@@ -103,7 +104,7 @@ function push_(t, rowNums) {
       var cell = t.sheet.getRange(r.row, (t.col['ID'] || 0) + 1);
       if (r.id && t.col['ID'] !== undefined && cell.getValue() !== r.id) cell.setValue(r.id);
       var name = t.sheet.getRange(r.row, t.col[t.kind === 'leads' ? 'Student' : 'School'] + 1);
-      name.setNote(r.result === 'error' ? 'Not synced: ' + r.error : (r.duplicate_phone ? 'Same parent phone as another row (sibling or duplicate?)' : ''));
+      name.setNote(r.result === 'error' ? 'Not synced: ' + r.error : [r.duplicate_phone ? 'Same parent phone as another row (sibling or duplicate?)' : '', r.link || ''].filter(String).join('\n'));
     });
   }
   if (t.col['Last synced'] !== undefined) {

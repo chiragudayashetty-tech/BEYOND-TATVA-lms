@@ -654,3 +654,12 @@ set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeee
 do $$ begin perform public.sheet_snapshot(); raise exception 'E8 FAIL'; exception when insufficient_privilege then raise notice 'E8 pass: students cannot read the sheet snapshot'; end $$;
 select 'E9 students see no outreach schools' t, (select count(*) from public.outreach_schools) = 0 as pass;
 reset role;
+
+-- ── Lead ↔ account link ──────────────────────────────────────────────────────
+reset role;
+select 'E10 unknown email is reported' t, public.sheet_link_lead((select id from public.leads where student_name = 'Sheet Kid'), 'nobody@example.com') = 'unknown_email' as pass;
+select 'E11 link by email makes the lead signed up' t,
+  public.sheet_link_lead((select id from public.leads where student_name = 'Sheet Kid'),
+    (select email from auth.users u join public.profiles p on p.id = u.id where p.role = 'student' and u.email is not null limit 1)) = 'linked' as pass;
+select 'E12 snapshot follows the link' t,
+  (select (e ->> 'signed_up')::boolean and e ->> 'lms_email' is not null from jsonb_array_elements(public.sheet_snapshot() -> 'leads') e where e ->> 'student' = 'Sheet Kid') as pass;
