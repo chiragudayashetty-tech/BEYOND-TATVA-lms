@@ -105,9 +105,16 @@ function setupSync() {
 }
 
 // ── Push ────────────────────────────────────────────────────────────────────
+// The tab a row belongs to: the tab it sits in. Exception: a Website/Manual lead with a School typed in
+// belongs to that school's tab (it moves there on the next sync).
+function desiredTab_(t, values) {
+  var school = t.col['School'] !== undefined ? String(values[t.col['School']] || '').trim() : '';
+  return (['Website', 'Manual'].indexOf(t.name) >= 0 && school && school !== t.name) ? school.slice(0, 60) : t.name;
+}
+
 function rowPayload_(t, values, rowNum) {
   var fields = t.kind === 'leads' ? LEAD_FIELDS : SCHOOL_FIELDS, extra = {};
-  var p = { row: rowNum, tab: t.name, id: t.col['ID'] !== undefined ? String(values[t.col['ID']] || '') : '' };
+  var p = { row: rowNum, tab: t.kind === 'leads' ? desiredTab_(t, values) : t.name, id: t.col['ID'] !== undefined ? String(values[t.col['ID']] || '') : '' };
   t.head.forEach(function (h, i) {
     if (!h || h === 'ID' || h === 'Last synced' || LEAD_SYSTEM.indexOf(h) >= 0) return;
     var v = values[i] instanceof Date ? Utilities.formatDate(values[i], 'Asia/Kolkata', 'yyyy-MM-dd') : String(values[i] === null ? '' : values[i]);
@@ -178,12 +185,17 @@ function pull() {
     t.values = t.sheet.getRange(2, 1, t.last - 1, t.head.length).getValues();
     t.values.forEach(function (v, i) { var id = v[t.col['ID']]; if (id) at[id] = { t: t, i: i }; });
   });
-  var live = {}, moves = [], adds = [], props = PropertiesService.getDocumentProperties(), recent = Date.now() - 10 * 60 * 1000;
+  var live = {}, moves = [], adds = [], fixes = [], props = PropertiesService.getDocumentProperties(), recent = Date.now() - 10 * 60 * 1000;
   data.leads.forEach(function (rec) {
     live[rec.id] = true;
     var hit = at[rec.id];
     if (!hit) { adds.push(rec); return; }
-    if (hit.t.name !== rec.tab) { moves.push({ rec: rec, hit: hit }); return; }
+    if (hit.t.name !== rec.tab) {
+      // Moved on purpose (Website/Manual lead given a School) → move the row. Anything else (tab renamed,
+      // row cut/pasted into another tab) → the sheet is right: tell the LMS where the row is now.
+      if (desiredTab_(hit.t, hit.t.values[hit.i]) === rec.tab) { moves.push({ rec: rec, hit: hit }); return; }
+      fixes.push(hit);
+    }
     var t = hit.t, v = t.values[hit.i];
     var sys = { 'Signed up': rec.signed_up ? 'Yes' : 'No', 'Module 0': rec.module0 ? 'Done' : (rec.signed_up ? 'Not yet' : ''), 'Paid?': rec.paid ? 'Yes' : 'No', 'Source': rec.source || '' };
     Object.keys(sys).forEach(function (h) { if (t.col[h] !== undefined && String(v[t.col[h]]) !== sys[h]) { v[t.col[h]] = sys[h]; t.dirty = true; } });
@@ -191,6 +203,11 @@ function pull() {
     if (edited < recent && rec.do_not_contact && t.col['Do not contact'] !== undefined && !v[t.col['Do not contact']]) { v[t.col['Do not contact']] = 'Yes'; t.dirty = true; }
   });
   ts.forEach(function (t) { if (t.dirty) t.sheet.getRange(2, 1, t.values.length, t.head.length).setValues(t.values); });
+
+  // Rows whose tab changed in the sheet (renamed tab, cut/paste): update the LMS, don't move them.
+  var byT = {};
+  fixes.forEach(function (h) { (byT[h.t.name] = byT[h.t.name] || { t: h.t, rows: [] }).rows.push(h.i + 2); });
+  Object.keys(byT).forEach(function (n) { var t = table_(byT[n].t.sheet); if (t) push_(t, byT[n].rows); });
 
   // Rows whose lead is gone (merged into another row, or deleted in Studio), and rows moving tabs.
   var drop = [];
@@ -218,6 +235,7 @@ function pull() {
     });
     t.sheet.getRange(t.last + 1, 1, rows.length, width).setValues(rows);
   });
+
 }
 
 function syncAll() {
