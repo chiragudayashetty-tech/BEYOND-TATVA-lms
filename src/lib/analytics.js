@@ -1,5 +1,23 @@
 export function conversionPercent(previous, next) {
-  return previous > 0 ? Math.round((next / previous) * 100) : 0;
+  return previous > 0 ? Math.round((next / previous) * 100) : null;
+}
+
+export function funnelRates(stages) {
+  const signupCount = stages.find((stage) => stage.key === "signedUp")?.count ?? 0;
+  return stages.map((stage, index) => ({
+    ...stage,
+    ofSignups: signupCount ? Math.round(stage.count / signupCount * 100) : null,
+    conversion: index === 0 ? null : conversionPercent(stages[index - 1].count, stage.count),
+  }));
+}
+
+export function medianDaysBetween(rows) {
+  const values = rows.map(({ signed_up_at, paid_at }) =>
+    signed_up_at && paid_at ? Math.max(0, (new Date(paid_at) - new Date(signed_up_at)) / 86_400_000) : null,
+  ).filter(Number.isFinite).sort((a, b) => a - b);
+  if (!values.length) return null;
+  const mid = Math.floor(values.length / 2);
+  return Math.round((values.length % 2 ? values[mid] : (values[mid - 1] + values[mid]) / 2) * 10) / 10;
 }
 
 // Supabase stores timestamps in UTC; group revenue by the calendar week in India.
@@ -22,7 +40,7 @@ export function revenueByIstWeek(rows) {
 }
 
 // Stages after sign-up follow the same cohort: students who signed up in the range.
-export function funnelCounts({ leads, profiles, progress, lessonIds, accesses }) {
+export function funnelCounts({ profiles, progress, lessonIds, accesses, quizzes = [], attempts = [], resources = [] }) {
   const cohort = new Set(profiles.map((row) => row.id));
   progress = progress.filter((row) => cohort.has(row.student_id));
   accesses = accesses.filter((row) => cohort.has(row.student_id));
@@ -36,13 +54,19 @@ export function funnelCounts({ leads, profiles, progress, lessonIds, accesses })
   const finished = new Set([...completedByStudent].filter(([, count]) => lessonIds.size > 0 && count >= lessonIds.size).map(([id]) => id));
   const bought = new Set(accesses.map((row) => row.student_id));
   const signedUp = new Set(profiles.map((row) => row.id));
-  return [
-    { key: "leads", label: "Leads", count: leads.length },
+  const quizIds = new Set(quizzes.filter((quiz) => lessonIds.has(quiz.lesson_id) || quiz.is_module0).map((quiz) => quiz.id));
+  const attemptedQuiz = new Set(attempts.filter((row) => quizIds.has(row.quiz_id) && cohort.has(row.student_id)).map((row) => row.student_id));
+  const passedQuiz = new Set(attempts.filter((row) => quizIds.has(row.quiz_id) && row.passed && cohort.has(row.student_id)).map((row) => row.student_id));
+  const openedResource = new Set(resources.filter((row) => cohort.has(row.student_id) && row.opens > 0).map((row) => row.student_id));
+  return funnelRates([
     { key: "signedUp", label: "Signed up", count: signedUp.size },
     { key: "started", label: "Started Module 0", count: started.size },
     { key: "finished", label: "Finished Module 0", count: finished.size },
+    { key: "attemptedQuiz", label: "Attempted quiz", count: attemptedQuiz.size },
+    { key: "passedQuiz", label: "Passed quiz", count: passedQuiz.size },
+    { key: "openedResource", label: "Opened PDF", count: openedResource.size },
     { key: "bought", label: "Bought", count: bought.size },
-  ].map((stage, index, all) => ({ ...stage, conversion: index === 0 ? null : conversionPercent(all[index - 1].count, stage.count) }));
+  ]);
 }
 
 export function quizHealth(quizzes, attempts) {
