@@ -26,6 +26,10 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
     return createClient().rpc("save_progress", { p_lesson: lesson.id, p_seconds: seconds ?? null, p_completed: completed ?? null });
   }, [canSave, userId, lesson.id]);
 
+  // Record that the lesson was opened, so analytics count views even before 15 s of watch time
+  // (and for videos whose player doesn't report time). Saves 0 seconds: no watch time is added.
+  useEffect(() => { saveProgress(); }, [saveProgress]);
+
   async function markDone(next) {
     setDone(next);
     setSaveError("");
