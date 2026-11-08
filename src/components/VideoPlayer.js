@@ -289,6 +289,14 @@ function EmbedPlayer({ embed, title }) {
   );
 }
 
+// Bunny ignores setCurrentTime before playback starts, so resume through the embed's "t" (start time) parameter.
+export function bunnyStart(embed, startAt) {
+  if (!(startAt > 10)) return embed;
+  const url = new URL(embed);
+  url.searchParams.set("t", String(Math.floor(startAt)));
+  return url.toString();
+}
+
 function BunnyPlayer({ embed, title, onProgress, onPauseProgress, startAt = 0 }) {
   const iframe = useRef(null);
   const progress = useRef(onProgress);
@@ -309,6 +317,13 @@ function BunnyPlayer({ embed, title, onProgress, onPauseProgress, startAt = 0 })
       answered = true;
       setTracked(true);
       clearTimeout(timeout);
+      if (message.event === "play") {
+        if (!sought && startAt > 10 && (lastTime.current?.seconds ?? 0) < startAt - 5) {
+          sought = true;
+          frame.contentWindow?.postMessage({ context: "player.js", version: "0.0.11", method: "setCurrentTime", value: startAt }, origin);
+        }
+        return;
+      }
       if (message.event === "timeupdate") {
         lastTime.current = message;
         progress.current?.(message.seconds, message.duration);
@@ -317,8 +332,9 @@ function BunnyPlayer({ embed, title, onProgress, onPauseProgress, startAt = 0 })
       }
     };
     let ready = false;
+    let sought = false;
     const subscribe = () => {
-      for (const value of ["timeupdate", "ended"]) {
+      for (const value of ["timeupdate", "ended", "play"]) {
         frame.contentWindow?.postMessage({ context: "player.js", version: "0.0.11", method: "addEventListener", value }, origin);
       }
     };
@@ -351,6 +367,6 @@ export default function VideoPlayer({ src, title = "Lesson video", onAnswer, onP
   if (!v) return <Notice icon={TriangleAlert} title="This video link isn't supported" body="Tell your teacher which lesson it is so they can fix the link." />;
   if (v.kind === "file") return <NativePlayer key={v.src} src={v.src} onAnswer={onAnswer} onProgress={onProgress} onPauseProgress={onPauseProgress} startAt={startAt} />;
   if (v.kind === "youtube") return <YouTubePlayer key={v.id} id={v.id} start={startAt < 0 ? 0 : Math.max(v.start ?? 0, Math.floor(startAt))} onProgress={onProgress} onPauseProgress={onPauseProgress} />;
-  if (v.kind === "bunny") return <BunnyPlayer key={v.embed} embed={v.embed} title={title} onProgress={onProgress} onPauseProgress={onPauseProgress} startAt={startAt} />;
+  if (v.kind === "bunny") return <BunnyPlayer key={v.embed} embed={bunnyStart(v.embed, startAt)} title={title} onProgress={onProgress} onPauseProgress={onPauseProgress} startAt={startAt} />;
   return <EmbedPlayer key={v.embed} embed={v.embed} title={title} />;
 }

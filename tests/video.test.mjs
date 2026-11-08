@@ -77,3 +77,8 @@ test("Bunny ready message is recognised so listeners are re-sent", () => {
   const origin = "https://iframe.mediadelivery.net";
   assert.deepEqual(parseBunnyMessage({ context: "player.js", event: "ready" }, origin, origin), { event: "ready" });
 });
+
+test("Bunny play message is recognised (resume backup)", () => {
+  const origin = "https://iframe.mediadelivery.net";
+  assert.deepEqual(parseBunnyMessage({ context: "player.js", event: "play" }, origin, origin), { event: "play" });
+});
