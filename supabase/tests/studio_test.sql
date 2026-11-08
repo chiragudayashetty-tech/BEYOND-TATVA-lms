@@ -626,3 +626,31 @@ set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeee
 select 'N5 enrolled student reads newsletters and files' t, (select count(*) from public.newsletters) = 1
   and (select count(*) from storage.objects where bucket_id = 'newsletters') = 1 as pass;
 reset role;
+
+-- ── Google Sheets sync ───────────────────────────────────────────────────────
+reset role;
+select 'E1 new sheet row creates a lead' t,
+  r -> 0 ->> 'result' = 'created' and (r -> 0 ->> 'id') is not null as pass
+  from (select public.sheet_upsert_leads('[{"row":2,"student":"Sheet Kid","grade":"8","phone":"98450 55555 (verify)","school":"SRVK","status":"Called","next_date":"Wed 11 Nov 2026","sheet":{"Join?":"Yes"}}]') r) x;
+select 'E2 same phone+name without ID matches, no duplicate' t,
+  r -> 0 ->> 'result' = 'matched' and (select count(*) from public.leads where phone = '+919845055555') = 1 as pass
+  from (select public.sheet_upsert_leads('[{"row":2,"student":"Sheet Kid","phone":"9845055555","status":"Interested"}]') r) x;
+select 'E3 edit by ID updates status and date' t,
+  status = 'Interested' and next_date is null and sheet ->> 'Join?' = 'Yes' as pass
+  from public.leads where phone = '+919845055555';
+select 'E4 sibling on same phone is flagged' t,
+  (r -> 0 ->> 'duplicate_phone')::boolean as pass
+  from (select public.sheet_upsert_leads('[{"row":3,"student":"Sheet Sibling","phone":"9845055555"}]') r) x;
+select 'E5 bad phone reports an error, saves nothing' t,
+  r -> 0 ->> 'result' = 'error' as pass
+  from (select public.sheet_upsert_leads('[{"row":4,"student":"No Phone","phone":"123"}]') r) x;
+select 'E6 schools upsert creates a school' t,
+  (public.sheet_upsert_schools('[{"row":2,"name":"Test School","calls":"3","visits":"x","next_date":"2026-11-11"}]') -> 0 ->> 'result') = 'created' as pass;
+select 'E6b numbers and date parsed' t, calls = 3 and visits = 0 and next_date = '2026-11-11' as pass from public.outreach_schools where name = 'Test School';
+select 'E7 snapshot lists leads with system columns' t,
+  jsonb_array_length(s -> 'leads') >= 2 and (s -> 'leads' -> 0) ? 'paid' and jsonb_array_length(s -> 'schools') = 1 as pass
+  from (select public.sheet_snapshot() s) x;
+set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+do $$ begin perform public.sheet_snapshot(); raise exception 'E8 FAIL'; exception when insufficient_privilege then raise notice 'E8 pass: students cannot read the sheet snapshot'; end $$;
+select 'E9 students see no outreach schools' t, (select count(*) from public.outreach_schools) = 0 as pass;
+reset role;
