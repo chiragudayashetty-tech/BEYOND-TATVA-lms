@@ -782,3 +782,5 @@ select 'Z29b status taken, do-not-contact and next step kept, still studio' t,
 select 'Z30 full push without touched is the sheet' t,
   (public.sheet_upsert_leads(jsonb_build_array(jsonb_build_object('row', 2, 'id', l, 'student', 'Sheet Kid', 'phone', '9845055555', 'status', 'Will join', 'do_not_contact', true))) -> 0 ->> 'result') = 'updated' as pass from f_ids;
 select 'Z30b source sheet' t, (select updated_source = 'sheet' and do_not_contact from public.leads where id = l) as pass from f_ids;
+select 'Z11 school started_module0 never exceeds students' t,
+  (select bool_and((e->>'started_module0')::int <= (e->>'students')::int) from jsonb_array_elements(public.admin_school_scores()) e) as pass;
