@@ -2,8 +2,8 @@ import Link from "next/link";
 import { ArrowRight, BookOpen, Crown, Gift, KeyRound, Play } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Card, IconTile, Ring, ViewAll } from "@/components/ui";
-import { ContinueHero, ModuleCard, PremiereCard, firstLesson } from "@/components/course";
-import { canWatch, nextPremiere } from "@/lib/catalog";
+import { ContinueHero, ContinueWatchingCard, ModuleCard, PremiereCard, firstLesson } from "@/components/course";
+import { canWatch, continueWatching, nextPremiere } from "@/lib/catalog";
 import { getCourse, getLearningStats, getLeaderboard } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -13,6 +13,7 @@ export const metadata = { title: "Dashboard · Beyond Tatva" };
 export default async function Dashboard() {
   const [{ hasAccess, profile }, course, stats, board] = await Promise.all([getSession(), getCourse(), getLearningStats(), getLeaderboard()]);
   const next = nextPremiere(course);
+  const resumeLesson = continueWatching(course, hasAccess);
   const current = course.modules.find((m) => m.progress < 100 && m.lessons.length && canWatch(m, hasAccess)) ?? course.modules[0];
   const done = course.lessons.filter((l) => l.done).length;
   const nextLesson = current ? firstLesson(current) : null;
@@ -71,6 +72,8 @@ export default async function Dashboard() {
         </div>
         {firstModuleLesson && <Link href={`/watch/${course.id}?l=${firstModuleLesson.n}`} className="btn-primary mt-4 w-full sm:mt-0 sm:w-auto"><Play className="h-4 w-4 fill-current" /> {firstModule.progress > 0 ? `Continue Module ${firstModule.n}` : `Start Module ${firstModule.n}`} <ArrowRight className="h-4 w-4" /></Link>}
       </section>}
+
+      <div className="mb-5"><ContinueWatchingCard lesson={resumeLesson} courseId={course.id} /></div>
 
       <div className="mb-4 grid grid-cols-1 gap-3 min-[360px]:grid-cols-3 lg:mb-6">
         <Tile tone="primary-soft"><Ring value={course.progress} size={64} stroke={7}><span className="text-sm font-semibold">{course.progress}%</span></Ring><TileText title="Course" sub={`${done} of ${course.lessonCount} lessons`} /></Tile>

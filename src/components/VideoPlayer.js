@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Maximize, Pause, Play, RotateCcw, RotateCw, TriangleAlert, Volume2, VolumeX, Zap } from "lucide-react";
-import { parseVideo } from "@/lib/video";
+import { parseBunnyMessage, parseVideo } from "@/lib/video";
 
 // In-video questions for the demo footage. Admin-authored checkpoints per lesson come later.
 const DEMO_VIDEO = "/media/lesson1.mp4";
@@ -26,7 +26,7 @@ const DEMO_CHECKPOINTS = [
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const SPEEDS = [1, 1.25, 1.5, 0.75];
 
-function NativePlayer({ src, onAnswer, onProgress }) {
+function NativePlayer({ src, onAnswer, onProgress, onPauseProgress, startAt = 0 }) {
   const CHECKPOINTS = src === DEMO_VIDEO ? DEMO_CHECKPOINTS : [];
   const video = useRef(null);
   const box = useRef(null);
@@ -39,6 +39,16 @@ function NativePlayer({ src, onAnswer, onProgress }) {
   const [picked, setPicked] = useState(null);
   const [answered, setAnswered] = useState([]);
   const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const v = video.current;
+    if (!v || (!startAt && startAt !== -1)) return;
+    const target = Math.max(0, startAt);
+    const seek = () => { if (v.duration && target < v.duration * 0.95) v.currentTime = target; };
+    if (v.readyState >= 1) seek();
+    else v.addEventListener("loadedmetadata", seek, { once: true });
+    return () => v.removeEventListener("loadedmetadata", seek);
+  }, [startAt]);
 
   const toggle = useCallback(() => {
     const v = video.current;
@@ -84,7 +94,8 @@ function NativePlayer({ src, onAnswer, onProgress }) {
         muted={muted}
         onClick={toggle}
         onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
+        onPause={() => { setPlaying(false); onPauseProgress?.(video.current?.currentTime ?? 0, video.current?.duration ?? 0); }}
+        onEnded={() => onPauseProgress?.(video.current?.currentTime ?? 0, video.current?.duration ?? 0)}
         onTimeUpdate={onTime}
         onDurationChange={(e) => setDur(e.currentTarget.duration)}
         onLoadedMetadata={(e) => setDur(e.currentTarget.duration)}
@@ -188,7 +199,7 @@ const YT_ERRORS = {
 };
 const API_TIMEOUT_MS = 6000;
 
-function YouTubePlayer({ id, start, onProgress }) {
+function YouTubePlayer({ id, start, onProgress, onPauseProgress }) {
   const mount = useRef(null);
   const progress = useRef(onProgress);
   const [state, setState] = useState("loading"); // loading | ready | plain | error
@@ -223,14 +234,15 @@ function YouTubePlayer({ id, start, onProgress }) {
             }
             if (e.data === YT.PlayerState.ENDED) {
               const d = player.getDuration?.();
-              if (d) progress.current?.(d, d);
+              if (d) { progress.current?.(d, d); onPauseProgress?.(d, d); }
             }
+            if (e.data === YT.PlayerState.PAUSED) onPauseProgress?.(player.getCurrentTime?.() ?? 0, player.getDuration?.() ?? 0);
           },
         },
       });
     }).catch(() => { clearTimeout(fallback); if (!gone) setState("plain"); });
     return () => { gone = true; clearTimeout(fallback); clearInterval(timer); player?.destroy?.(); };
-  }, [id, start]);
+  }, [id, start, onPauseProgress]);
 
   if (state === "error") {
     return (
@@ -277,13 +289,60 @@ function EmbedPlayer({ embed, title }) {
   );
 }
 
+function BunnyPlayer({ embed, title, onProgress, onPauseProgress, startAt = 0 }) {
+  const iframe = useRef(null);
+  const progress = useRef(onProgress);
+  const lastTime = useRef(null);
+  const [tracked, setTracked] = useState(null);
+  useEffect(() => { progress.current = onProgress; }, [onProgress]);
+  useEffect(() => {
+    const frame = iframe.current;
+    if (!frame) return;
+    const origin = new URL(embed).origin;
+    let answered = false;
+    const timeout = setTimeout(() => { if (!answered) setTracked(false); }, 10_000);
+    const onMessage = (event) => {
+      if (event.source !== frame.contentWindow) return;
+      const message = parseBunnyMessage(event.data, event.origin, origin);
+      if (!message) return;
+      answered = true;
+      setTracked(true);
+      clearTimeout(timeout);
+      if (message.event === "timeupdate") {
+        lastTime.current = message;
+        progress.current?.(message.seconds, message.duration);
+      } else if (message.event === "ended" && lastTime.current) {
+        onPauseProgress?.(lastTime.current.seconds, lastTime.current.duration);
+      }
+    };
+    const onLoad = () => {
+      for (const value of ["timeupdate", "ended"]) {
+        frame.contentWindow?.postMessage({ context: "player.js", version: "0.0.11", method: "addEventListener", value }, origin);
+      }
+      if (startAt > 10 || startAt < 0) frame.contentWindow?.postMessage({ context: "player.js", version: "0.0.11", method: "setCurrentTime", value: Math.max(0, startAt) }, origin);
+    };
+    window.addEventListener("message", onMessage);
+    frame.addEventListener("load", onLoad);
+    // A lazy iframe may already have loaded before this effect.
+    onLoad();
+    return () => { clearTimeout(timeout); window.removeEventListener("message", onMessage); frame.removeEventListener("load", onLoad); };
+  }, [embed, startAt, onPauseProgress]);
+  return (
+    <div className="relative aspect-video overflow-hidden rounded-2xl bg-black">
+      <iframe ref={iframe} src={embed} title={title} className="absolute inset-0 h-full w-full border-0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" loading="lazy" />
+      {tracked === false && <div role="status" className="pointer-events-none absolute bottom-2 left-2 rounded-lg bg-black/75 px-2.5 py-1.5 text-xs text-white">Progress can&apos;t be tracked for this video</div>}
+    </div>
+  );
+}
+
 // Picks the right player for whatever link the admin pasted.
 // onProgress(seconds, duration) is called while playing, for players that can report it.
-export default function VideoPlayer({ src, title = "Lesson video", onAnswer, onProgress }) {
+export default function VideoPlayer({ src, title = "Lesson video", onAnswer, onProgress, onPauseProgress, startAt = 0 }) {
   if (!src) return <Notice title="Video coming soon" body="This lesson's video hasn't been uploaded yet." />;
   const v = parseVideo(src);
   if (!v) return <Notice icon={TriangleAlert} title="This video link isn't supported" body="Tell your teacher which lesson it is so they can fix the link." />;
-  if (v.kind === "file") return <NativePlayer key={v.src} src={v.src} onAnswer={onAnswer} onProgress={onProgress} />;
-  if (v.kind === "youtube") return <YouTubePlayer key={v.id} id={v.id} start={v.start} onProgress={onProgress} />;
+  if (v.kind === "file") return <NativePlayer key={v.src} src={v.src} onAnswer={onAnswer} onProgress={onProgress} onPauseProgress={onPauseProgress} startAt={startAt} />;
+  if (v.kind === "youtube") return <YouTubePlayer key={v.id} id={v.id} start={startAt < 0 ? 0 : Math.max(v.start ?? 0, Math.floor(startAt))} onProgress={onProgress} onPauseProgress={onPauseProgress} />;
+  if (v.kind === "bunny") return <BunnyPlayer key={v.embed} embed={v.embed} title={title} onProgress={onProgress} onPauseProgress={onPauseProgress} startAt={startAt} />;
   return <EmbedPlayer key={v.embed} embed={v.embed} title={title} />;
 }

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseVideo, tracksProgress } from "../src/lib/video.js";
+import { parseBunnyMessage, parseVideo, tracksProgress } from "../src/lib/video.js";
 
 test("YouTube link shapes", () => {
   for (const u of [
@@ -53,9 +53,22 @@ test("rejects things that won't play", () => {
   }
 });
 
-test("only file and YouTube players report watch time", () => {
+test("file, YouTube and Bunny players report watch time", () => {
   assert.equal(tracksProgress(parseVideo("/media/lesson1.mp4")), true);
   assert.equal(tracksProgress(parseVideo("https://youtu.be/dQw4w9WgXcQ")), true);
+  assert.equal(tracksProgress(parseVideo("https://player.mediadelivery.net/play/12345/video-id")), true);
   assert.equal(tracksProgress(parseVideo("https://vimeo.com/76979871")), false);
   assert.equal(tracksProgress(null), false);
+});
+
+test("Bunny player.js messages require matching origin and valid time values", () => {
+  const origin = "https://iframe.mediadelivery.net";
+  const data = { context: "player.js", event: "timeupdate", value: { seconds: 12.5, duration: 90 } };
+  assert.deepEqual(parseBunnyMessage(data, origin, origin), { event: "timeupdate", seconds: 12.5, duration: 90 });
+  assert.deepEqual(parseBunnyMessage(JSON.stringify(data), origin, origin), { event: "timeupdate", seconds: 12.5, duration: 90 });
+  assert.deepEqual(parseBunnyMessage({ context: "player.js", event: "ended" }, origin, origin), { event: "ended" });
+  assert.equal(parseBunnyMessage(data, "https://evil.example", origin), null);
+  assert.equal(parseBunnyMessage({ ...data, context: "other" }, origin, origin), null);
+  assert.equal(parseBunnyMessage({ ...data, value: { seconds: "NaN", duration: 90 } }, origin, origin), null);
+  assert.equal(parseBunnyMessage("not json", origin, origin), null);
 });

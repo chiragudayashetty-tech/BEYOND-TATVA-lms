@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CalendarClock, Check, CircleCheck, ClipboardList, Lock, PlayCircle, Sparkles, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarClock, CircleCheck, ClipboardList, Lock, PlayCircle, Sparkles, Zap } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
 import { Avatar, Badge } from "@/components/ui";
 import { quizBadge, submissionBadge } from "@/components/activity";
@@ -11,54 +11,68 @@ import { parseVideo, tracksProgress } from "@/lib/video";
 import { createClient } from "@/lib/supabase/client";
 
 const tabs = ["Overview", "Notes"];
-const COMPLETE_AT = 0.9; // a lesson counts as watched at 90%
-
 export default function LessonView({ course, lesson, hasAccess, video, activities, canSave, userId }) {
   const [tab, setTab] = useState("Overview");
   const [xp, setXp] = useState(0);
   const [done, setDone] = useState(lesson.done);
   const [saveError, setSaveError] = useState("");
+  const [watchedPct, setWatchedPct] = useState(lesson.progressPct ?? (lesson.secondsWatched > 0 ? null : 0));
+  const [watchSeconds, setWatchSeconds] = useState(lesson.secondsWatched ?? 0);
+  const [startAt, setStartAt] = useState(() => lesson.lastPositionSeconds > 10 && lesson.durationSeconds > 0 && lesson.lastPositionSeconds < lesson.durationSeconds * 0.95
+    ? lesson.lastPositionSeconds : 0);
+  const playerRef = useRef({ max: lesson.secondsWatched ?? 0, position: startAt, duration: lesson.durationSeconds || lesson.mins * 60 });
+
+  const resumeNote = startAt > 0 ? `Resumed from ${Math.floor(startAt / 60)}:${String(startAt % 60).padStart(2, "0")}` : "";
+  const refreshDone = useCallback(async () => {
+    if (!canSave || !userId) return;
+    const { data } = await createClient().from("lesson_progress").select("completed_at").eq("student_id", userId).eq("lesson_id", lesson.id).maybeSingle();
+    setDone(Boolean(data?.completed_at));
+  }, [canSave, userId, lesson.id]);
 
   // Progress and answers go through checked database functions (save_progress / save_answer):
   // the database confirms the lesson is open for this student and caps watch time.
-  const saveProgress = useCallback(async ({ seconds, completed } = {}) => {
+  const saveProgress = useCallback(async ({ seconds, position, duration } = {}) => {
     if (!canSave || !userId) return { error: null };
-    return createClient().rpc("save_progress", { p_lesson: lesson.id, p_seconds: seconds ?? null, p_completed: completed ?? null });
-  }, [canSave, userId, lesson.id]);
+    const { error } = await createClient().rpc("save_progress", {
+      p_lesson: lesson.id,
+      p_seconds: seconds ?? null,
+      p_position: position ?? null,
+      p_duration: duration ?? null,
+    });
+    if (!error) await refreshDone();
+    return { error };
+  }, [canSave, userId, lesson.id, refreshDone]);
 
-  // Record that the lesson was opened, so analytics count views even before 15 s of watch time
-  // (and for videos whose player doesn't report time). Saves 0 seconds: no watch time is added.
-  useEffect(() => { saveProgress(); }, [saveProgress]);
-
-  async function markDone(next) {
-    setDone(next);
+  const saveLatest = useCallback(async () => {
+    const w = playerRef.current;
+    if (!w.max && !w.position) return;
     setSaveError("");
-    const { error } = await saveProgress({ completed: next });
-    if (error) { setDone(!next); setSaveError("Couldn't save. Check your connection and try again."); }
-  }
-
-  // Watch time from players that report it (MP4, YouTube). Saved every 15 s of new viewing;
-  // the lesson completes itself once 90% has been watched.
-  const watched = useRef({ max: 0, saved: 0, autoDone: false });
-  const doneRef = useRef(done);
-  useEffect(() => { doneRef.current = done; }, [done]);
-  const onProgress = useCallback((seconds, duration) => {
-    const w = watched.current;
-    w.max = Math.max(w.max, Math.floor(seconds));
-    const reached = duration > 0 && seconds / duration >= COMPLETE_AT;
-    if (reached && !doneRef.current && !w.autoDone) {
-      w.autoDone = true;
-      w.saved = w.max;
-      doneRef.current = true;
-      setDone(true);
-      saveProgress({ seconds: w.max, completed: true }).then(({ error }) => {
-        if (error) { w.autoDone = false; doneRef.current = false; setDone(false); }
-      });
-    } else if (w.max - w.saved >= 15) {
-      w.saved = w.max;
-      saveProgress({ seconds: w.max });
-    }
+    const { error } = await saveProgress({ seconds: Math.floor(w.max), position: Math.floor(w.position), duration: Math.floor(w.duration) || null });
+    if (error) setSaveError("Couldn't save your progress. Check your connection and try again.");
   }, [saveProgress]);
+
+  // A heartbeat saves measured position every 15 seconds. Pause and page exit save immediately.
+  useEffect(() => {
+    const timer = setInterval(saveLatest, 15_000);
+    const onHide = () => { if (document.visibilityState === "hidden") void saveLatest(); };
+    window.addEventListener("pagehide", saveLatest);
+    document.addEventListener("visibilitychange", onHide);
+    return () => { clearInterval(timer); window.removeEventListener("pagehide", saveLatest); document.removeEventListener("visibilitychange", onHide); };
+  }, [saveLatest]);
+
+  const onProgress = useCallback((seconds, duration) => {
+    const w = playerRef.current;
+    w.max = Math.max(w.max, Math.floor(seconds));
+    setWatchSeconds(w.max);
+    w.position = Math.floor(seconds);
+    w.duration = Math.floor(duration);
+    const total = duration || lesson.mins * 60;
+    setWatchedPct(total > 0 ? Math.min(100, Math.round(w.max / total * 100)) : null);
+  }, [lesson.mins]);
+  const onPauseProgress = useCallback((seconds, duration) => {
+    onProgress(seconds, duration);
+    void saveLatest();
+  }, [onProgress, saveLatest]);
   const autoTracked = tracksProgress(parseVideo(video));
 
   async function saveAnswer(question, correct) {
@@ -90,7 +104,8 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
     <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
       <div className="min-w-0">
         <Link href="/course" className="btn-ghost -ml-3 mb-3"><ArrowLeft className="h-4 w-4" /> {course.title}</Link>
-        <VideoPlayer src={video} title={lesson.title} onAnswer={saveAnswer} onProgress={onProgress} />
+        <VideoPlayer src={video} title={lesson.title} onAnswer={saveAnswer} onProgress={onProgress} onPauseProgress={onPauseProgress} startAt={startAt} />
+        {resumeNote && <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted"><span>{resumeNote}</span><button type="button" className="font-medium text-primary underline" onClick={() => { playerRef.current.position = 0; setStartAt(-1); }}>Start over</button></div>}
 
         {(moduleQuizzes.length > 0 || moduleAssignments.length > 0) && <section className="mt-5 rounded-2xl border border-border bg-surface p-4 sm:p-5" aria-labelledby="lesson-tasks-title">
           <h2 id="lesson-tasks-title" className="text-base font-semibold">After this video</h2>
@@ -128,9 +143,9 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
               {xp > 0 && <Badge tone="warning"><Zap className="h-3 w-3" /> +{xp} XP earned</Badge>}
             </div>
           </div>
-          <button onClick={() => markDone(!done)} className={done ? "btn-secondary text-success" : "btn-primary"}>
-            {done ? <><CircleCheck className="h-4 w-4" /> Completed</> : <><Check className="h-4 w-4" /> Mark as complete</>}
-          </button>
+          <div role="status" className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium ${done ? "bg-success-soft text-success" : "bg-surface-2 text-muted"}`}>
+            {done ? <><CircleCheck className="h-4 w-4" /> Completed ✓</> : watchSeconds > 0 ? watchedPct == null ? <span title="The video length is unavailable, so a percentage cannot be calculated.">–</span> : `${watchedPct}% watched` : "Not started"}
+          </div>
           {saveError && <p role="alert" className="w-full text-sm text-danger">{saveError}</p>}
         </div>
 
@@ -149,8 +164,8 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
             <div className="max-w-2xl space-y-3 text-sm leading-relaxed text-muted">
               {lesson.description && <p>{lesson.description}</p>}
               {autoTracked
-                ? <p>This lesson marks itself complete once you&apos;ve watched most of it. Quick questions inside the video earn 10 XP each.</p>
-                : <p>When you finish the video, tap <span className="font-medium text-fg">Mark as complete</span> to save your progress.</p>}
+                ? <p>Your progress saves as you watch. The lesson completes automatically after you watch 90%. Quick questions inside the video earn 10 XP each.</p>
+                : <p>Progress tracking is not available for this video. Your lesson status will update when tracking is supported.</p>}
             </div>
           )}
           {tab === "Notes" && (
