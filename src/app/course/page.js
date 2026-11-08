@@ -3,9 +3,9 @@ import { Award, CalendarClock, Check, ChevronDown, CircleCheck, ClipboardList, G
 import { quizBadge, submissionBadge } from "@/components/activity";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, IconTile, Progress } from "@/components/ui";
-import { PremiereCard, Thumb, iconFor, moduleState } from "@/components/course";
+import { ContinueWatchingCard, PremiereCard, Thumb, iconFor, moduleState } from "@/components/course";
 import Countdown from "@/components/Countdown";
-import { fmtPremiere, isComingSoon, isReleased, nextPremiere } from "@/lib/catalog";
+import { continueWatching, fmtPremiere, isComingSoon, isReleased, nextPremiere } from "@/lib/catalog";
 import { getActivities, getCourse, getModuleResources } from "@/lib/data";
 import ModuleResources from "@/components/ModuleResources";
 import { getSession } from "@/lib/supabase/server";
@@ -25,6 +25,7 @@ export default async function CoursePage({ searchParams }) {
   const [{ hasAccess }, course, activities, resources] = await Promise.all([getSession(), getCourse(), getActivities(), getModuleResources()]);
   const quizByChapter = Object.fromEntries(activities.quizzes.map((q) => [q.chapter_id, q]));
   const next = nextPremiere(course);
+  const resumeLesson = continueWatching(course, hasAccess);
   const released = course.modules.filter((m) => isReleased(m)).length;
 
   return (
@@ -74,6 +75,8 @@ export default async function CoursePage({ searchParams }) {
           )}
 
           {next && <PremiereCard module={next} hasAccess={hasAccess} />}
+
+          <ContinueWatchingCard lesson={resumeLesson} courseId={course.id} />
 
           <Card title="Modules" action={<span className="text-sm text-muted">{released} of {course.modules.length} out</span>}>
             <ol className="relative">

@@ -5,7 +5,7 @@
 //        "youtube" YouTube (watch, youtu.be, shorts, live, embed) → IFrame API, full tracking
 //        "drive"   Google Drive file → Drive's preview player, no tracking (manual "Mark as complete")
 //        "vimeo"   Vimeo → Vimeo's player, no tracking
-//        "bunny"   Bunny Stream embed/play link → Bunny's player, no tracking
+//        "bunny"   Bunny Stream embed/play link → Bunny's player.js protocol
 //        null      not a link we can play
 
 const YT_ID = /^[A-Za-z0-9_-]{11}$/;
@@ -80,5 +80,22 @@ function parseTime(t) {
 
 export const VIDEO_HELP = "Paste a YouTube, Google Drive, Vimeo or Bunny Stream link, or a direct .mp4 link.";
 
+// Bunny sends player.js messages as either objects or JSON strings. Ignore unrelated,
+// malformed, and non-finite updates so callers can only save real player measurements.
+export function parseBunnyMessage(data, origin, expectedOrigin) {
+  if (origin !== expectedOrigin) return null;
+  let message = data;
+  if (typeof message === "string") {
+    try { message = JSON.parse(message); } catch { return null; }
+  }
+  if (!message || message.context !== "player.js") return null;
+  if (message.event === "ended") return { event: "ended" };
+  if (message.event !== "timeupdate") return null;
+  const seconds = Number(message.value?.seconds);
+  const duration = Number(message.value?.duration);
+  if (!Number.isFinite(seconds) || !Number.isFinite(duration) || seconds < 0 || duration <= 0) return null;
+  return { event: "timeupdate", seconds, duration };
+}
+
 // Players that report time, so lessons can complete themselves at 90% watched.
-export const tracksProgress = (v) => v?.kind === "file" || v?.kind === "youtube";
+export const tracksProgress = (v) => ["file", "youtube", "bunny"].includes(v?.kind);

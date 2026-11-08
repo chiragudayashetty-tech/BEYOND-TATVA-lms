@@ -41,6 +41,21 @@ function StateBadge({ m, state }) {
 
 export const firstLesson = (m) => m.lessons.find((l) => l.current) ?? m.lessons.find((l) => !l.done) ?? m.lessons[0];
 
+export function ContinueWatchingCard({ lesson, courseId }) {
+  if (!lesson) return null;
+  return (
+    <section className="card flex flex-col gap-3 border-primary/20 bg-primary-soft/40 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5" aria-label="Continue watching">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-fg"><PlayCircle className="h-5 w-5" /></span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Continue watching</p>
+        <h2 className="mt-0.5 truncate font-semibold">{lesson.title}</h2>
+        <div className="mt-2 flex items-center gap-2"><Progress value={lesson.progressPct ?? 0} className="h-1.5 flex-1" /><span title={lesson.progressPct == null ? "The video length is unavailable, so a percentage cannot be calculated." : undefined} className="text-xs tabular-nums text-muted">{lesson.progressPct == null ? "–" : `${lesson.progressPct}%`} watched</span></div>
+      </div>
+      <Link href={`/watch/${courseId}?l=${lesson.n}`} className="btn-primary w-full justify-center sm:w-auto">Resume</Link>
+    </section>
+  );
+}
+
 export function ModuleCard({ module: m, hasAccess, courseId }) {
   const state = moduleState(m, hasAccess);
   const playable = (state !== "upcoming" && state !== "locked") && m.lessons.length > 0;

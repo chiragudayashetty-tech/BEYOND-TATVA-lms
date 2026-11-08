@@ -40,12 +40,13 @@ export const getCourse = cache(async (courseId = COURSE_ID) => {
   const { user, profile } = await getSession();
   const live = user?.id === "preview" || profile?.role === "admin";
   const progress = user && user.id !== "preview"
-    ? supabase.from("lesson_progress").select("lesson_id").eq("student_id", user.id).not("completed_at", "is", null)
+    ? supabase.from("lesson_progress").select("lesson_id, seconds_watched, last_position_seconds, completed_at, updated_at").eq("student_id", user.id)
     : Promise.resolve({ data: [] });
   const catalogP = live ? loadCatalog(supabase, courseId) : cachedCatalog(courseId).catch(() => loadCatalog(supabase, courseId));
   const [{ course, chapters, lessons }, { data: rows }] = await Promise.all([catalogP, progress]);
-  const done = new Set((rows ?? []).map((r) => r.lesson_id));
-  return buildCourse(course, chapters, lessons, done);
+  const progressRows = rows ?? [];
+  const done = new Set(progressRows.filter((r) => r.completed_at).map((r) => r.lesson_id));
+  return buildCourse(course, chapters, lessons, done, progressRows);
 });
 
 // The video link for a lesson, or null when the viewer may not watch it (enforced by RLS).
