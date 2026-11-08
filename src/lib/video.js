@@ -89,6 +89,7 @@ export function parseBunnyMessage(data, origin, expectedOrigin) {
     try { message = JSON.parse(message); } catch { return null; }
   }
   if (!message || message.context !== "player.js") return null;
+  if (message.event === "ready") return { event: "ready" };
   if (message.event === "ended") return { event: "ended" };
   if (message.event !== "timeupdate") return null;
   const seconds = Number(message.value?.seconds);

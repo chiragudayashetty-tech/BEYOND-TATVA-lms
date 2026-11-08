@@ -305,6 +305,7 @@ function BunnyPlayer({ embed, title, onProgress, onPauseProgress, startAt = 0 })
       if (event.source !== frame.contentWindow) return;
       const message = parseBunnyMessage(event.data, event.origin, origin);
       if (!message) return;
+      if (message.event === "ready") { ready = true; subscribe(); seek(); return; }   // player.js: subscribe once ready
       answered = true;
       setTracked(true);
       clearTimeout(timeout);
@@ -315,17 +316,24 @@ function BunnyPlayer({ embed, title, onProgress, onPauseProgress, startAt = 0 })
         onPauseProgress?.(lastTime.current.seconds, lastTime.current.duration);
       }
     };
-    const onLoad = () => {
+    let ready = false;
+    const subscribe = () => {
       for (const value of ["timeupdate", "ended"]) {
         frame.contentWindow?.postMessage({ context: "player.js", version: "0.0.11", method: "addEventListener", value }, origin);
       }
+    };
+    const seek = () => {
       if (startAt > 10 || startAt < 0) frame.contentWindow?.postMessage({ context: "player.js", version: "0.0.11", method: "setCurrentTime", value: Math.max(0, startAt) }, origin);
     };
+    const onLoad = () => { subscribe(); seek(); };
     window.addEventListener("message", onMessage);
     frame.addEventListener("load", onLoad);
-    // A lazy iframe may already have loaded before this effect.
+    // A lazy iframe may already have loaded before this effect. Keep asking once a second until the
+    // player answers, because Bunny ignores listeners sent before it is ready.
     onLoad();
-    return () => { clearTimeout(timeout); window.removeEventListener("message", onMessage); frame.removeEventListener("load", onLoad); };
+    const retry = setInterval(() => { if (answered || ready) clearInterval(retry); else subscribe(); }, 1000);
+    setTimeout(() => clearInterval(retry), 10_000);
+    return () => { clearInterval(retry); clearTimeout(timeout); window.removeEventListener("message", onMessage); frame.removeEventListener("load", onLoad); };
   }, [embed, startAt, onPauseProgress]);
   return (
     <div className="relative aspect-video overflow-hidden rounded-2xl bg-black">
