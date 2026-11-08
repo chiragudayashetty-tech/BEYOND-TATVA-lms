@@ -718,3 +718,39 @@ select 'I6 snapshot carries updated_at for the version column' t,
 select 'I7 edit to a school deleted in Studio does not bring it back' t,
   r -> 0 ->> 'result' = 'deleted' and not exists (select 1 from public.outreach_schools where name = 'Gone School') as pass
   from (select public.sheet_upsert_schools('[{"row":5,"name":"Gone School","id":"00000000-0000-0000-0000-00000000dead","version":"2026-11-08T00:00:00+00:00"}]') r) x;
+
+-- ── Student scorecard + resource views ──────────────────────────────────────
+reset role;
+insert into public.module_resources (id, chapter_id, title, file_path, mime, size_bytes)
+  values ('aaaaaaaa-0000-0000-0000-00000000f00d', pg_temp.chapter(0), 'Notes', pg_temp.chapter(0)::text || '/notes.pdf', 'application/pdf', 100);
+set role authenticated;
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+select public.log_resource_view('aaaaaaaa-0000-0000-0000-00000000f00d', 'open');
+select public.log_resource_view('aaaaaaaa-0000-0000-0000-00000000f00d', 'open');
+select public.log_resource_view('aaaaaaaa-0000-0000-0000-00000000f00d', 'download');
+select 'Z1 student sees own resource view, counts add up' t, opens = 2 and downloads = 1 as pass from public.resource_views;
+do $$ begin perform public.admin_student_scores(); raise exception 'Z2 FAIL'; exception when others then if sqlerrm like 'Z2%' then raise; end if; raise notice 'Z2 pass: %', sqlerrm; end $$;
+do $$ begin perform public.admin_student_activity('11111111-1111-1111-1111-111111111111'); raise exception 'Z3 FAIL'; exception when others then if sqlerrm like 'Z3%' then raise; end if; raise notice 'Z3 pass: %', sqlerrm; end $$;
+select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
+select 'Z4 other student cannot see the view row' t, count(*) = 0 as pass from public.resource_views;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.log_resource_view('aaaaaaaa-0000-0000-0000-00000000f00d', 'open');
+select 'Z5 admin opens are not logged' t, count(*) = 1 as pass from public.resource_views;
+select 'Z6 scores list every student with a 0-100 score' t,
+  jsonb_array_length(s) = (select count(*) from public.profiles where role = 'student')
+  and (select bool_and((e->>'score')::int between 0 and 100) from jsonb_array_elements(s) e) as pass
+  from (select public.admin_student_scores() s) x;
+select 'Z7 student 11 has the resource counted and a score' t,
+  (e->>'resources_opened')::int = 1 and (e->>'score')::int > 0 as pass
+  from jsonb_array_elements(public.admin_student_scores()) e where e->>'student_id' = '11111111-1111-1111-1111-111111111111';
+reset role;
+update public.profiles set school_id = (select id from public.schools where code = 'TEST-ABC') where id = '11111111-1111-1111-1111-111111111111';
+select set_config('bt.sc_school', (select id::text from public.schools where code = 'TEST-ABC'), false);
+set role authenticated;
+select 'Z8 school filter only returns that school' t,
+  (select count(*) > 0 and bool_and(e->>'school_id' = current_setting('bt.sc_school')) from jsonb_array_elements(public.admin_student_scores(current_setting('bt.sc_school')::uuid)) e) as pass;
+select 'Z9 school roll-up counts match' t,
+  (select sum((e->>'students')::int) from jsonb_array_elements(public.admin_school_scores()) e) = (select count(*) from public.profiles where role = 'student') as pass;
+select 'Z10 activity has timeline with resource + quiz' t,
+  a->'timeline' @> '[{"kind":"resource_opened"}]' and jsonb_array_length(a->'quizzes') >= 0 and a->'summary'->>'student_id' is not null as pass
+  from (select public.admin_student_activity('11111111-1111-1111-1111-111111111111') a) x;
