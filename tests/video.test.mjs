@@ -72,3 +72,8 @@ test("Bunny player.js messages require matching origin and valid time values", (
   assert.equal(parseBunnyMessage({ ...data, value: { seconds: "NaN", duration: 90 } }, origin, origin), null);
   assert.equal(parseBunnyMessage("not json", origin, origin), null);
 });
+
+test("Bunny ready message is recognised so listeners are re-sent", () => {
+  const origin = "https://iframe.mediadelivery.net";
+  assert.deepEqual(parseBunnyMessage({ context: "player.js", event: "ready" }, origin, origin), { event: "ready" });
+});
