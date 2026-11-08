@@ -845,3 +845,14 @@ select public.admin_mark_duplicate_account('5c000000-0000-0000-0000-0000000000a2
 select 'Q58 duplicate login is left out of analytics' t,
   not exists (select 1 from public.student_score_rows(null, 30) where student_id = '5c000000-0000-0000-0000-0000000000a2')
   and exists (select 1 from public.student_score_rows(null, 30) where student_id = '5c000000-0000-0000-0000-0000000000a1') as pass;
+select 'Q59 merged pair is listed as merged' t,
+  exists (select 1 from jsonb_array_elements(public.admin_duplicate_candidates()) g where g->>'reason' = 'merged') as pass;
+select 'Q60 merge copied the duplicate''s lead to the main account' t,
+  (select student_id = '5c000000-0000-0000-0000-0000000000a1' from public.leads where reference = 'sl-2') as pass;
+select public.admin_unmark_duplicate('5c000000-0000-0000-0000-0000000000a2');
+select 'Q61 undo brings the account back into analytics' t,
+  exists (select 1 from public.student_score_rows(null, 30) where student_id = '5c000000-0000-0000-0000-0000000000a2') as pass;
+set role authenticated; select pg_temp.as_user('5c000000-0000-0000-0000-0000000000a1');
+do $$ begin perform public.admin_duplicate_candidates(); raise exception 'Q62x FAIL';
+exception when others then if sqlerrm like 'Q62%' then raise; end if; raise notice 'Q62 pass: %', sqlerrm; end $$;
+reset role;
