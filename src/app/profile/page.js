@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { Bell, ChevronRight, CircleHelp, KeyRound, LogOut, Moon, ShieldCheck } from "lucide-react";
+import { Bell, ChevronRight, CircleHelp, Headset, KeyRound, LogOut, MessageCircleQuestion, Moon, ShieldCheck } from "lucide-react";
+import SocialLinks from "@/components/SocialLinks";
+import { supportWhatsApp } from "@/lib/social";
 import Shell from "@/components/shell/Shell";
 import { ThemeSwitch } from "@/components/ThemeToggle";
 import { Avatar, Badge, Card, PageTitle } from "@/components/ui";
@@ -10,7 +12,7 @@ import { getLeaderboard } from "@/lib/data";
 
 export const metadata = { title: "Profile · Beyond Tatva" };
 
-function Row({ icon: Icon, label, hint, children, href }) {
+function Row({ icon: Icon, label, hint, children, href, external }) {
   const inner = (
     <>
       <Icon className="h-5 w-5 text-muted" strokeWidth={1.75} />
@@ -21,6 +23,7 @@ function Row({ icon: Icon, label, hint, children, href }) {
       {children ?? <ChevronRight className="h-4 w-4 text-subtle" />}
     </>
   );
+  if (href && external) return <a href={href} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 px-5 py-4 transition hover:bg-surface-2">{inner}</a>;
   return href
     ? <Link href={href} className="flex items-center gap-4 px-5 py-4 transition hover:bg-surface-2">{inner}</Link>
     : <div className="flex items-center gap-4 px-5 py-4">{inner}</div>;
@@ -30,6 +33,9 @@ export default async function ProfilePage() {
   const { user, profile } = await getSession();
   const student = profile?.role === "student";
   const board = student ? await getLeaderboard() : null;
+  const name = profile.full_name ? ` I'm ${profile.full_name}.` : "";
+  const doubts = supportWhatsApp(`Hi Beyond Tatva!${name} I have a doubt in the course: `);
+  const helpline = supportWhatsApp(`Hi Beyond Tatva!${name} I need help with my account.`);
   return (
     <Shell roles={["student", "teacher", "admin"]}>
       <PageTitle title="Profile" />
@@ -59,6 +65,13 @@ export default async function ProfilePage() {
         </Card>
 
         <div id="settings" className="space-y-6">
+          {(doubts || helpline) && (
+            <section className="card divide-y divide-border overflow-hidden">
+              <div className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-subtle">Help on WhatsApp</div>
+              {doubts && <Row icon={MessageCircleQuestion} label="Clear my doubts" hint="Stuck on a lesson? Ask us on WhatsApp" href={doubts} external />}
+              {helpline && <Row icon={Headset} label="Helpline" hint="Login, payment or account help" href={helpline} external />}
+            </section>
+          )}
           <section className="card divide-y divide-border overflow-hidden">
             <div className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-subtle">Preferences</div>
             <Row icon={Moon} label="Dark mode" hint="Easier on the eyes at night"><ThemeSwitch /></Row>
@@ -71,6 +84,13 @@ export default async function ProfilePage() {
             <Row icon={KeyRound} label="Login and security" hint="You sign in with a one-time code" href="/profile#settings" />
             <Row icon={ShieldCheck} label="Privacy and data" hint="What we collect and why, under the DPDP Act" href="/profile#settings" />
             <Row icon={CircleHelp} label="Help and support" href="/help" />
+          </section>
+          <section className="card flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+            <div>
+              <div className="text-sm font-medium">Follow Beyond Tatva</div>
+              <div className="text-xs text-muted">AI tips, new modules and student projects</div>
+            </div>
+            <SocialLinks />
           </section>
           <form action="/auth/signout" method="post">
             <button className="btn-secondary w-full text-danger sm:w-auto"><LogOut className="h-4 w-4" /> Log out</button>

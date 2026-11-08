@@ -1,11 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { conversionPercent, funnelCounts, istWeekKey, quizHealth, revenueByIstWeek } from "../src/lib/analytics.js";
+import { conversionPercent, funnelCounts, istWeekKey, medianDaysBetween, quizHealth, revenueByIstWeek } from "../src/lib/analytics.js";
 
 test("funnel conversions are step to step and safe with an empty prior step", () => {
-  assert.equal(conversionPercent(0, 2), 0);
+  assert.equal(conversionPercent(0, 2), null);
   const funnel = funnelCounts({
-    leads: [{ id: "lead" }],
     profiles: [{ id: "a" }, { id: "b" }],
     lessonIds: new Set(["l0", "l1"]),
     progress: [
@@ -15,7 +14,27 @@ test("funnel conversions are step to step and safe with an empty prior step", ()
     ],
     accesses: [{ student_id: "a" }, { student_id: "old-student" }],
   });
-  assert.deepEqual(funnel.map(({ count, conversion }) => [count, conversion]), [[1, null], [2, 200], [2, 100], [1, 50], [1, 100]]);
+  assert.deepEqual(funnel.map(({ count, conversion, ofSignups }) => [count, conversion, ofSignups]), [[2, null, 100], [2, 100, 100], [1, 50, 50], [0, 0, 0], [0, null, 0], [0, null, 0], [1, null, 50]]);
+});
+
+test("funnel reports no previous-stage conversion when the previous count is zero", () => {
+  const stages = funnelCounts({
+    profiles: [{ id: "student" }], lessonIds: new Set(["lesson"]),
+    progress: [], accesses: [{ student_id: "student" }],
+  });
+  const bought = stages.at(-1);
+  assert.equal(bought.count, 1);
+  assert.equal(bought.conversion, null);
+  assert.equal(bought.ofSignups, 100);
+});
+
+test("median time to purchase ignores rows missing either timestamp", () => {
+  assert.equal(medianDaysBetween([
+    { signed_up_at: "2026-01-01", paid_at: "2026-01-02" },
+    { signed_up_at: "2026-01-01", paid_at: "2026-01-05" },
+    { signed_up_at: "2026-01-01", paid_at: null },
+  ]), 2.5);
+  assert.equal(medianDaysBetween([{ signed_up_at: "2026-01-01", paid_at: null }]), null);
 });
 
 test("IST week key starts on Monday even around UTC date boundaries", () => {
@@ -44,5 +63,5 @@ test("funnel stages after sign-up only count the sign-up cohort", () => {
     progress: [{ student_id: "old", lesson_id: "l0", completed_at: "2026-01-01" }],
     accesses: [{ student_id: "old" }],
   });
-  assert.deepEqual(funnel.map((s) => s.count), [0, 1, 0, 0, 0]);
+  assert.deepEqual(funnel.map((s) => s.count), [1, 0, 0, 0, 0, 0, 0]);
 });

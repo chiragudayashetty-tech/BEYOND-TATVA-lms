@@ -22,6 +22,8 @@ const istToIso = (v) => (v ? new Date(`${v}:00+05:30`).toISOString() : null);
 async function run(fn) {
   const supabase = await createClient();
   const { error } = await fn(supabase);
+  if (error?.message.includes("courses_list_price_range")) return { ok: false, error: "The original price must be at least the price (or leave it empty)." };
+  if (error?.message.includes("courses_price_range") || error?.message.includes("price_inr")) return { ok: false, error: "Price must be between ₹1 and ₹1,00,000." };
   if (error) return { ok: false, error: error.message.includes("row-level security") ? "Only an admin can do this. Sign in with your admin account." : error.message };
   updateTag(COURSE_TAG); // course content is cached across requests (lib/data.js)
   revalidatePath("/", "layout");
@@ -33,7 +35,8 @@ export async function saveCourse(_, fd) {
     title: str(fd, "title"),
     tagline: str(fd, "tagline"),
     description: str(fd, "description"),
-    price_inr: num(fd, "price") ?? 0,
+    price_inr: num(fd, "price") || null, // empty or 0 is rejected by the database
+    list_price_inr: num(fd, "list_price") || null,
     hero_url: str(fd, "hero"),
   }).eq("id", COURSE_ID));
 }
@@ -244,4 +247,114 @@ export async function gradeSubmission(_, fd) {
   return run((s) => s.rpc("grade_submission", {
     p_submission: str(fd, "id"), p_marks: back ? null : num(fd, "marks"), p_feedback: str(fd, "feedback"), p_return: back,
   }));
+}
+
+// Leads. Deleting a lead also removes every other lead with the same phone and its CRM notes.
+async function leadRpc(fn, args, label) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(fn, args);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/pipeline", "layout");
+  return { ok: true, message: `${label}: ${data ?? 0} lead${data === 1 ? "" : "s"} removed.` };
+}
+export async function deleteLeads(ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return { ok: false, error: "Nothing selected." };
+  return leadRpc("admin_delete_leads", { p_ids: ids }, "Deleted");
+}
+export async function clearLeads(confirm, source = null) {
+  return leadRpc("admin_clear_leads", { p_confirm: confirm, p_course: COURSE_ID, p_source: source }, "Cleared");
+}
+export async function dedupeLeads() {
+  return leadRpc("admin_dedupe_leads", { p_course: COURSE_ID }, "Duplicates removed");
+}
+
+// Offline leads (typed in or pasted) and registering existing leads for a workshop.
+export async function addLead(_, fd) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_add_lead", {
+    p_phone: str(fd, "phone"), p_source: str(fd, "source") ?? "manual",
+    p_parent_name: str(fd, "parent_name"), p_student_name: str(fd, "student_name"),
+    p_grade: num(fd, "grade") || null, p_school_name: str(fd, "school_name"), p_note: str(fd, "note"), p_course: COURSE_ID,
+  });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/pipeline", "layout");
+  return { ok: true, message: data === "saved" ? "Lead added." : "That phone is already a lead from this source." };
+}
+export async function importLeads(rows, source) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_import_leads", { p_rows: rows, p_source: source || "import", p_course: COURSE_ID });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/pipeline", "layout");
+  return { ok: true, data };
+}
+
+// ── School outreach (outreach_schools; the School Outreach sheet syncs the same rows) ──
+
+async function outreach(fn) {
+  const supabase = await createClient();
+  const { error } = await fn(supabase);
+  if (error) return { ok: false, error: error.message.includes("row-level security") ? "Only an admin can do this. Sign in with your admin account." : error.message };
+  revalidatePath("/admin/outreach");
+  return { ok: true };
+}
+const outreachFields = (fd) => ({
+  name: str(fd, "name"),
+  area: str(fd, "area"),
+  contact: str(fd, "contact"),
+  phone: str(fd, "phone"),
+  status: str(fd, "status"),
+  next_step: str(fd, "next_step"),
+  next_date: str(fd, "next_date"),
+  notes: str(fd, "notes"),
+});
+
+export async function saveOutreachSchool(_, fd) {
+  const row = outreachFields(fd);
+  if (!row.name) return { ok: false, error: "Enter the school name." };
+  const id = str(fd, "id");
+  return outreach((s) => (id ? s.from("outreach_schools").update(row).eq("id", id) : s.from("outreach_schools").insert(row)));
+}
+
+// kind = "call" | "visit": bumps the counter and adds a dated line to the history.
+export async function logOutreach(id, kind, note) {
+  if (!["call", "visit"].includes(kind)) return { ok: false, error: "Unknown activity." };
+  return outreach(async (s) => {
+    const { data, error } = await s.from("outreach_schools").select("calls, visits, history").eq("id", id).single();
+    if (error) return { error };
+    const day = new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short" });
+    const line = `${day}: ${kind}${note?.trim() ? ` – ${note.trim().slice(0, 200)}` : ""}`;
+    const history = [line, data.history].filter(Boolean).join("\n").slice(0, 4000);
+    const col = kind === "call" ? "calls" : "visits";
+    return s.from("outreach_schools").update({ [col]: data[col] + 1, history }).eq("id", id);
+  });
+}
+
+export async function deleteOutreachSchool(id) {
+  return outreach((s) => s.from("outreach_schools").delete().eq("id", id));
+}
+
+// Studio → Today: one Log form for schools and leads.
+//   school: a call/visit through logOutreach (WhatsApp counts as a call), then only the fields given.
+//   lead:   admin_log_lead_contact (CRM note + lead fields; marks the lead 'studio' so the sheet picks it up).
+const isDay = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v ?? "") ? v : null);
+export async function logContact(_, fd) {
+  const id = str(fd, "id"), channel = str(fd, "channel"), note = str(fd, "note");
+  const fields = { status: str(fd, "status"), next_step: str(fd, "next_step"), next_date: isDay(str(fd, "next_date")) };
+  if (str(fd, "kind") === "school") {
+    if (!["call", "visit", "whatsapp"].includes(channel)) return { ok: false, error: "Choose call, WhatsApp or visit." };
+    const logged = await logOutreach(id, channel === "visit" ? "visit" : "call", channel === "whatsapp" ? `WhatsApp${note ? `: ${note}` : ""}` : note);
+    if (!logged.ok) return logged;
+    const changes = Object.fromEntries(Object.entries(fields).filter(([, v]) => v));
+    const saved = Object.keys(changes).length ? await outreach((s) => s.from("outreach_schools").update(changes).eq("id", id)) : logged;
+    if (!saved.ok) return saved;
+  } else {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("admin_log_lead_contact", {
+      p_lead: id, p_channel: channel, p_note: note, p_status: fields.status, p_next_step: fields.next_step, p_next_date: fields.next_date,
+      p_do_not_contact: fd.get("do_not_contact") === "on" ? true : null,
+    });
+    if (error) return { ok: false, error: error.message === "Admins only" ? "Only an admin can do this." : error.message };
+  }
+  revalidatePath("/admin/today");
+  return { ok: true, message: "Saved. The Google Sheet updates within 5 minutes." };
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Bot, Brain, CalendarClock, Gift, Lock, MessageSquareText, Palette, PenLine, PlayCircle, Sparkles, Wrench } from "lucide-react";
 import Countdown from "./Countdown";
 import { Badge, IconTile, Progress } from "./ui";
-import { canWatch, fmtPremiere, isReleased } from "@/lib/catalog";
+import { canWatch, fmtPremiere, isComingSoon, isReleased } from "@/lib/catalog";
 
 const moduleIcons = [Sparkles, Brain, PenLine, Wrench, MessageSquareText, Palette, Bot];
 export const iconFor = (m) => moduleIcons[m?.n ?? 0] ?? Brain;
@@ -20,7 +20,11 @@ export function moduleState(m, hasAccess, now = Date.now()) {
 export function Thumb({ module: m, className = "", dim = false, children }) {
   return (
     <div className={`${/\babsolute\b/.test(className) ? "" : "relative"} overflow-hidden bg-surface-2 ${className}`}>
-      {m?.thumb ? <img src={m.thumb} alt="" loading="lazy" className={`h-full w-full object-cover ${dim ? "grayscale-[60%] opacity-60" : ""}`} />
+      {m?.thumb ? <>
+        {/* Square posters: blurred copy fills the 16:9 frame, the full image sits on top so no text is cropped. */}
+        <img src={m.thumb} alt="" aria-hidden="true" loading="lazy" className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl" />
+        <img src={m.thumb} alt="" loading="lazy" className={`relative h-full w-full object-contain ${dim ? "grayscale-[60%] opacity-60" : ""}`} />
+      </>
         : <div className="grid h-full w-full place-items-center"><IconTile icon={iconFor(m)} size="lg" /></div>}
       {children}
     </div>
@@ -36,6 +40,21 @@ function StateBadge({ m, state }) {
 }
 
 export const firstLesson = (m) => m.lessons.find((l) => l.current) ?? m.lessons.find((l) => !l.done) ?? m.lessons[0];
+
+export function ContinueWatchingCard({ lesson, courseId }) {
+  if (!lesson) return null;
+  return (
+    <section className="card flex flex-col gap-3 border-primary/20 bg-primary-soft/40 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5" aria-label="Continue watching">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-fg"><PlayCircle className="h-5 w-5" /></span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Continue watching</p>
+        <h2 className="mt-0.5 truncate font-semibold">{lesson.title}</h2>
+        <div className="mt-2 flex items-center gap-2"><Progress value={lesson.progressPct ?? 0} className="h-1.5 flex-1" /><span title={lesson.progressPct == null ? "The video length is unavailable, so a percentage cannot be calculated." : undefined} className="text-xs tabular-nums text-muted">{lesson.progressPct == null ? "–" : `${lesson.progressPct}%`} watched</span></div>
+      </div>
+      <Link href={`/watch/${courseId}?l=${lesson.n}`} className="btn-primary w-full justify-center sm:w-auto">Resume</Link>
+    </section>
+  );
+}
 
 export function ModuleCard({ module: m, hasAccess, courseId }) {
   const state = moduleState(m, hasAccess);
@@ -57,7 +76,7 @@ export function ModuleCard({ module: m, hasAccess, courseId }) {
           {state === "progress" || state === "done" ? (
             <div className="flex items-center gap-3"><Progress value={m.progress} tone={state === "done" ? "success" : "primary"} className="h-1.5" /><span className="font-medium text-fg">{m.progress}%</span></div>
           ) : state === "upcoming" ? (
-            m.release ? <span>Premieres in <span className="font-semibold text-fg"><Countdown to={m.release} compact /></span></span> : <span>Coming soon</span>
+            m.release && !isComingSoon(m) ? <span>Premieres in <span className="font-semibold text-fg"><Countdown to={m.release} compact /></span></span> : <span>Coming soon</span>
           ) : state === "locked" ? (
             <span className="font-medium text-primary">Unlock the full course</span>
           ) : (

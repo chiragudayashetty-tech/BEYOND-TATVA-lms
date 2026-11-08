@@ -4,8 +4,8 @@ import { ArrowLeft, CalendarClock, KeyRound, Lock } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import Countdown from "@/components/Countdown";
 import { Thumb } from "@/components/course";
-import { canWatch, fmtPremiere, isReleased, moduleOfLesson } from "@/lib/catalog";
-import { getCourse, getLessonVideo } from "@/lib/data";
+import { canWatch, fmtPremiere, isComingSoon, isReleased, moduleOfLesson } from "@/lib/catalog";
+import { getActivities, getCourse, getLessonVideo } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 import LessonView from "./LessonView";
 
@@ -26,9 +26,9 @@ function LockScreen({ module: m, price }) {
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-white/70">Module {m.n}</div>
             <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">{m.title}</h1>
-            <p className="mt-2 text-sm text-white/70">{upcoming ? `Premieres ${fmtPremiere(m.release)}` : "This module is part of the full course."}</p>
+            <p className="mt-2 text-sm text-white/70">{upcoming ? (isComingSoon(m) ? "Coming soon" : `Premieres ${fmtPremiere(m.release)}`) : "This module is part of the full course."}</p>
           </div>
-          {upcoming && m.release && <Countdown to={m.release} />}
+          {upcoming && m.release && !isComingSoon(m) && <Countdown to={m.release} />}
           {!m.free && (
             <div className="flex flex-wrap justify-center gap-2">
               <Link href="/unlock" className="btn bg-white text-[#0f172a] hover:bg-white/90"><KeyRound className="h-4 w-4" /> Unlock for ₹{price}</Link>
@@ -44,7 +44,7 @@ function LockScreen({ module: m, price }) {
 export default async function WatchPage({ params, searchParams }) {
   const { id } = await params;
   const { l } = await searchParams;
-  const [{ user, hasAccess }, course] = await Promise.all([getSession(), getCourse()]);
+  const [{ user, hasAccess }, course, activities] = await Promise.all([getSession(), getCourse(), getActivities()]);
   if (id !== course.id || !course.lessons.length) notFound();
   const lesson = course.lessons.find((x) => x.n === Number(l)) ?? course.lessons.find((x) => x.current) ?? course.lessons[0];
   const m = moduleOfLesson(course, lesson);
@@ -54,7 +54,7 @@ export default async function WatchPage({ params, searchParams }) {
   return (
     <Shell roles={["student", "teacher"]}>
       {allowed
-        ? <LessonView key={lesson.id} course={course} lesson={lesson} hasAccess={hasAccess} video={video} canSave={Boolean(user) && user.id !== "preview"} userId={user?.id} />
+        ? <LessonView key={lesson.id} course={course} lesson={lesson} hasAccess={hasAccess} video={video} activities={activities} canSave={Boolean(user) && user.id !== "preview"} userId={user?.id} />
         : <LockScreen module={m} price={course.price} />}
     </Shell>
   );

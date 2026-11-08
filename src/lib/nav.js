@@ -5,8 +5,7 @@ export const nav = {
     main: [
       { href: "/browse", label: "Dashboard", icon: "LayoutDashboard" },
       { href: "/course", label: "Course", icon: "BookOpen" },
-      { href: "/assignments", label: "Assignments", icon: "ClipboardList" },
-      { href: "/planner", label: "Study Planner", icon: "CalendarDays" },
+      { href: "/activities", label: "Study Kit", icon: "ClipboardList" },
       { href: "/progress", label: "Progress", icon: "ChartLine" },
       { href: "/certificates", label: "Certificate", icon: "BadgeCheck" },
     ],
@@ -14,7 +13,7 @@ export const nav = {
     mobile: [
       { href: "/browse", label: "Home", icon: "House" },
       { href: "/course", label: "Course", icon: "BookOpen" },
-      { href: "/planner", label: "Planner", icon: "CalendarDays" },
+      { href: "/activities", label: "Study Kit", icon: "ClipboardList" },
       { href: "/progress", label: "Progress", icon: "ChartLine" },
       { href: "/profile", label: "Profile", icon: "User" },
     ],
@@ -34,6 +33,7 @@ export const nav = {
   // Studio: only accounts on the studio_admins allowlist ever get this role.
   admin: {
     main: [
+      { href: "/admin/today", label: "Today", icon: "CalendarCheck" },
       { href: "/admin", label: "Studio", icon: "LayoutDashboard" },
       { href: "/admin/content", label: "Content", icon: "Clapperboard" },
       { href: "/admin/quizzes", label: "Quizzes", icon: "ListChecks" },
@@ -44,7 +44,7 @@ export const nav = {
       { href: "/admin/access", label: "School keys", icon: "KeyRound" },
       { href: "/admin/pipeline", label: "Pipeline", icon: "Contact" },
       { href: "/admin/analytics", label: "Analytics", icon: "ChartLine" },
-      { href: "/admin/workshops", label: "Workshops", icon: "CalendarDays" },
+      { href: "/admin/outreach", label: "School outreach", icon: "School" },
       { href: "/admin/automations", label: "Automations", icon: "Workflow" },
     ],
     more: [
@@ -52,8 +52,8 @@ export const nav = {
       { href: "/course", label: "Course page", icon: "BookOpen" },
     ],
     mobile: [
+      { href: "/admin/today", label: "Today", icon: "CalendarCheck" },
       { href: "/admin", label: "Studio", icon: "LayoutDashboard" },
-      { href: "/admin/content", label: "Content", icon: "Clapperboard" },
       { href: "/admin/assignments", label: "Review", icon: "ClipboardCheck" },
       { href: "/admin/enrollments", label: "Enrolled", icon: "UserCheck" },
       { href: "/profile", label: "Profile", icon: "User" },

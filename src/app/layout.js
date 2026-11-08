@@ -1,5 +1,6 @@
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
+import TopLoader from "@/components/TopLoader";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const poppins = Poppins({
@@ -29,7 +30,7 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <script dangerouslySetInnerHTML={{ __html: installPromptScript }} />
       </head>
-      <body className="min-h-full font-sans">{children}</body>
+      <body className="min-h-full font-sans"><TopLoader />{children}</body>
     </html>
   );
 }

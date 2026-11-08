@@ -39,7 +39,8 @@ function CourseForm({ course }) {
       <div className="flex items-center justify-between"><h2 className="font-semibold">Course details</h2><Status state={state} /></div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Title"><input name="title" className="input" defaultValue={course.title} required /></Field>
-        <Field label="Price (₹, one time)"><input name="price" type="number" min={0} className="input" defaultValue={course.price} /></Field>
+        <Field label="Price (₹, one time)" hint="What parents pay. Updates the website and both checkouts within about a minute."><input name="price" type="number" min={1} max={100000} required className="input" defaultValue={course.price} /></Field>
+        <Field label="Original price (₹, shown crossed out)" hint="Optional. Leave empty to hide the crossed-out price and the Save % badge."><input name="list_price" type="number" min={1} max={100000} className="input" defaultValue={course.listPrice ?? ""} /></Field>
       </div>
       <Field label="Tagline"><input name="tagline" className="input" defaultValue={course.tagline} /></Field>
       <Field label="Description"><textarea name="description" rows={3} className="input" defaultValue={course.description} /></Field>
@@ -175,7 +176,7 @@ export default function ContentEditor({ course, videos, resources = {} }) {
         <CourseForm course={course} />
         <div className="card p-5 text-sm">
           <h2 className="font-semibold">About videos</h2>
-          <p className="mt-2 text-muted">Paste a link into each lesson. YouTube (unlisted) and .mp4 links track watch time and complete the lesson automatically at 90%. Google Drive, Vimeo and Bunny links play, and students tap &quot;Mark as complete&quot;.</p>
+          <p className="mt-2 text-muted">Paste a link into each lesson. YouTube (unlisted), .mp4 and Bunny Stream videos track watch time and complete the lesson automatically at 90%. Google Drive and Vimeo videos play without progress tracking.</p>
           <p className="mt-2 text-muted">Google Drive: set sharing to &quot;Anyone with the link&quot;. Drive limits how many people can stream a file, so use it for testing, not launch.</p>
           <p className="mt-2 text-muted">Unlisted YouTube and Drive links can be shared outside the app. For paid modules, Bunny Stream with signed links is the safer choice.</p>
           <p className="mt-2 text-muted">Students only ever receive a lesson&apos;s video after its module premieres and they have access.</p>

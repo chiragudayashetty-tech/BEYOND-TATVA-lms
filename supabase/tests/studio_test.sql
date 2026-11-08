@@ -302,11 +302,11 @@ do $$ begin perform public.save_progress(pg_temp.lesson(1), 100, true); raise ex
 exception when others then if sqlerrm like 'M2c%' then raise; end if; raise notice 'M2c pass: locked lesson refused (%)', sqlerrm; end $$;
 select public.save_progress(pg_temp.lesson(0), 120);
 select public.save_progress(pg_temp.lesson(0), 60);
-select public.save_progress(pg_temp.lesson(0), 99999999, true);
+select public.save_progress(pg_temp.lesson(0), 99999999, true, p_duration => 600);
 select 'M2d free lesson saved, watch time never goes down and is capped' t,
   (select seconds_watched between 120 and 14400 and completed_at is not null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 select public.save_progress(pg_temp.lesson(0), null, false);
-select 'M2e can un-mark done' t, (select completed_at is null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select 'M2e students cannot un-mark a finished lesson' t, (select completed_at is not null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 select 'M2f first answer counts' t, public.save_answer(pg_temp.lesson(0), 'Which tool?', true) and not public.save_answer(pg_temp.lesson(0), 'Which tool?', true) as pass;
 select 'M2g one row' t, (select count(*) = 1 from public.checkpoint_answers where student_id = auth.uid()) as pass;
 do $$ begin perform public.save_answer(pg_temp.lesson(1), 'x', true); raise exception 'M2h FAIL';
@@ -445,10 +445,9 @@ reset role;
 set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
 select 'G1 today logged, skipping ahead does not count as watching' t,
   (select seconds between 60 and 120 from public.learning_days where student_id = auth.uid()) as pass;
-select 'G2 stats: week of 7 days, streak, answers' t,
-  jsonb_array_length(s -> 'week') = 7 and (s ->> 'streak')::int = 1 and (s ->> 'best_streak')::int = 1
-  and (s ->> 'checks_answered')::int >= 1 and (s ->> 'minutes_this_week')::int between 1 and 2
-  and jsonb_array_length(s -> 'active_days') = 1 as pass
+select 'G2 dashboard stats: XP, answers, watch time (no streaks since migration 10)' t,
+  (s ->> 'xp')::int >= 10 and (s ->> 'checks_answered')::int >= 1 and (s ->> 'minutes_total')::int >= 1
+  and s ? 'xp_breakdown' and not s ? 'streak' as pass
   from (select public.my_learning_stats() as s) x;
 do $$ begin insert into public.learning_days (student_id, day, seconds) values (auth.uid(), current_date - 1, 3600); raise exception 'G3 FAIL';
 exception when insufficient_privilege then raise notice 'G3 pass: no direct writes to the learning log'; end $$;
@@ -460,9 +459,8 @@ insert into public.learning_days (student_id, day, seconds) values
   ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', (now() at time zone 'Asia/Kolkata')::date - 2, 600),
   ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', (now() at time zone 'Asia/Kolkata')::date - 5, 600);
 set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
-select 'G5 streak counts consecutive days; best streak kept' t,
-  (s ->> 'streak')::int = 3 and (s ->> 'best_streak')::int = 3 and (s ->> 'minutes_this_week')::int between 31 and 32 as pass
-  from (select public.my_learning_stats() as s) x;
+select 'G5 daily log keeps one row per day for the student' t,
+  (select count(*) = 4 and sum(seconds) between 1860 and 1920 from public.learning_days where student_id = auth.uid()) as pass;
 reset role;
 
 -- ── XP, leaderboard, owner insights ──────────────────────────────────────────
@@ -544,3 +542,317 @@ reset role;
 select 'U9 access + purchase rows exist' t,
   exists (select 1 from public.course_access where student_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee' and reference = 'upi-432156789012')
   and exists (select 1 from public.purchases where reference = 'upi-432156789012' and status = 'claimed' and amount_paise > 0) as pass;
+
+-- ── Coupons ──────────────────────────────────────────────────────────────────
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+insert into public.coupons (code, price_inr, valid_until) values ('WORKSHOP499', 499, now() + interval '2 days');
+insert into public.coupons (code, price_inr, valid_from, valid_until) values ('OLD199', 199, now() - interval '5 days', now() - interval '3 days');
+reset role;
+insert into storage.objects (bucket_id, name) values ('payment-proofs', '77777777-7777-7777-7777-777777777777/pay.jpg');
+delete from public.course_access where student_id = '77777777-7777-7777-7777-777777777777';
+set role authenticated; select pg_temp.as_user('77777777-7777-7777-7777-777777777777');
+select 'V1 valid code gives the coupon price, expired and unknown give nothing' t,
+  public.coupon_price('workshop499') = 499 and public.coupon_price('OLD199') is null and public.coupon_price('NOPE') is null as pass;
+select 'V2 students cannot list coupons' t, count(*) = 0 as pass from public.coupons;
+do $$ begin perform public.submit_upi_claim('77777777-7777-7777-7777-777777777777/pay.jpg', null, null, 'ai-for-students', 'OLD199'); raise exception 'V3 FAIL';
+exception when others then if sqlerrm like 'V3%' then raise; end if; raise notice 'V3 pass: %', sqlerrm; end $$;
+select 'V4 claim with a valid code is priced by the server at 499' t,
+  public.submit_upi_claim('77777777-7777-7777-7777-777777777777/pay.jpg', null, null, 'ai-for-students', ' workshop499 ') = 'submitted' as pass;
+select 'V4b claim stored at 499 with the code' t, coalesce((select amount_paise = 49900 and coupon_code = 'WORKSHOP499' from public.upi_claims where student_id = auth.uid()), false) as pass;
+do $$ begin insert into public.coupons (code, price_inr, valid_until) values ('FREE1', 1, now() + interval '1 day'); raise exception 'V5 FAIL';
+exception when insufficient_privilege then raise notice 'V5 pass: students cannot create coupons'; end $$;
+reset role;
+
+-- ── Leads: delete, clear, duplicates ─────────────────────────────────────────
+reset role;
+set role service_role;
+select 'Y0 two leads, same phone' t, public.record_lead('dup-1', '9111111111', 'qr') = 'saved' and public.record_lead('dup-2', '91111 11111', 'loki') in ('saved', 'duplicate') as pass;
+reset role;
+insert into public.leads (reference, phone, source) values ('dup-3', '+919111111111', 'schools');
+select 'Y1 email key folds Gmail dots and +tags' t, public.email_key('A.B+x@Gmail.com') = 'ab@gmail.com' and public.email_key('A@x.in') = 'a@x.in' and public.phone_key('+91 91111-11111') = '9111111111' as pass;
+set role authenticated; select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+do $$ begin perform public.admin_duplicates(); raise exception 'Y2 FAIL'; exception when others then if sqlerrm like 'Y2%' then raise; end if; raise notice 'Y2 pass: %', sqlerrm; end $$;
+do $$ begin perform public.admin_clear_leads('DELETE ALL LEADS'); raise exception 'Y3 FAIL'; exception when others then if sqlerrm like 'Y3%' then raise; end if; raise notice 'Y3 pass: %', sqlerrm; end $$;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'Y4 duplicate phone found' t, count(*) >= 2 as pass from public.admin_duplicates() where match = 'phone' and match_key = '9111111111';
+select 'Y5 dedupe removes extra copies' t, public.admin_dedupe_leads() >= 1 as pass;
+select 'Y5b one lead left for that phone' t, count(*) = 1 as pass from public.leads where public.phone_key(phone) = '9111111111';
+select 'Y6 delete lead by id' t, public.admin_delete_leads(array(select id from public.leads where public.phone_key(phone) = '9111111111')) = 1 as pass;
+do $$ begin perform public.admin_clear_leads('yes'); raise exception 'Y7 FAIL'; exception when others then if sqlerrm like 'Y7%' then raise; end if; raise notice 'Y7 pass: %', sqlerrm; end $$;
+select 'Y8 clear all leads' t, public.admin_clear_leads('DELETE ALL LEADS') >= 0 as pass;
+select 'Y8b no leads left' t, count(*) = 0 as pass from public.leads where course_id = 'ai-for-students';
+reset role;
+
+-- ── Course price and original price ──────────────────────────────────────────
+select 'F1 list price set' t, list_price_inr = 3000 as pass from public.courses where id = 'ai-for-students';
+do $$ begin update public.courses set price_inr = 0 where id = 'ai-for-students'; raise exception 'F2 FAIL'; exception when check_violation then raise notice 'F2 pass: price 0 rejected'; end $$;
+do $$ begin update public.courses set list_price_inr = 10 where id = 'ai-for-students'; raise exception 'F3 FAIL'; exception when check_violation then raise notice 'F3 pass: original price below price rejected'; end $$;
+
+-- ── Admin lead entry, import, workshop invites ───────────────────────────────
+reset role;
+insert into public.workshops (id, slug, title, starts_at, seats) values ('abababab-abab-abab-abab-abababababab', 'test-ws', 'Test', now() + interval '1 day', 2);
+set role authenticated; select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+do $$ begin perform public.admin_add_lead('9222222222'); raise exception 'J1 FAIL'; exception when others then if sqlerrm like 'J1%' then raise; end if; raise notice 'J1 pass: %', sqlerrm; end $$;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'J2 admin adds a lead' t, public.admin_add_lead('92222 22222', 'manual', 'Ravi', 'Anu', 9::smallint, 'SVS', 'met at fair') = 'saved' as pass;
+select 'J3 same phone again counts once' t, public.admin_add_lead('9222222222') = 'duplicate' as pass;
+select 'J4 import saves good rows, reports bad ones' t,
+  r -> 'saved' = '2' and jsonb_array_length(r -> 'invalid') = 1 as pass
+  from (select public.admin_import_leads('[{"phone":"9333333333","parent_name":"A","student_name":"B","grade":"8"},{"phone":"123"},{"phone":"9444444444"}]', 'fair') r) x;
+do $$ begin perform public.admin_register_leads('abababab-abab-abab-abab-abababababab', array(select id from public.leads), false); raise exception 'J5 FAIL'; exception when others then if sqlerrm like 'J5%' then raise; end if; raise notice 'J5 pass: %', sqlerrm; end $$;
+select 'J6 complete leads registered, incomplete skipped' t,
+  (r ->> 'added')::int = 2 and jsonb_array_length(r -> 'skipped') >= 1 as pass
+  from (select public.admin_register_leads('abababab-abab-abab-abab-abababababab', array(select id from public.leads where phone in ('+919222222222', '+919333333333', '+919444444444')), true) r) x;
+reset role;
+
+-- ── Newsletters ──────────────────────────────────────────────────────────────
+reset role;
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+insert into public.newsletters (title, issue_date, file_path, mime, size_bytes) values ('November 2026', '2026-11-01', '2026-11/nov.pdf', 'application/pdf', 1000);
+insert into storage.objects (bucket_id, name) values ('newsletters', '2026-11/nov.pdf');
+select 'N1 admin uploads a newsletter' t, (select count(*) from public.newsletters) = 1 as pass;
+do $$ begin insert into public.newsletters (title, file_path, mime, size_bytes) values ('Bad', 'nov.pdf', 'application/pdf', 1); raise exception 'N2 FAIL';
+exception when check_violation then raise notice 'N2 pass: file must sit in a yyyy-mm folder'; end $$;
+reset role;
+delete from public.course_access where student_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+select 'N3 student without access sees no newsletters' t, (select count(*) from public.newsletters) = 0
+  and (select count(*) from storage.objects where bucket_id = 'newsletters') = 0 as pass;
+do $$ begin insert into public.newsletters (title, file_path, mime, size_bytes) values ('Mine', '2026-11/mine.pdf', 'application/pdf', 1); raise exception 'N4 FAIL';
+exception when insufficient_privilege then raise notice 'N4 pass: students cannot add newsletters'; end $$;
+reset role;
+insert into public.course_access (student_id, course_id, source) values ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'ai-for-students', 'admin');
+set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+select 'N5 enrolled student reads newsletters and files' t, (select count(*) from public.newsletters) = 1
+  and (select count(*) from storage.objects where bucket_id = 'newsletters') = 1 as pass;
+reset role;
+
+-- ── Google Sheets sync ───────────────────────────────────────────────────────
+reset role;
+select 'E1 new sheet row creates a lead' t,
+  r -> 0 ->> 'result' = 'created' and (r -> 0 ->> 'id') is not null as pass
+  from (select public.sheet_upsert_leads('[{"row":2,"student":"Sheet Kid","grade":"8","phone":"98450 55555 (verify)","school":"SRVK","status":"Called","next_date":"Wed 11 Nov 2026","sheet":{"Join?":"Yes"}}]') r) x;
+select 'E2 same phone+name without ID matches, no duplicate' t,
+  r -> 0 ->> 'result' = 'matched' and (select count(*) from public.leads where phone = '+919845055555') = 1 as pass
+  from (select public.sheet_upsert_leads('[{"row":2,"student":"Sheet Kid","phone":"9845055555","status":"Interested"}]') r) x;
+select 'E3 edit by ID updates status and date' t,
+  status = 'Interested' and next_date is null and sheet ->> 'Join?' = 'Yes' as pass
+  from public.leads where phone = '+919845055555';
+select 'E4 sibling on same phone is flagged' t,
+  (r -> 0 ->> 'duplicate_phone')::boolean as pass
+  from (select public.sheet_upsert_leads('[{"row":3,"student":"Sheet Sibling","phone":"9845055555"}]') r) x;
+select 'E5 bad phone reports an error, saves nothing' t,
+  r -> 0 ->> 'result' = 'error' as pass
+  from (select public.sheet_upsert_leads('[{"row":4,"student":"No Phone","phone":"123"}]') r) x;
+select 'E6 schools upsert creates a school' t,
+  (public.sheet_upsert_schools('[{"row":2,"name":"Test School","calls":"3","visits":"x","next_date":"2026-11-11"}]') -> 0 ->> 'result') = 'created' as pass;
+select 'E6b sheet cannot set calls/visits; date parsed' t, calls = 0 and visits = 0 and next_date = '2026-11-11' as pass from public.outreach_schools where name = 'Test School';
+select 'E7 snapshot lists leads with system columns' t,
+  jsonb_array_length(s -> 'leads') >= 2 and (s -> 'leads' -> 0) ? 'paid' and jsonb_array_length(s -> 'schools') = 1 as pass
+  from (select public.sheet_snapshot() s) x;
+set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+do $$ begin perform public.sheet_snapshot(); raise exception 'E8 FAIL'; exception when insufficient_privilege then raise notice 'E8 pass: students cannot read the sheet snapshot'; end $$;
+select 'E9 students see no outreach schools' t, (select count(*) from public.outreach_schools) = 0 as pass;
+reset role;
+
+-- ── Lead ↔ account link ──────────────────────────────────────────────────────
+reset role;
+select 'E10 unknown email is reported' t, public.sheet_link_lead((select id from public.leads where student_name = 'Sheet Kid'), 'nobody@example.com') = 'unknown_email' as pass;
+select 'E11 link by email makes the lead signed up' t,
+  public.sheet_link_lead((select id from public.leads where student_name = 'Sheet Kid'),
+    (select email from auth.users u join public.profiles p on p.id = u.id where p.role = 'student' and u.email is not null limit 1)) = 'linked' as pass;
+select 'E12 snapshot follows the link' t,
+  (select (e ->> 'signed_up')::boolean and e ->> 'lms_email' is not null from jsonb_array_elements(public.sheet_snapshot() -> 'leads') e where e ->> 'student' = 'Sheet Kid') as pass;
+
+-- ── Tabs and duplicate merge ─────────────────────────────────────────────────
+reset role;
+select 'E13 website lead saved' t, public.record_lead('web-merge-1', '9845077779', 'loki', 'Parent', null, 9::smallint) = 'saved' as pass;
+select 'E13b and lands in the Website tab' t, public.lead_tab(tab, source, school_name) = 'Website' as pass from public.leads where reference = 'web-merge-1';
+select 'E14 sheet row in a school tab with same phone links to it (no copy)' t,
+  r -> 0 ->> 'result' = 'matched' and (select count(*) from public.leads where phone = '+919845077779') = 1 as pass
+  from (select public.sheet_upsert_leads('[{"row":2,"tab":"Durga EMS","student":"Kiran","phone":"9845077779"}]') r) x;
+select 'E15 matched lead moved to the school tab' t,
+  public.lead_tab(tab, source, school_name) = 'Durga EMS' and student_name = 'Kiran' and school_name = 'Durga EMS' as pass
+  from public.leads where phone = '+919845077779';
+select 'E16 a later website copy is merged away' t,
+  public.record_lead('web-merge-2', '9845077779', 'website', 'Parent 2', 'Kiran') = 'saved'
+  and public.sheet_merge_duplicates() >= 1 and (select count(*) from public.leads where phone = '+919845077779') = 1 as pass;
+select 'E17 merged lead keeps the school tab and fills the parent name' t,
+  public.lead_tab(tab, source, school_name) = 'Durga EMS' and parent_name = 'Parent' as pass
+  from public.leads where phone = '+919845077779';
+select 'E18 two siblings saved' t, public.record_lead('sib-1', '9845088888', 'workshop', null, 'Asha', 8::smallint, 'SRVK') = 'saved'
+  and public.record_lead('sib-2', '9845088888', 'workshop', null, 'Ravi', 9::smallint, 'SRVK') = 'saved' as pass;
+select 'E18b merge leaves siblings alone' t, public.sheet_merge_duplicates() = 0 as pass;
+select 'E18c both kept' t, count(*) = 2 as pass from public.leads where phone = '+919845088888';
+select 'E19 sibling note names the other child' t,
+  r -> 0 ->> 'siblings' like 'Ravi (SRVK)%' as pass
+  from (select public.sheet_upsert_leads('[{"row":5,"tab":"SRVK","student":"Asha","phone":"9845088888"}]') r) x;
+
+-- ── School outreach: Studio is the main record ──────────────────────────────
+reset role;
+insert into public.outreach_schools (name, calls, visits, history) values ('Studio School', 2, 1, '8 Nov: call');
+create temp table g1 as select public.sheet_upsert_schools(jsonb_build_array(jsonb_build_object('row', 2, 'name', 'Studio School', 'status', 'Called',
+    'calls', '99', 'visits', '99', 'history', 'wiped', 'id', id, 'version', updated_at))) r
+  from public.outreach_schools where name = 'Studio School';
+select 'I1 sheet edit with the current version saves, but not calls/visits/history' t,
+  r -> 0 ->> 'result' = 'updated' and o.status = 'Called' and o.calls = 2 and o.visits = 1 and o.history = '8 Nov: call'
+  and (r -> 0 ->> 'version')::timestamptz = o.updated_at as pass
+  from g1, public.outreach_schools o where o.name = 'Studio School';
+-- Studio changes the row after the sheet's last pull.
+update public.outreach_schools set updated_at = now() + interval '1 minute', next_step = 'Studio step' where name = 'Studio School';
+select 'I2 older sheet version is skipped' t, r -> 0 ->> 'result' = 'stale' as pass
+  from (select public.sheet_upsert_schools(jsonb_build_array(jsonb_build_object('row', 2, 'name', 'Studio School', 'next_step', 'Sheet step',
+          'id', id, 'version', updated_at - interval '1 minute'))) r from public.outreach_schools where name = 'Studio School') x;
+select 'I2b Studio value kept' t, next_step = 'Studio step' as pass from public.outreach_schools where name = 'Studio School';
+select 'I3 ID without a version is skipped' t, r -> 0 ->> 'result' = 'stale' as pass
+  from (select public.sheet_upsert_schools(jsonb_build_array(jsonb_build_object('row', 2, 'name', 'Studio School', 'id', id))) r
+        from public.outreach_schools where name = 'Studio School') x;
+select 'I4 same name without ID links, does not overwrite' t,
+  r -> 0 ->> 'result' = 'exists' and (select next_step from public.outreach_schools where name = 'Studio School') = 'Studio step' as pass
+  from (select public.sheet_upsert_schools('[{"row":3,"name":"studio school","next_step":"x"}]') r) x;
+select 'I5 new row typed in the sheet is created with a version' t,
+  r -> 0 ->> 'result' = 'created' and r -> 0 ->> 'version' is not null as pass
+  from (select public.sheet_upsert_schools('[{"row":4,"name":"Sheet New School","status":"Not contacted"}]') r) x;
+select 'I6 snapshot carries updated_at for the version column' t,
+  (select bool_and(e ? 'updated_at') from jsonb_array_elements(public.sheet_snapshot() -> 'schools') e) as pass;
+select 'I7 edit to a school deleted in Studio does not bring it back' t,
+  r -> 0 ->> 'result' = 'deleted' and not exists (select 1 from public.outreach_schools where name = 'Gone School') as pass
+  from (select public.sheet_upsert_schools('[{"row":5,"name":"Gone School","id":"00000000-0000-0000-0000-00000000dead","version":"2026-11-08T00:00:00+00:00"}]') r) x;
+
+-- ── Student scorecard + resource views ──────────────────────────────────────
+reset role;
+insert into public.module_resources (id, chapter_id, title, file_path, mime, size_bytes)
+  values ('aaaaaaaa-0000-0000-0000-00000000f00d', pg_temp.chapter(0), 'Notes', pg_temp.chapter(0)::text || '/notes.pdf', 'application/pdf', 100);
+set role authenticated;
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+select public.log_resource_view('aaaaaaaa-0000-0000-0000-00000000f00d', 'open');
+select public.log_resource_view('aaaaaaaa-0000-0000-0000-00000000f00d', 'open');
+select public.log_resource_view('aaaaaaaa-0000-0000-0000-00000000f00d', 'download');
+select 'Z1 student sees own resource view, counts add up' t, opens = 2 and downloads = 1 as pass from public.resource_views;
+do $$ begin perform public.admin_student_scores(); raise exception 'Z2 FAIL'; exception when others then if sqlerrm like 'Z2%' then raise; end if; raise notice 'Z2 pass: %', sqlerrm; end $$;
+do $$ begin perform public.admin_student_activity('11111111-1111-1111-1111-111111111111'); raise exception 'Z3 FAIL'; exception when others then if sqlerrm like 'Z3%' then raise; end if; raise notice 'Z3 pass: %', sqlerrm; end $$;
+select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
+select 'Z4 other student cannot see the view row' t, count(*) = 0 as pass from public.resource_views;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.log_resource_view('aaaaaaaa-0000-0000-0000-00000000f00d', 'open');
+select 'Z5 admin opens are not logged' t, count(*) = 1 as pass from public.resource_views;
+select 'Z6 scores list every student with a 0-100 score' t,
+  jsonb_array_length(s) = (select count(*) from public.profiles where role = 'student')
+  and (select bool_and((e->>'score')::int between 0 and 100) from jsonb_array_elements(s) e) as pass
+  from (select public.admin_student_scores() s) x;
+select 'Z7 student 11 has the resource counted and a score' t,
+  (e->>'resources_opened')::int = 1 and (e->>'score')::int > 0 as pass
+  from jsonb_array_elements(public.admin_student_scores()) e where e->>'student_id' = '11111111-1111-1111-1111-111111111111';
+reset role;
+update public.profiles set school_id = (select id from public.schools where code = 'TEST-ABC') where id = '11111111-1111-1111-1111-111111111111';
+select set_config('bt.sc_school', (select id::text from public.schools where code = 'TEST-ABC'), false);
+set role authenticated;
+select 'Z8 school filter only returns that school' t,
+  (select count(*) > 0 and bool_and(e->>'school_id' = current_setting('bt.sc_school')) from jsonb_array_elements(public.admin_student_scores(current_setting('bt.sc_school')::uuid)) e) as pass;
+select 'Z9 school roll-up counts match' t,
+  (select sum((e->>'students')::int) from jsonb_array_elements(public.admin_school_scores()) e) = (select count(*) from public.profiles where role = 'student') as pass;
+select 'Z10 activity has timeline with resource + quiz' t,
+  a->'timeline' @> '[{"kind":"resource_opened"}]' and jsonb_array_length(a->'quizzes') >= 0 and a->'summary'->>'student_id' is not null as pass
+  from (select public.admin_student_activity('11111111-1111-1111-1111-111111111111') a) x;
+
+-- ── Today: Studio lead logs flow back to the Workshop leads sheet ────────────
+reset role;
+create temp table f_ids as select (select id from public.leads where student_name = 'Sheet Kid') l;
+grant select on f_ids to authenticated;
+select 'Z21 sheet push marks leads as sheet' t, updated_source = 'sheet' as pass from public.leads, f_ids where id = l;
+set role authenticated; select pg_temp.as_user('99999999-9999-9999-9999-999999999999');
+do $$ begin perform public.admin_log_lead_contact((select l from f_ids), 'call', 'x'); raise exception 'Z22 FAIL'; exception when others then if sqlerrm like 'Z22%' then raise; end if; raise notice 'Z22 pass: non-admin cannot log a lead contact (%)', sqlerrm; end $$;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+do $$ begin perform public.admin_log_lead_contact((select l from f_ids), 'email', 'x'); raise exception 'Z23 FAIL'; exception when others then if sqlerrm like 'Z23%' then raise; end if; raise notice 'Z23 pass: bad channel refused (%)', sqlerrm; end $$;
+select 'Z24 lead contact logged' t, public.admin_log_lead_contact(l, 'whatsapp', 'Sent fee details', 'Interested', 'Call back', '2026-11-10', null) ->> 'note_id' is not null as pass from f_ids;
+select 'Z25 note with 10:00 IST follow-up' t, channel = 'whatsapp' and body = 'Sent fee details' and follow_up_at = '2026-11-10 04:30:00+00' and done_at is null as pass
+  from public.crm_notes, f_ids where lead_id = l order by created_at desc limit 1;
+select 'Z26 lead fields and source' t, status = 'Interested' and next_step = 'Call back' and next_date = '2026-11-10' and not do_not_contact and updated_source = 'studio' as pass
+  from public.leads, f_ids where id = l;
+select 'Z27 do not contact set' t, (public.admin_log_lead_contact(l, 'call', '', null, null, null, true) ->> 'do_not_contact')::boolean as pass from f_ids;
+select 'Z27b empty note gets a label, status kept' t, (select body from public.crm_notes where lead_id = l order by created_at desc limit 1) = 'Call'
+  and (select status from public.leads where id = l) = 'Interested' as pass from f_ids;
+reset role;
+select 'Z28 snapshot carries updated_source' t,
+  (select e ->> 'updated_source' = 'studio' and e ? 'updated_at' from jsonb_array_elements(public.sheet_snapshot() -> 'leads') e where e ->> 'student' = 'Sheet Kid') as pass;
+select 'Z29 edit to Status in a stale row' t,
+  (public.sheet_upsert_leads(jsonb_build_array(jsonb_build_object('row', 2, 'id', l, 'student', 'Sheet Kid', 'phone', '9845055555', 'status', 'Will join', 'do_not_contact', false, 'touched', '["status"]'::jsonb))) -> 0 ->> 'result') = 'updated' as pass from f_ids;
+select 'Z29b status taken, do-not-contact and next step kept, still studio' t,
+  (select status = 'Will join' and do_not_contact and next_step = 'Call back' and updated_source = 'studio' from public.leads where id = l) as pass from f_ids;
+select 'Z30 full push without touched is the sheet' t,
+  (public.sheet_upsert_leads(jsonb_build_array(jsonb_build_object('row', 2, 'id', l, 'student', 'Sheet Kid', 'phone', '9845055555', 'status', 'Will join', 'do_not_contact', true))) -> 0 ->> 'result') = 'updated' as pass from f_ids;
+select 'Z30b source sheet' t, (select updated_source = 'sheet' and do_not_contact from public.leads where id = l) as pass from f_ids;
+select 'Z11 school started_module0 never exceeds students' t,
+  (select bool_and((e->>'started_module0')::int <= (e->>'students')::int) from jsonb_array_elements(public.admin_school_scores()) e) as pass;
+
+-- ── Real progress: server decides completion, resume position, honest score ──
+reset role;
+insert into auth.users (id, email) values ('abababab-0000-0000-0000-000000000001', 'watch@x.in');
+set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000001');
+select public.complete_onboarding('student', 'Watcher', null, 9::smallint, 'Mum', '9811122233', 'Typed School', p_consent => true);
+select public.save_progress(pg_temp.lesson(0), 30, true, p_position => 30, p_duration => 600);
+select 'Z12 "complete" from the client is ignored before 90%' t,
+  (select completed_at is null and last_position_seconds = 30 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select public.save_progress(pg_temp.lesson(0), 545, null, p_position => 545, p_duration => 600);
+select 'Z13 reaching 90% completes it automatically' t,
+  (select completed_at is not null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select public.save_progress(pg_temp.lesson(0), 545, null, p_position => 100, p_duration => 600);
+select 'Z14 resume position follows the player, furthest point stays' t,
+  (select last_position_seconds = 100 and seconds_watched = 545 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+reset role;
+select 'Z15 typed school name is used' t, (select school = 'Typed School' from public.student_score_rows(null, 30) where student_id = 'abababab-0000-0000-0000-000000000001') as pass;
+select 'Z16 a student with no activity scores 0' t,
+  (select bool_and(score = 0) from public.student_score_rows(null, 30) r where lessons_started = 0 and quiz_attempts = 0
+     and checkpoints_answered = 0 and assignments_submitted = 0 and resources_opened = 0 and active_days_30 = 0) as pass;
+
+-- ── School from leads + signup school list ──────────────────────────────────
+reset role;
+insert into public.schools (id, name, code, teacher_code, show_at_signup)
+  values ('5c000000-0000-0000-0000-000000000001', 'Kodi School', 'KODI-1', 'KODI-T1', true);
+select public.record_lead('sl-1', '9822200001', 'workshop', 'Lead Parent', 'Asha Rao', 9::smallint, 'kodi school');
+insert into auth.users (id, email) values ('5c000000-0000-0000-0000-0000000000a1', 'asha@x.in'), ('5c000000-0000-0000-0000-0000000000a2', 'picker@x.in');
+set role authenticated; select pg_temp.as_user('5c000000-0000-0000-0000-0000000000a1');
+select public.complete_onboarding('student', 'Asha R', null, 9::smallint, 'Mum', '9822200001', 'Kodi skool', p_consent => true);
+reset role;
+select 'Q51 signup links the lead with the same parent phone' t,
+  (select student_id = '5c000000-0000-0000-0000-0000000000a1' from public.leads where reference = 'sl-1') as pass;
+select 'Q52 student gets the real school from the lead' t,
+  (select school_id = '5c000000-0000-0000-0000-000000000001' from public.profiles where id = '5c000000-0000-0000-0000-0000000000a1') as pass;
+select 'Q53 filled lead fields are not overwritten' t,
+  (select student_name = 'Asha Rao' and parent_name = 'Lead Parent' from public.leads where reference = 'sl-1') as pass;
+set role authenticated; select pg_temp.as_user('5c000000-0000-0000-0000-0000000000a2');
+select 'Q54 signup list shows only listed schools' t, (select array_agg(name) = array['Kodi School'] from public.signup_schools()) as pass;
+select public.complete_onboarding('student', 'Picker', null, 8::smallint, 'Dad', '9822200002', null, p_consent => true,
+  p_school_pick => '5c000000-0000-0000-0000-000000000001');
+reset role;
+select 'Q55 picking a listed school sets it without class enrollment' t,
+  (select school_id = '5c000000-0000-0000-0000-000000000001' from public.profiles where id = '5c000000-0000-0000-0000-0000000000a2')
+  and not exists (select 1 from public.enrollments where student_id = '5c000000-0000-0000-0000-0000000000a2') as pass;
+select public.record_lead('sl-2', '9822200002', 'website');
+select 'Q56 a lead added later links and fills its blanks' t,
+  (select student_id = '5c000000-0000-0000-0000-0000000000a2' and student_name = 'Picker' and parent_name = 'Dad' and grade = 8
+       from public.leads where reference = 'sl-2') as pass;
+reset role; insert into auth.users (id, email) values ('5c000000-0000-0000-0000-0000000000a3', 'nolist@x.in');
+set role authenticated; select pg_temp.as_user('5c000000-0000-0000-0000-0000000000a3');
+do $$ begin perform public.complete_onboarding('student', 'X', null, 8::smallint, 'D', '9822200003', null, p_consent => true,
+  p_school_pick => '5c000000-0000-0000-0000-000000000099'); raise exception 'Q57x FAIL';
+exception when others then if sqlerrm like 'Q57%' then raise; end if; raise notice 'Q57 pass: %', sqlerrm; end $$;
+reset role;
+-- Duplicate logins
+reset role;
+select set_config('request.jwt.claim.sub', '33333333-3333-3333-3333-333333333333', false);
+select public.admin_mark_duplicate_account('5c000000-0000-0000-0000-0000000000a2', '5c000000-0000-0000-0000-0000000000a1');
+select 'Q58 duplicate login is left out of analytics' t,
+  not exists (select 1 from public.student_score_rows(null, 30) where student_id = '5c000000-0000-0000-0000-0000000000a2')
+  and exists (select 1 from public.student_score_rows(null, 30) where student_id = '5c000000-0000-0000-0000-0000000000a1') as pass;
+select 'Q59 merged pair is listed as merged' t,
+  exists (select 1 from jsonb_array_elements(public.admin_duplicate_candidates()) g where g->>'reason' = 'merged') as pass;
+select 'Q60 merge copied the duplicate''s lead to the main account' t,
+  (select student_id = '5c000000-0000-0000-0000-0000000000a1' from public.leads where reference = 'sl-2') as pass;
+select public.admin_unmark_duplicate('5c000000-0000-0000-0000-0000000000a2');
+select 'Q61 undo brings the account back into analytics' t,
+  exists (select 1 from public.student_score_rows(null, 30) where student_id = '5c000000-0000-0000-0000-0000000000a2') as pass;
+set role authenticated; select pg_temp.as_user('5c000000-0000-0000-0000-0000000000a1');
+do $$ begin perform public.admin_duplicate_candidates(); raise exception 'Q62x FAIL';
+exception when others then if sqlerrm like 'Q62%' then raise; end if; raise notice 'Q62 pass: %', sqlerrm; end $$;
+reset role;

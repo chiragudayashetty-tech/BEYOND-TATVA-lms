@@ -23,7 +23,7 @@ export default async function AssignmentPage({ params }) {
   }
   return (
     <Shell roles={["student"]}>
-      <Link href="/assignments" className="btn-ghost -ml-3 mb-3"><ArrowLeft className="h-4 w-4" /> Assignments</Link>
+      <Link href="/activities" className="btn-ghost -ml-3 mb-3"><ArrowLeft className="h-4 w-4" /> Study Kit</Link>
       <HandIn assignment={a} moduleLabel={mod ? `Module ${mod.n} · ${mod.title}` : ""} submission={sub} files={files} userId={user.id} />
     </Shell>
   );

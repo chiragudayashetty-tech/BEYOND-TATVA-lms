@@ -3,9 +3,9 @@ import { Award, CalendarClock, Check, ChevronDown, CircleCheck, ClipboardList, G
 import { quizBadge, submissionBadge } from "@/components/activity";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, IconTile, Progress } from "@/components/ui";
-import { PremiereCard, Thumb, iconFor, moduleState } from "@/components/course";
+import { ContinueWatchingCard, PremiereCard, Thumb, iconFor, moduleState } from "@/components/course";
 import Countdown from "@/components/Countdown";
-import { fmtPremiere, isReleased, nextPremiere } from "@/lib/catalog";
+import { continueWatching, fmtPremiere, isComingSoon, isReleased, nextPremiere } from "@/lib/catalog";
 import { getActivities, getCourse, getModuleResources } from "@/lib/data";
 import ModuleResources from "@/components/ModuleResources";
 import { getSession } from "@/lib/supabase/server";
@@ -25,6 +25,7 @@ export default async function CoursePage({ searchParams }) {
   const [{ hasAccess }, course, activities, resources] = await Promise.all([getSession(), getCourse(), getActivities(), getModuleResources()]);
   const quizByChapter = Object.fromEntries(activities.quizzes.map((q) => [q.chapter_id, q]));
   const next = nextPremiere(course);
+  const resumeLesson = continueWatching(course, hasAccess);
   const released = course.modules.filter((m) => isReleased(m)).length;
 
   return (
@@ -36,7 +37,7 @@ export default async function CoursePage({ searchParams }) {
               <IconTile icon={CircleCheck} tone="success" />
               <div>
                 <h2 className="font-semibold">Payment successful. The full course is yours.</h2>
-                <p className="mt-1 text-sm text-muted">Every module unlocks on this account as it premieres, every Sunday at 6 PM. Sign in with this same account on any device.</p>
+                <p className="mt-1 text-sm text-muted">Every module unlocks on this account as it premieres, every Sunday at 10 AM. Sign in with this same account on any device.</p>
               </div>
             </div>
           )}
@@ -47,7 +48,7 @@ export default async function CoursePage({ searchParams }) {
                 <h1 className="mt-3 text-3xl font-semibold">{course.title}</h1>
                 <p className="mt-2 text-muted">{course.description}</p>
                 <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-                  {[[`0–${course.modules.length - 1}`, "Modules"], [String(course.lessonCount), "Lessons"], ["Sun", "6 PM weekly"]].map(([v, l]) => (
+                  {[[`0–${course.modules.length - 1}`, "Modules"], [String(course.lessonCount), "Lessons"], ["Sun", "10 AM weekly"]].map(([v, l]) => (
                     <div key={l} className="rounded-xl bg-surface-2 py-3">
                       <div className="font-display text-xl font-semibold">{v}</div>
                       <div className="text-xs text-muted">{l}</div>
@@ -66,14 +67,16 @@ export default async function CoursePage({ searchParams }) {
             <div className="card flex items-center gap-3 p-4 xl:hidden">
               <IconTile icon={Gift} tone="success" />
               <div className="min-w-0 flex-1">
-                <div className="font-semibold">AI 101 is free</div>
-                <div className="text-sm text-muted">Modules 1–6 for ₹{course.price}, one time</div>
+                <div className="font-semibold">Module 0 is free</div>
+                <div className="text-sm text-muted">Modules 1–5 for ₹{course.price}, one time</div>
               </div>
               <Link href="/unlock" className="btn-primary shrink-0 px-4">Unlock</Link>
             </div>
           )}
 
           {next && <PremiereCard module={next} hasAccess={hasAccess} />}
+
+          <ContinueWatchingCard lesson={resumeLesson} courseId={course.id} />
 
           <Card title="Modules" action={<span className="text-sm text-muted">{released} of {course.modules.length} out</span>}>
             <ol className="relative">
@@ -100,7 +103,9 @@ export default async function CoursePage({ searchParams }) {
                           <h3 className="mt-1 text-lg font-semibold">{m.title}</h3>
                           <p className="mt-0.5 text-sm text-muted">{m.blurb}</p>
                           <div className="mt-2 text-xs text-muted">
-                            {state === "upcoming"
+                            {state === "upcoming" && isComingSoon(m)
+                              ? <>Coming soon</>
+                              : state === "upcoming"
                               ? <>Premieres {fmtPremiere(m.release)} · in <span className="font-semibold text-fg"><Countdown to={m.release} compact /></span></>
                               : <>{m.lessons.length} lessons · {m.mins} min</>}
                           </div>
@@ -172,13 +177,13 @@ export default async function CoursePage({ searchParams }) {
               <>
                 <IconTile icon={CircleCheck} tone="success" />
                 <h2 className="mt-3 font-semibold">Full course unlocked</h2>
-                <p className="mt-1 text-sm text-muted">New modules appear here every Sunday at 6 PM.</p>
+                <p className="mt-1 text-sm text-muted">New modules appear here every Sunday at 10 AM.</p>
               </>
             ) : (
               <>
                 <IconTile icon={Gift} tone="success" />
-                <h2 className="mt-3 font-semibold">AI 101 is free</h2>
-                <p className="mt-1 text-sm text-muted">Unlock modules 1–6 with a key from your school, or pay once online.</p>
+                <h2 className="mt-3 font-semibold">Module 0 is free</h2>
+                <p className="mt-1 text-sm text-muted">Unlock modules 1–5 with a key from your school, or pay once online.</p>
                 <div className="mt-4 flex items-baseline gap-1"><span className="font-display text-3xl font-semibold">₹{course.price}</span><span className="text-sm text-muted">one time</span></div>
                 <Link href="/unlock" className="btn-primary mt-4 w-full">Unlock full course</Link>
                 <Link href="/unlock#key" className="btn-ghost mt-1 w-full">I have an access key</Link>
