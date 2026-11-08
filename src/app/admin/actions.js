@@ -287,10 +287,3 @@ export async function importLeads(rows, source) {
   revalidatePath("/admin/pipeline", "layout");
   return { ok: true, data };
 }
-export async function registerLeads(workshopId, leadIds, consentConfirmed) {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("admin_register_leads", { p_workshop: workshopId, p_lead_ids: leadIds, p_parent_consent_confirmed: consentConfirmed });
-  if (error) return { ok: false, error: error.message };
-  revalidatePath("/admin/workshops");
-  return { ok: true, data };
-}
