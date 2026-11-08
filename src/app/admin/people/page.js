@@ -1,4 +1,5 @@
 import { School, Users } from "lucide-react";
+import Link from "next/link";
 import Shell from "@/components/shell/Shell";
 import { Avatar, Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
@@ -8,9 +9,10 @@ export const metadata = { title: "Schools and people · Admin · Beyond Tatva" }
 
 export default async function PeoplePage() {
   const supabase = await createClient();
-  const [{ data: schools }, { data: signupSchools, error: signupSchoolsError }, { data: classes }, { data: people }, { data: access }] = await Promise.all([
+  const [{ data: schools }, { data: signupSchools, error: signupSchoolsError }, { data: duplicateGroups, error: duplicateGroupsError }, { data: classes }, { data: people }, { data: access }] = await Promise.all([
     supabase.rpc("admin_schools"),
     supabase.rpc("signup_schools"),
+    supabase.rpc("admin_duplicate_candidates"),
     supabase.from("classes").select("id, name, grade, school_id, teacher_id"),
     supabase.from("profiles").select("id, role, full_name, grade, school_id, school_name, guardian_phone, guardian_consent_at, consent_by, teacher_terms_at, teacher_revoked_at, signed_up_by, student_phone, created_at").order("created_at", { ascending: false }),
     supabase.from("course_access").select("student_id, source"),
@@ -24,7 +26,9 @@ export default async function PeoplePage() {
 
   return (
     <Shell roles={["admin"]}>
-      <PageTitle title="Schools and people" subtitle="School students join with a school code; individual students sign up without one. Teachers use the separate teacher code." />
+      <PageTitle title="Schools and people" subtitle="School students join with a school code; individual students sign up without one. Teachers use the separate teacher code.">
+        <Link href="/admin/people/duplicates" className="btn-secondary" title={duplicateGroupsError ? "Could not load the duplicate count" : undefined}>Duplicates ({duplicateGroupsError ? "–" : Array.isArray(duplicateGroups) ? duplicateGroups.length : 0})</Link>
+      </PageTitle>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Card title="Schools">

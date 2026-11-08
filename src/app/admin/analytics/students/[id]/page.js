@@ -12,11 +12,16 @@ const weights = ["Lessons · 35", "Quizzes · 25", "Checkpoints · 10", "Assignm
 
 export default async function StudentActivityPage({ params }) {
   const { id } = await params;
-  const { data, error } = await (await createClient()).rpc("admin_student_activity", { p_student_id: id });
+  const supabase = await createClient();
+  const [{ data, error }, { data: duplicateGroups }] = await Promise.all([
+    supabase.rpc("admin_student_activity", { p_student_id: id }),
+    supabase.rpc("admin_duplicate_candidates"),
+  ]);
   if (error && /Student not found/i.test(error.message)) notFound();
   if (!data) return <Shell roles={["admin"]}><Empty title="Student activity unavailable" body="We couldn't load this student's activity. Please try again." /></Shell>;
   const summary = data.summary;
   if (!summary) notFound();
+  const extraLogin = (duplicateGroups ?? []).flatMap((group) => group.accounts ?? []).find((account) => account.duplicate_of === id);
   const lessonScore = summary.lessons_total ? Math.min(summary.lessons_completed / summary.lessons_total, 1) * 35 : null;
   const quizScore = summary.quizzes_total ? Math.min((summary.quiz_avg_best_pct ?? 0) / 100, 1) * 25 : null;
   const checkScore = summary.checkpoints_answered ? summary.checkpoints_correct / summary.checkpoints_answered * Math.min(summary.checkpoints_answered / Math.max(summary.lessons_total, 1), 1) * 10 : null;
@@ -38,6 +43,7 @@ export default async function StudentActivityPage({ params }) {
     <PageTitle title={summary.full_name || "Student"} subtitle={[summary.school, summary.grade && `Grade ${summary.grade}`, `Signed up ${date(summary.signed_up_at)}`].filter(Boolean).join(" · ")}>
       <Link className="btn-secondary" href="/admin/analytics/students">All students</Link>
     </PageTitle>
+    {extraLogin?.email && <p className="mb-5 rounded-xl border border-primary/20 bg-primary-soft p-3 text-sm"><span className="font-semibold">Also logs in with:</span> <span className="break-all">{extraLogin.email}</span></p>}
     <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
       <StatCard label="Learning score" value={`${summary.score ?? 0}/100`} hint="Across six learning areas" />
       <StatCard label="Lessons finished" value={`${summary.lessons_completed}/${summary.lessons_total}`} hint={`${summary.watch_minutes ?? 0} minutes watched`} />
