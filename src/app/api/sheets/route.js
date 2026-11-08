@@ -31,7 +31,18 @@ export async function POST(request) {
   }
   const fn = { leads: "sheet_upsert_leads", schools: "sheet_upsert_schools" }[body?.kind];
   if (!fn || !Array.isArray(body.rows)) return NextResponse.json({ error: "kind must be leads or schools, rows a list" }, { status: 400 });
-  const { data, error } = await createAdminClient().rpc(fn, { p_rows: body.rows });
+  const db = createAdminClient();
+  const { data, error } = await db.rpc(fn, { p_rows: body.rows });
+  if (!error && body.kind === "leads" && Array.isArray(data)) {
+    // "LMS email" column → link the lead to that exact student account (when phone matching can't).
+    const byRow = new Map(body.rows.map((r) => [r.row, r]));
+    for (const res of data) {
+      const sent = byRow.get(res.row);
+      if (!res.id || !sent || !("lms_email" in sent)) continue;
+      const { data: link } = await db.rpc("sheet_link_lead", { p_lead: res.id, p_email: String(sent.lms_email ?? "") });
+      if (link === "unknown_email") res.link = "No LMS account with this email";
+    }
+  }
   if (error) {
     console.error("sheet push failed", body.kind, error.message);
     return NextResponse.json({ error: /rows must/.test(error.message) ? error.message : "temporary failure" }, { status: /rows must/.test(error.message) ? 400 : 500 });

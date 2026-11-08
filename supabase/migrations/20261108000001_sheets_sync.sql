@@ -75,6 +75,7 @@ begin
   if jsonb_typeof(p_rows) <> 'array' or jsonb_array_length(p_rows) > 2000 then raise exception 'rows must be a list of at most 2000'; end if;
   for r in select * from jsonb_array_elements(p_rows) loop
     begin
+      v_res := null;
       v_phone := public.normalize_phone(r ->> 'phone');
       v_name := nullif(left(trim(coalesce(r ->> 'student', '')), 80), '');
       v_grade := case when (r ->> 'grade') ~ '^\s*\d{1,2}\s*$' and trim(r ->> 'grade')::int between 1 and 12 then trim(r ->> 'grade')::smallint end;
@@ -127,6 +128,7 @@ begin
   if jsonb_typeof(p_rows) <> 'array' or jsonb_array_length(p_rows) > 2000 then raise exception 'rows must be a list of at most 2000'; end if;
   for r in select * from jsonb_array_elements(p_rows) loop
     begin
+      v_res := null;
       v_name := nullif(left(trim(coalesce(r ->> 'name', '')), 160), '');
       if v_name is null then raise exception 'School name is empty'; end if;
       v_id := case when (r ->> 'id') ~ '^[0-9a-f-]{36}$' then (r ->> 'id')::uuid end;
