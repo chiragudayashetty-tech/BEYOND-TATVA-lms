@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CalendarClock, CircleCheck, ClipboardList, Lock, PlayCircle, Sparkles, Zap } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
@@ -23,11 +24,19 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
   const playerRef = useRef({ max: lesson.secondsWatched ?? 0, position: startAt, duration: lesson.durationSeconds || lesson.mins * 60 });
 
   const resumeNote = startAt > 0 ? `Resumed from ${Math.floor(startAt / 60)}:${String(startAt % 60).padStart(2, "0")}` : "";
+  // Visited pages are kept in the browser for 30 s (next.config.mjs). When this lesson becomes complete,
+  // refresh so the dashboard and progress show it right away instead of a cached copy. Not on every
+  // 15 s heartbeat: that would re-render the page for nothing.
+  const router = useRouter();
+  const wasDone = useRef(lesson.done);
   const refreshDone = useCallback(async () => {
     if (!canSave || !userId) return;
     const { data } = await createClient().from("lesson_progress").select("completed_at").eq("student_id", userId).eq("lesson_id", lesson.id).maybeSingle();
-    setDone(Boolean(data?.completed_at));
-  }, [canSave, userId, lesson.id]);
+    const nowDone = Boolean(data?.completed_at);
+    setDone(nowDone);
+    if (nowDone && !wasDone.current) router.refresh();
+    wasDone.current = nowDone;
+  }, [canSave, userId, lesson.id, router]);
 
   // Progress and answers go through checked database functions (save_progress / save_answer):
   // the database confirms the lesson is open for this student and caps watch time.
@@ -78,7 +87,8 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
   async function saveAnswer(question, correct) {
     if (correct) setXp((x) => x + 10);
     if (!canSave || !userId) return;
-    await createClient().rpc("save_answer", { p_lesson: lesson.id, p_question: question, p_correct: correct });
+    const { error } = await createClient().rpc("save_answer", { p_lesson: lesson.id, p_question: question, p_correct: correct });
+    if (!error) router.refresh(); // XP and leaderboard
   }
   const noteKey = `notes:${lesson.id}`;
   // The Notes tab is never server-rendered (Overview opens first), so reading storage here is safe.
