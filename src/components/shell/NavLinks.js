@@ -4,12 +4,12 @@ import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BadgeCheck, BookOpen, CalendarDays, ChartLine, Circle, Clapperboard, ClipboardCheck, ClipboardList, Contact, GraduationCap,
-  House, KeyRound, LayoutDashboard, ListChecks, ReceiptText, User, UserCheck, Users, Workflow,
+  House, KeyRound, LayoutDashboard, ListChecks, ReceiptText, School, User, UserCheck, Users, Workflow,
 } from "lucide-react";
 
 const Icons = {
   BadgeCheck, BookOpen, CalendarDays, ChartLine, Circle, Clapperboard, ClipboardCheck, ClipboardList, Contact, GraduationCap,
-  House, KeyRound, LayoutDashboard, ListChecks, ReceiptText, User, UserCheck, Users, Workflow,
+  House, KeyRound, LayoutDashboard, ListChecks, ReceiptText, School, User, UserCheck, Users, Workflow,
 };
 
 // Lights up the tapped item straight away while its page loads (useLinkStatus must sit inside the Link).

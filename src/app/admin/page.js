@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CalendarClock, CalendarDays, CheckCircle2, Clapperboard, ClipboardCheck, Contact, Film, GraduationCap, KeyRound, ListChecks, School, UserCheck, Users, Workflow } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, Clapperboard, ClipboardCheck, Contact, Film, GraduationCap, KeyRound, ListChecks, School, UserCheck, Users, Workflow } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, IconTile, StatCard } from "@/components/ui";
 import { iconFor } from "@/components/course";
@@ -16,7 +16,7 @@ const sections = [
   { href: "/admin/enrollments", icon: UserCheck, title: "Enrollments", body: "Website payments, manual enrollments and refunds" },
   { href: "/admin/people", icon: School, title: "Schools and people", body: "Schools, join codes, classes, teachers and students" },
   { href: "/admin/pipeline", icon: Contact, title: "Pipeline", body: "Leads to paid: who signed in, watched Module 0 and bought" },
-  { href: "/admin/workshops", icon: CalendarDays, title: "Workshops", body: "Signups, venues and attendance" },
+  { href: "/admin/outreach", icon: School, title: "School outreach", body: "Schools to approach: calls, visits and the next follow-up" },
   { href: "/admin/automations", icon: Workflow, title: "Automations", body: "Reminders, emails, WhatsApp and Sheets sync" },
 ];
 

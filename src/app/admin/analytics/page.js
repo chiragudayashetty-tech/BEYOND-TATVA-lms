@@ -142,10 +142,6 @@ function InsightsSection({ insights }) {
       <Card title="Schools">
         {insights.schools?.length ? <ul className="space-y-2">{insights.schools.map((row) => <li key={row.school} className="rounded-xl bg-surface-2 p-3"><div className="font-medium">{row.school}</div><div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted"><span>{row.keys ?? 0} keys</span><span>{row.used ?? 0} used ({row.keys ? Math.round((row.used ?? 0) / row.keys * 100) : 0}%)</span><span>{row.students ?? 0} students</span></div></li>)}</ul> : <Empty title="No school data yet" body="School keys and students will appear here." />}
       </Card>
-
-      <Card title="Workshops">
-        {insights.workshops?.length ? <ul className="space-y-3">{insights.workshops.map((row) => <li key={`${row.title}-${row.starts_at}`} className="rounded-xl bg-surface-2 p-3"><div className="flex flex-wrap items-baseline justify-between gap-2"><span className="font-medium">{row.title}</span><span className="text-xs text-muted">{new Date(row.starts_at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short" })}</span></div><div className="mt-2 grid grid-cols-4 gap-2 text-center text-xs"><span><b className="block text-sm">{row.registered}/{row.seats}</b>signed up</span><span><b className="block text-sm">{row.attended}</b>attended</span><span><b className="block text-sm">{row.signed_up}</b>made account</span><span><b className="block text-sm">{row.paid}</b>paid</span></div></li>)}</ul> : <Empty title="No workshop data yet" body="Workshop sign-ups and attendance will appear here." />}
-      </Card>
     </div>
   </div>;
 }
