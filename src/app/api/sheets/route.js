@@ -4,14 +4,18 @@ import { sheetsKeyValid } from "@/lib/sheets-key";
 
 // Google Sheets ↔ Supabase sync, called only by the Apps Script inside Chirag's two sheets
 // (scripts/sheets-sync.gs). Header x-sheets-key must equal SHEETS_SYNC_SECRET.
-//   GET  /api/sheets                          → { leads: [...], schools: [...], at }   (snapshot incl. Signed up / Module 0 / Paid)
+//   GET  /api/sheets                          → merges duplicate leads, then { leads: [... with tab], schools: [...], at }
 //   POST /api/sheets { kind: "leads"|"schools", rows: [...] } → [{ row, id, result, error?, duplicate_phone? }]
 export const dynamic = "force-dynamic";
 const deny = () => NextResponse.json({ error: "bad key" }, { status: 401 });
 
 export async function GET(request) {
   if (!sheetsKeyValid(request.headers.get("x-sheets-key"))) return deny();
-  const { data, error } = await createAdminClient().rpc("sheet_snapshot");
+  const db = createAdminClient();
+  // Merge true duplicates (same phone + same/no child name) before every pull; siblings are kept.
+  const { error: mergeError } = await db.rpc("sheet_merge_duplicates");
+  if (mergeError) console.error("lead merge failed", mergeError.message);
+  const { data, error } = await db.rpc("sheet_snapshot");
   if (error) {
     console.error("sheet snapshot failed", error.message);
     return NextResponse.json({ error: "temporary failure" }, { status: 500 });
