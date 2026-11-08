@@ -27,7 +27,7 @@ export default async function AnalyticsPage({ searchParams }) {
     supabase.from("profiles").select("id, grade, signup_source, signup_utm, created_at").eq("role", "student").gte("created_at", startAt).lt("created_at", endAt),
     supabase.from("chapters").select("id, position, is_free").eq("course_id", COURSE_ID),
     supabase.from("lessons").select("id, chapter_id").eq("course_id", COURSE_ID),
-    supabase.from("lesson_progress").select("student_id, lesson_id, completed_at"), // all time: completion is cumulative
+    fetchAll((from, to) => supabase.from("lesson_progress").select("student_id, lesson_id, completed_at").order("student_id").order("lesson_id").range(from, to)), // all time: completion is cumulative
     supabase.from("course_access").select("student_id, granted_at").eq("course_id", COURSE_ID),
     supabase.from("purchases").select("created_at, amount_paise, status").gte("created_at", startAt).lt("created_at", endAt),
     supabase.from("quizzes").select("id, title, chapter_id").eq("published", true),
@@ -46,9 +46,10 @@ export default async function AnalyticsPage({ searchParams }) {
   const quizzes = quizzesResult.data ?? [];
   const attempts = attemptsResult.data ?? [];
 
-  const moduleZero = chapters.find((chapter) => chapter.is_free);
-  const moduleZeroLessons = lessons.filter((lesson) => lesson.chapter_id === moduleZero?.id);
-  const funnel = funnelCounts({ leads, profiles, progress, lessonIds: new Set(moduleZeroLessons.map((lesson) => lesson.id)), accesses });
+  // Module 0 = every free module's lessons (same rule as the pipeline and sheet sync).
+  const freeChapterIds = new Set(chapters.filter((chapter) => chapter.is_free).map((chapter) => chapter.id));
+  const moduleZeroLessonIds = new Set(lessons.filter((lesson) => freeChapterIds.has(lesson.chapter_id)).map((lesson) => lesson.id));
+  const funnel = funnelCounts({ leads, profiles, progress, lessonIds: moduleZeroLessonIds, accesses });
   const sourceCounts = countBy(profiles, (profile) => profile.signup_source || profile.signup_utm?.utm_source || "Unknown");
   const gradeCounts = countBy(profiles, (profile) => profile.grade ? `Grade ${profile.grade}` : "Unknown");
   const sourceBars = toBars(sourceCounts);
@@ -56,11 +57,7 @@ export default async function AnalyticsPage({ searchParams }) {
   const revenue = revenueByIstWeek(purchases);
   const revenueBars = revenue.slice(-8).map(({ week, amountPaise }) => ({ label: week.slice(5), value: amountPaise / 100 }));
   const payingIds = new Set(accesses.map((access) => access.student_id));
-  const completions = chapters.slice().sort((a, b) => a.position - b.position).map((chapter) => {
-    const ids = new Set(lessons.filter((lesson) => lesson.chapter_id === chapter.id).map((lesson) => lesson.id));
-    const count = [...payingIds].filter((id) => ids.size > 0 && [...ids].every((lessonId) => progress.some((row) => row.student_id === id && row.lesson_id === lessonId && row.completed_at))).length;
-    return { label: `M${chapter.position}`, value: payingIds.size ? Math.round(count / payingIds.size * 100) : 0 };
-  });
+  const completions = moduleCompletion({ chapters, lessons, progress, payingIds });
   const quizRows = quizHealth(quizzes, attempts);
   const totalRevenue = purchases.filter((row) => row.status !== "revoked").reduce((sum, row) => sum + (row.amount_paise ?? 0), 0);
 
@@ -97,7 +94,7 @@ export default async function AnalyticsPage({ searchParams }) {
           {revenueBars.length ? <Bars data={revenueBars} max={Math.max(...revenueBars.map((x) => x.value), 1)} valueLabel={(value) => rupees(value * 100)} /> : <Empty icon={ChartLine} title="No data yet" body="Recorded payments will appear here." />}
         </Card>
         <Card title="Module completion">
-          {completions.length && payingIds.size ? <><p className="mb-2 text-xs text-muted">Share of {payingIds.size} students with full course access who completed every lesson.</p><Bars data={completions.map(({ label, value }) => ({ label, value }))} max={100} valueLabel={percent} /></> : <Empty icon={ChartLine} title="No data yet" body="Module completion will appear after students with full access finish lessons." />}
+          {completions.some((row) => row.base > 0) ? <><p className="mb-2 text-xs text-muted">Free modules: share of students who opened the module and finished every lesson. Paid modules: share of the {payingIds.size} students with full access who finished every lesson.</p><Bars data={completions.map(({ label, value }) => ({ label, value }))} max={100} valueLabel={percent} /></> : <Empty icon={ChartLine} title="No data yet" body="Module completion will appear after students with full access finish lessons." />}
         </Card>
         <Card title="Quiz health">
           {quizRows.length ? <ul className="divide-y divide-border">{quizRows.map((quiz) => <li key={quiz.id} className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0"><span className="min-w-0 flex-1 text-sm font-medium">{quiz.title}</span><span className="text-right text-xs text-muted">{quiz.attempts} attempts · {quiz.passRate}% passed · {quiz.averageScore}% avg score</span></li>)}</ul> : <Empty icon={ChartLine} title="No data yet" body="Published quizzes will appear here." />}
@@ -151,6 +148,35 @@ function InsightsSection({ insights }) {
       </Card>
     </div>
   </div>;
+}
+
+// Supabase returns at most 1,000 rows per request, so read in pages until a short page comes back.
+async function fetchAll(query, pageSize = 1000) {
+  const rows = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await query(from, from + pageSize - 1);
+    if (error) return { data: rows, error };
+    rows.push(...(data ?? []));
+    if (!data || data.length < pageSize) return { data: rows, error: null };
+  }
+}
+
+function moduleCompletion({ chapters, lessons, progress, payingIds }) {
+  const byStudent = new Map();
+  for (const row of progress) {
+    let entry = byStudent.get(row.student_id);
+    if (!entry) byStudent.set(row.student_id, entry = { opened: new Set(), done: new Set() });
+    entry.opened.add(row.lesson_id);
+    if (row.completed_at) entry.done.add(row.lesson_id);
+  }
+  return chapters.slice().sort((a, b) => a.position - b.position).map((chapter) => {
+    const ids = lessons.filter((lesson) => lesson.chapter_id === chapter.id).map((lesson) => lesson.id);
+    const base = chapter.is_free
+      ? [...byStudent].filter(([, entry]) => ids.some((id) => entry.opened.has(id))).map(([id]) => id)
+      : [...payingIds];
+    const finished = ids.length ? base.filter((id) => ids.every((lessonId) => byStudent.get(id)?.done.has(lessonId))).length : 0;
+    return { label: `M${chapter.position}`, value: base.length ? Math.round(finished / base.length * 100) : 0, base: base.length };
+  });
 }
 
 function countBy(rows, keyOf) {
