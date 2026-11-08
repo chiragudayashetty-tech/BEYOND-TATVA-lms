@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Download, Eye, FileText, Image as ImageIcon } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 const size = (b) => (b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
 
@@ -9,10 +10,18 @@ const size = (b) => (b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.m
 export default function ModuleResources({ files }) {
   const [busy, setBusy] = useState(false);
   if (!files?.length) return null;
+  function track(resourceId, kind) {
+    try {
+      void createClient().rpc("log_resource_view", { p_resource_id: resourceId, p_kind: kind }).catch(() => {});
+    } catch {
+      // Resource links must keep working even when tracking is unavailable.
+    }
+  }
   async function downloadAll() {
     setBusy(true);
     for (const f of files) {
       if (!f.download) continue;
+      track(f.id, "download");
       const a = Object.assign(document.createElement("a"), { href: f.download, rel: "noopener" });
       document.body.appendChild(a); a.click(); a.remove();
       await new Promise((r) => setTimeout(r, 700)); // browsers block many downloads fired at once
@@ -32,8 +41,8 @@ export default function ModuleResources({ files }) {
             <li key={f.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-surface p-2 pl-3">
               <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
               <span className="min-w-0 flex-1 basis-40 truncate text-sm font-medium">{f.title} <span className="font-normal text-muted">· {size(f.size_bytes)}</span></span>
-              {f.view && <a href={f.view} target="_blank" rel="noopener noreferrer" aria-label={`View ${f.title}`} className="btn-ghost min-h-11 px-3 text-sm"><Eye className="h-4 w-4" /> View</a>}
-              {f.download && <a href={f.download} rel="noopener" aria-label={`Download ${f.title}`} className="btn-ghost min-h-11 px-3 text-sm"><Download className="h-4 w-4" /> Download</a>}
+              {f.view && <a href={f.view} target="_blank" rel="noopener noreferrer" onClick={() => track(f.id, "open")} aria-label={`View ${f.title}`} className="btn-ghost min-h-11 px-3 text-sm"><Eye className="h-4 w-4" /> View</a>}
+              {f.download && <a href={f.download} rel="noopener" onClick={() => track(f.id, "download")} aria-label={`Download ${f.title}`} className="btn-ghost min-h-11 px-3 text-sm"><Download className="h-4 w-4" /> Download</a>}
             </li>
           );
         })}
