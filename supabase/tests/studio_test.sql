@@ -663,3 +663,27 @@ select 'E11 link by email makes the lead signed up' t,
     (select email from auth.users u join public.profiles p on p.id = u.id where p.role = 'student' and u.email is not null limit 1)) = 'linked' as pass;
 select 'E12 snapshot follows the link' t,
   (select (e ->> 'signed_up')::boolean and e ->> 'lms_email' is not null from jsonb_array_elements(public.sheet_snapshot() -> 'leads') e where e ->> 'student' = 'Sheet Kid') as pass;
+
+-- ── Tabs and duplicate merge ─────────────────────────────────────────────────
+reset role;
+select 'E13 website lead saved' t, public.record_lead('web-merge-1', '9845077777', 'loki', 'Parent', null, 9::smallint) = 'saved' as pass;
+select 'E13b and lands in the Website tab' t, public.lead_tab(tab, source, school_name) = 'Website' as pass from public.leads where reference = 'web-merge-1';
+select 'E14 sheet row in a school tab with same phone links to it (no copy)' t,
+  r -> 0 ->> 'result' = 'matched' and (select count(*) from public.leads where phone = '+919845077777') = 1 as pass
+  from (select public.sheet_upsert_leads('[{"row":2,"tab":"Durga EMS","student":"Kiran","phone":"9845077777"}]') r) x;
+select 'E15 matched lead moved to the school tab' t,
+  public.lead_tab(tab, source, school_name) = 'Durga EMS' and student_name = 'Kiran' and school_name = 'Durga EMS' as pass
+  from public.leads where phone = '+919845077777';
+select 'E16 a later website copy is merged away' t,
+  public.record_lead('web-merge-2', '9845077777', 'website', 'Parent 2', 'Kiran') = 'saved'
+  and public.sheet_merge_duplicates() >= 1 and (select count(*) from public.leads where phone = '+919845077777') = 1 as pass;
+select 'E17 merged lead keeps the school tab and fills the parent name' t,
+  public.lead_tab(tab, source, school_name) = 'Durga EMS' and parent_name = 'Parent' as pass
+  from public.leads where phone = '+919845077777';
+select 'E18 two siblings saved' t, public.record_lead('sib-1', '9845088888', 'workshop', null, 'Asha', 8::smallint, 'SRVK') = 'saved'
+  and public.record_lead('sib-2', '9845088888', 'workshop', null, 'Ravi', 9::smallint, 'SRVK') = 'saved' as pass;
+select 'E18b merge leaves siblings alone' t, public.sheet_merge_duplicates() = 0 as pass;
+select 'E18c both kept' t, count(*) = 2 as pass from public.leads where phone = '+919845088888';
+select 'E19 sibling note names the other child' t,
+  r -> 0 ->> 'siblings' like 'Ravi (SRVK)%' as pass
+  from (select public.sheet_upsert_leads('[{"row":5,"tab":"SRVK","student":"Asha","phone":"9845088888"}]') r) x;
