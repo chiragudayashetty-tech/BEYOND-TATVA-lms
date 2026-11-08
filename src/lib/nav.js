@@ -33,6 +33,7 @@ export const nav = {
   // Studio: only accounts on the studio_admins allowlist ever get this role.
   admin: {
     main: [
+      { href: "/admin/today", label: "Today", icon: "CalendarCheck" },
       { href: "/admin", label: "Studio", icon: "LayoutDashboard" },
       { href: "/admin/content", label: "Content", icon: "Clapperboard" },
       { href: "/admin/quizzes", label: "Quizzes", icon: "ListChecks" },
@@ -51,8 +52,8 @@ export const nav = {
       { href: "/course", label: "Course page", icon: "BookOpen" },
     ],
     mobile: [
+      { href: "/admin/today", label: "Today", icon: "CalendarCheck" },
       { href: "/admin", label: "Studio", icon: "LayoutDashboard" },
-      { href: "/admin/content", label: "Content", icon: "Clapperboard" },
       { href: "/admin/assignments", label: "Review", icon: "ClipboardCheck" },
       { href: "/admin/enrollments", label: "Enrolled", icon: "UserCheck" },
       { href: "/profile", label: "Profile", icon: "User" },

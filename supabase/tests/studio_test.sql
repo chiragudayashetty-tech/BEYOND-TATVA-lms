@@ -754,3 +754,31 @@ select 'Z9 school roll-up counts match' t,
 select 'Z10 activity has timeline with resource + quiz' t,
   a->'timeline' @> '[{"kind":"resource_opened"}]' and jsonb_array_length(a->'quizzes') >= 0 and a->'summary'->>'student_id' is not null as pass
   from (select public.admin_student_activity('11111111-1111-1111-1111-111111111111') a) x;
+
+-- ── Today: Studio lead logs flow back to the Workshop leads sheet ────────────
+reset role;
+create temp table f_ids as select (select id from public.leads where student_name = 'Sheet Kid') l;
+grant select on f_ids to authenticated;
+select 'Z21 sheet push marks leads as sheet' t, updated_source = 'sheet' as pass from public.leads, f_ids where id = l;
+set role authenticated; select pg_temp.as_user('99999999-9999-9999-9999-999999999999');
+do $$ begin perform public.admin_log_lead_contact((select l from f_ids), 'call', 'x'); raise exception 'Z22 FAIL'; exception when others then if sqlerrm like 'Z22%' then raise; end if; raise notice 'Z22 pass: non-admin cannot log a lead contact (%)', sqlerrm; end $$;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+do $$ begin perform public.admin_log_lead_contact((select l from f_ids), 'email', 'x'); raise exception 'Z23 FAIL'; exception when others then if sqlerrm like 'Z23%' then raise; end if; raise notice 'Z23 pass: bad channel refused (%)', sqlerrm; end $$;
+select 'Z24 lead contact logged' t, public.admin_log_lead_contact(l, 'whatsapp', 'Sent fee details', 'Interested', 'Call back', '2026-11-10', null) ->> 'note_id' is not null as pass from f_ids;
+select 'Z25 note with 10:00 IST follow-up' t, channel = 'whatsapp' and body = 'Sent fee details' and follow_up_at = '2026-11-10 04:30:00+00' and done_at is null as pass
+  from public.crm_notes, f_ids where lead_id = l order by created_at desc limit 1;
+select 'Z26 lead fields and source' t, status = 'Interested' and next_step = 'Call back' and next_date = '2026-11-10' and not do_not_contact and updated_source = 'studio' as pass
+  from public.leads, f_ids where id = l;
+select 'Z27 do not contact set' t, (public.admin_log_lead_contact(l, 'call', '', null, null, null, true) ->> 'do_not_contact')::boolean as pass from f_ids;
+select 'Z27b empty note gets a label, status kept' t, (select body from public.crm_notes where lead_id = l order by created_at desc limit 1) = 'Call'
+  and (select status from public.leads where id = l) = 'Interested' as pass from f_ids;
+reset role;
+select 'Z28 snapshot carries updated_source' t,
+  (select e ->> 'updated_source' = 'studio' and e ? 'updated_at' from jsonb_array_elements(public.sheet_snapshot() -> 'leads') e where e ->> 'student' = 'Sheet Kid') as pass;
+select 'Z29 edit to Status in a stale row' t,
+  (public.sheet_upsert_leads(jsonb_build_array(jsonb_build_object('row', 2, 'id', l, 'student', 'Sheet Kid', 'phone', '9845055555', 'status', 'Will join', 'do_not_contact', false, 'touched', '["status"]'::jsonb))) -> 0 ->> 'result') = 'updated' as pass from f_ids;
+select 'Z29b status taken, do-not-contact and next step kept, still studio' t,
+  (select status = 'Will join' and do_not_contact and next_step = 'Call back' and updated_source = 'studio' from public.leads where id = l) as pass from f_ids;
+select 'Z30 full push without touched is the sheet' t,
+  (public.sheet_upsert_leads(jsonb_build_array(jsonb_build_object('row', 2, 'id', l, 'student', 'Sheet Kid', 'phone', '9845055555', 'status', 'Will join', 'do_not_contact', true))) -> 0 ->> 'result') = 'updated' as pass from f_ids;
+select 'Z30b source sheet' t, (select updated_source = 'sheet' and do_not_contact from public.leads where id = l) as pass from f_ids;

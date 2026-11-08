@@ -11,6 +11,8 @@
  *     lead: copies are merged and removed automatically. Siblings on one phone are kept and noted.
  *   • "Signed up", "Module 0", "Paid?" and "Source" are filled by the LMS; typing in them is undone.
  *   • "LMS email": the student's login email, when the account doesn't use the parent phone on the slip.
+ *   • A contact logged in Studio → Today comes back on the next pull (every 5 min): Status / Next step /
+ *     Next date / Do not contact. Only cells that differ are written. An edit typed here wins again.
  * SCHOOL OUTREACH spreadsheet (header has "School" and "Calls"): one row per school, one tab.
  *   • The LMS (Studio → School outreach) is the main record. Every 5 minutes this tab is rewritten from
  *     the LMS: new schools are added, changed ones updated, schools deleted in Studio are removed.
@@ -25,6 +27,7 @@ var LEAD_SYSTEM = ['Signed up', 'Module 0', 'Paid?', 'Source'];
 var LEAD_ADD = ['School', 'Next step', 'Next date', 'Do not contact', 'LMS email', 'Source', 'Signed up', 'Module 0', 'Paid?', 'Last synced', 'ID'];
 var LEAD_FIELDS = { 'Student': 'student', 'Class': 'grade', 'Parent WhatsApp': 'phone', 'School': 'school', 'Status': 'status', 'Next step': 'next_step', 'Next date': 'next_date', 'LMS email': 'lms_email' };
 var SCHOOL_FIELDS = { 'School': 'name', 'Area': 'area', 'Contact': 'contact', 'Phone': 'phone', 'Status': 'status', 'Next step': 'next_step', 'Next date': 'next_date', 'Notes': 'notes' };
+var LEAD_BACK = { 'Status': 'status', 'Next step': 'next_step', 'Next date': 'next_date', 'Do not contact': 'do_not_contact' };
 var SCHOOL_SYSTEM = ['Calls', 'Visits', 'History (short)'];
 var SCHOOL_PULL = { 'School': 'name', 'Area': 'area', 'Contact': 'contact', 'Phone': 'phone', 'Status': 'status', 'Calls': 'calls', 'Visits': 'visits', 'History (short)': 'history', 'Next step': 'next_step', 'Next date': 'next_date', 'Notes': 'notes', 'Version': 'updated_at', 'ID': 'id' };
 var HIDDEN = ['ID', 'Version', 'Last synced'];
@@ -127,7 +130,9 @@ function desiredTab_(t, values) {
   return (['Website', 'Manual'].indexOf(t.name) >= 0 && school && school !== t.name) ? school.slice(0, 60) : t.name;
 }
 
-function rowPayload_(t, values, rowNum) {
+// touched (leads): the LMS fields edited by hand. For a lead last written by Studio → Today, the LMS only
+// takes these, so one edit in a not-yet-refreshed row never overwrites a Studio log. Omitted = whole row.
+function rowPayload_(t, values, rowNum, touched) {
   var fields = t.kind === 'leads' ? LEAD_FIELDS : SCHOOL_FIELDS, extra = {};
   var p = { row: rowNum, tab: t.kind === 'leads' ? desiredTab_(t, values) : t.name, id: t.col['ID'] !== undefined ? String(values[t.col['ID']] || '') : '' };
   t.head.forEach(function (h, i) {
@@ -141,13 +146,19 @@ function rowPayload_(t, values, rowNum) {
   }
   if (t.kind === 'schools' && t.col['Version'] !== undefined) p.version = String(values[t.col['Version']] || '');
   p.sheet = extra;
+  if (touched && t.kind === 'leads') p.touched = touched;
   return p;
 }
 
-function push_(t, rowNums) {
+function fieldsOf_(t, headers) {
+  if (t.kind !== 'leads') return undefined;
+  return headers.map(function (h) { return h === 'Do not contact' ? 'do_not_contact' : LEAD_FIELDS[h]; }).filter(function (f) { return f; });
+}
+
+function push_(t, rowNums, touched) {
   var key = PropertiesService.getScriptProperties().getProperty('KEY');
   if (!key || !rowNums.length) return;
-  var width = t.head.length, rows = rowNums.map(function (r) { return rowPayload_(t, t.sheet.getRange(r, 1, 1, width).getValues()[0], r); })
+  var width = t.head.length, rows = rowNums.map(function (r) { return rowPayload_(t, t.sheet.getRange(r, 1, 1, width).getValues()[0], r, touched); })
     .filter(function (p) { return t.kind !== 'leads' || p.student || p.phone; });
   var refresh = false;
   for (var i = 0; i < rows.length; i += 200) {
@@ -185,7 +196,7 @@ function onEditSync(e) {
   if (touched.every(function (h) { return owned.indexOf(h) >= 0; })) return pull();   // LMS-owned: put the value back
   var rows = [], props = PropertiesService.getDocumentProperties(), now = String(Date.now());
   for (var r = r0; r <= r1; r++) { rows.push(r); props.setProperty('edit_' + t.name + '_' + r, now); }
-  push_(t, rows);
+  push_(t, rows, fieldsOf_(t, touched));
 }
 
 // ── Pull: LMS → sheet ───────────────────────────────────────────────────────
@@ -222,18 +233,24 @@ function pull() {
       if (desiredTab_(hit.t, hit.t.values[hit.i]) === rec.tab) { moves.push({ rec: rec, hit: hit }); return; }
       fixes.push(hit);
     }
-    var t = hit.t, v = t.values[hit.i];
+    var t = hit.t, v = t.values[hit.i], row = hit.i + 2;
     var sys = { 'Signed up': rec.signed_up ? 'Yes' : 'No', 'Module 0': rec.module0 ? 'Done' : (rec.signed_up ? 'Not yet' : ''), 'Paid?': rec.paid ? 'Yes' : 'No', 'Source': rec.source || '' };
-    Object.keys(sys).forEach(function (h) { if (t.col[h] !== undefined && String(v[t.col[h]]) !== sys[h]) { v[t.col[h]] = sys[h]; t.dirty = true; } });
-    var edited = Number(props.getProperty('edit_' + t.name + '_' + (hit.i + 2)) || 0);
-    if (edited < recent && rec.do_not_contact && t.col['Do not contact'] !== undefined && !v[t.col['Do not contact']]) { v[t.col['Do not contact']] = 'Yes'; t.dirty = true; }
+    Object.keys(sys).forEach(function (h) { setCell_(t, v, row, h, sys[h]); });
+    var edited = Number(props.getProperty('edit_' + t.name + '_' + row) || 0);
+    if (studioWins_(rec, edited)) {
+      Object.keys(LEAD_BACK).forEach(function (h) {
+        var x = rec[LEAD_BACK[h]];
+        setCell_(t, v, row, h, LEAD_BACK[h] === 'do_not_contact' ? (x ? 'Yes' : '') : (x == null ? '' : x));
+      });
+    } else if (edited < recent && rec.do_not_contact && t.col['Do not contact'] !== undefined && !v[t.col['Do not contact']]) {
+      setCell_(t, v, row, 'Do not contact', 'Yes');
+    }
   });
-  ts.forEach(function (t) { if (t.dirty) t.sheet.getRange(2, 1, t.values.length, t.head.length).setValues(t.values); });
 
   // Rows whose tab changed in the sheet (renamed tab, cut/paste): update the LMS, don't move them.
   var byT = {};
   fixes.forEach(function (h) { (byT[h.t.name] = byT[h.t.name] || { t: h.t, rows: [] }).rows.push(h.i + 2); });
-  Object.keys(byT).forEach(function (n) { var t = table_(byT[n].t.sheet); if (t) push_(t, byT[n].rows); });
+  Object.keys(byT).forEach(function (n) { var t = table_(byT[n].t.sheet); if (t) push_(t, byT[n].rows, []); });
 
   // Rows whose lead is gone (merged into another row, or deleted in Studio), and rows moving tabs.
   var drop = [];
@@ -303,6 +320,22 @@ function pullSchools_(t, schools) {
 function syncAll() {
   var ts = tables_();
   if (ts.length && ts[0].kind === 'schools') return pull();   // LMS is the main record: never bulk-push old sheet values
-  ts.forEach(function (t) { var rows = []; for (var r = 2; r <= t.last; r++) rows.push(r); push_(t, rows); });
+  // Leads last written by Studio keep the Studio values (touched = none); the pull then writes them in.
+  ts.forEach(function (t) { var rows = []; for (var r = 2; r <= t.last; r++) rows.push(r); push_(t, rows, []); });
   pull();
+}
+
+// ── Lead write-back helpers (Studio → sheet) ────────────────────────────────
+function cellText_(x) { return x instanceof Date ? Utilities.formatDate(x, 'Asia/Kolkata', 'yyyy-MM-dd') : String(x === null || x === undefined ? '' : x).trim(); }
+
+// One cell, only when it differs (formulas and formatting elsewhere in the row stay as they are).
+function setCell_(t, v, row, h, value) {
+  if (t.col[h] === undefined || cellText_(v[t.col[h]]) === cellText_(value)) return;
+  v[t.col[h]] = value;
+  t.sheet.getRange(row, t.col[h] + 1).setValue(value);
+}
+
+// Studio wrote last, and nobody typed in this row after that.
+function studioWins_(rec, editedAt) {
+  return rec.updated_source === 'studio' && !(editedAt && editedAt >= Date.parse(rec.updated_at));
 }
