@@ -838,3 +838,10 @@ do $$ begin perform public.complete_onboarding('student', 'X', null, 8::smallint
   p_school_pick => '5c000000-0000-0000-0000-000000000099'); raise exception 'Q57x FAIL';
 exception when others then if sqlerrm like 'Q57%' then raise; end if; raise notice 'Q57 pass: %', sqlerrm; end $$;
 reset role;
+-- Duplicate logins
+reset role;
+select set_config('request.jwt.claim.sub', '33333333-3333-3333-3333-333333333333', false);
+select public.admin_mark_duplicate_account('5c000000-0000-0000-0000-0000000000a2', '5c000000-0000-0000-0000-0000000000a1');
+select 'Q58 duplicate login is left out of analytics' t,
+  not exists (select 1 from public.student_score_rows(null, 30) where student_id = '5c000000-0000-0000-0000-0000000000a2')
+  and exists (select 1 from public.student_score_rows(null, 30) where student_id = '5c000000-0000-0000-0000-0000000000a1') as pass;
