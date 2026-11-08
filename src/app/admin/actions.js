@@ -287,3 +287,48 @@ export async function importLeads(rows, source) {
   revalidatePath("/admin/pipeline", "layout");
   return { ok: true, data };
 }
+
+// ── School outreach (outreach_schools; the School Outreach sheet syncs the same rows) ──
+
+async function outreach(fn) {
+  const supabase = await createClient();
+  const { error } = await fn(supabase);
+  if (error) return { ok: false, error: error.message.includes("row-level security") ? "Only an admin can do this. Sign in with your admin account." : error.message };
+  revalidatePath("/admin/outreach");
+  return { ok: true };
+}
+const outreachFields = (fd) => ({
+  name: str(fd, "name"),
+  area: str(fd, "area"),
+  contact: str(fd, "contact"),
+  phone: str(fd, "phone"),
+  status: str(fd, "status"),
+  next_step: str(fd, "next_step"),
+  next_date: str(fd, "next_date"),
+  notes: str(fd, "notes"),
+});
+
+export async function saveOutreachSchool(_, fd) {
+  const row = outreachFields(fd);
+  if (!row.name) return { ok: false, error: "Enter the school name." };
+  const id = str(fd, "id");
+  return outreach((s) => (id ? s.from("outreach_schools").update(row).eq("id", id) : s.from("outreach_schools").insert(row)));
+}
+
+// kind = "call" | "visit": bumps the counter and adds a dated line to the history.
+export async function logOutreach(id, kind, note) {
+  if (!["call", "visit"].includes(kind)) return { ok: false, error: "Unknown activity." };
+  return outreach(async (s) => {
+    const { data, error } = await s.from("outreach_schools").select("calls, visits, history").eq("id", id).single();
+    if (error) return { error };
+    const day = new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short" });
+    const line = `${day}: ${kind}${note?.trim() ? ` – ${note.trim().slice(0, 200)}` : ""}`;
+    const history = [line, data.history].filter(Boolean).join("\n").slice(0, 4000);
+    const col = kind === "call" ? "calls" : "visits";
+    return s.from("outreach_schools").update({ [col]: data[col] + 1, history }).eq("id", id);
+  });
+}
+
+export async function deleteOutreachSchool(id) {
+  return outreach((s) => s.from("outreach_schools").delete().eq("id", id));
+}

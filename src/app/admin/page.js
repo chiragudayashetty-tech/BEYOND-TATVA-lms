@@ -16,6 +16,7 @@ const sections = [
   { href: "/admin/enrollments", icon: UserCheck, title: "Enrollments", body: "Website payments, manual enrollments and refunds" },
   { href: "/admin/people", icon: School, title: "Schools and people", body: "Schools, join codes, classes, teachers and students" },
   { href: "/admin/pipeline", icon: Contact, title: "Pipeline", body: "Leads to paid: who signed in, watched Module 0 and bought" },
+  { href: "/admin/outreach", icon: School, title: "School outreach", body: "Schools to approach: calls, visits and the next follow-up" },
   { href: "/admin/automations", icon: Workflow, title: "Automations", body: "Reminders, emails, WhatsApp and Sheets sync" },
 ];
 
