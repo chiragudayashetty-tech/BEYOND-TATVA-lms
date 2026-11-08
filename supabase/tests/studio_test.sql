@@ -666,20 +666,20 @@ select 'E12 snapshot follows the link' t,
 
 -- ── Tabs and duplicate merge ─────────────────────────────────────────────────
 reset role;
-select 'E13 website lead saved' t, public.record_lead('web-merge-1', '9845077777', 'loki', 'Parent', null, 9::smallint) = 'saved' as pass;
+select 'E13 website lead saved' t, public.record_lead('web-merge-1', '9845077779', 'loki', 'Parent', null, 9::smallint) = 'saved' as pass;
 select 'E13b and lands in the Website tab' t, public.lead_tab(tab, source, school_name) = 'Website' as pass from public.leads where reference = 'web-merge-1';
 select 'E14 sheet row in a school tab with same phone links to it (no copy)' t,
-  r -> 0 ->> 'result' = 'matched' and (select count(*) from public.leads where phone = '+919845077777') = 1 as pass
-  from (select public.sheet_upsert_leads('[{"row":2,"tab":"Durga EMS","student":"Kiran","phone":"9845077777"}]') r) x;
+  r -> 0 ->> 'result' = 'matched' and (select count(*) from public.leads where phone = '+919845077779') = 1 as pass
+  from (select public.sheet_upsert_leads('[{"row":2,"tab":"Durga EMS","student":"Kiran","phone":"9845077779"}]') r) x;
 select 'E15 matched lead moved to the school tab' t,
   public.lead_tab(tab, source, school_name) = 'Durga EMS' and student_name = 'Kiran' and school_name = 'Durga EMS' as pass
-  from public.leads where phone = '+919845077777';
+  from public.leads where phone = '+919845077779';
 select 'E16 a later website copy is merged away' t,
-  public.record_lead('web-merge-2', '9845077777', 'website', 'Parent 2', 'Kiran') = 'saved'
-  and public.sheet_merge_duplicates() >= 1 and (select count(*) from public.leads where phone = '+919845077777') = 1 as pass;
+  public.record_lead('web-merge-2', '9845077779', 'website', 'Parent 2', 'Kiran') = 'saved'
+  and public.sheet_merge_duplicates() >= 1 and (select count(*) from public.leads where phone = '+919845077779') = 1 as pass;
 select 'E17 merged lead keeps the school tab and fills the parent name' t,
   public.lead_tab(tab, source, school_name) = 'Durga EMS' and parent_name = 'Parent' as pass
-  from public.leads where phone = '+919845077777';
+  from public.leads where phone = '+919845077779';
 select 'E18 two siblings saved' t, public.record_lead('sib-1', '9845088888', 'workshop', null, 'Asha', 8::smallint, 'SRVK') = 'saved'
   and public.record_lead('sib-2', '9845088888', 'workshop', null, 'Ravi', 9::smallint, 'SRVK') = 'saved' as pass;
 select 'E18b merge leaves siblings alone' t, public.sheet_merge_duplicates() = 0 as pass;
@@ -804,3 +804,37 @@ select 'Z15 typed school name is used' t, (select school = 'Typed School' from p
 select 'Z16 a student with no activity scores 0' t,
   (select bool_and(score = 0) from public.student_score_rows(null, 30) r where lessons_started = 0 and quiz_attempts = 0
      and checkpoints_answered = 0 and assignments_submitted = 0 and resources_opened = 0 and active_days_30 = 0) as pass;
+
+-- ── School from leads + signup school list ──────────────────────────────────
+reset role;
+insert into public.schools (id, name, code, teacher_code, show_at_signup)
+  values ('5c000000-0000-0000-0000-000000000001', 'Kodi School', 'KODI-1', 'KODI-T1', true);
+select public.record_lead('sl-1', '9822200001', 'workshop', 'Lead Parent', 'Asha Rao', 9::smallint, 'kodi school');
+insert into auth.users (id, email) values ('5c000000-0000-0000-0000-0000000000a1', 'asha@x.in'), ('5c000000-0000-0000-0000-0000000000a2', 'picker@x.in');
+set role authenticated; select pg_temp.as_user('5c000000-0000-0000-0000-0000000000a1');
+select public.complete_onboarding('student', 'Asha R', null, 9::smallint, 'Mum', '9822200001', 'Kodi skool', p_consent => true);
+reset role;
+select 'Q51 signup links the lead with the same parent phone' t,
+  (select student_id = '5c000000-0000-0000-0000-0000000000a1' from public.leads where reference = 'sl-1') as pass;
+select 'Q52 student gets the real school from the lead' t,
+  (select school_id = '5c000000-0000-0000-0000-000000000001' from public.profiles where id = '5c000000-0000-0000-0000-0000000000a1') as pass;
+select 'Q53 filled lead fields are not overwritten' t,
+  (select student_name = 'Asha Rao' and parent_name = 'Lead Parent' from public.leads where reference = 'sl-1') as pass;
+set role authenticated; select pg_temp.as_user('5c000000-0000-0000-0000-0000000000a2');
+select 'Q54 signup list shows only listed schools' t, (select array_agg(name) = array['Kodi School'] from public.signup_schools()) as pass;
+select public.complete_onboarding('student', 'Picker', null, 8::smallint, 'Dad', '9822200002', null, p_consent => true,
+  p_school_pick => '5c000000-0000-0000-0000-000000000001');
+reset role;
+select 'Q55 picking a listed school sets it without class enrollment' t,
+  (select school_id = '5c000000-0000-0000-0000-000000000001' from public.profiles where id = '5c000000-0000-0000-0000-0000000000a2')
+  and not exists (select 1 from public.enrollments where student_id = '5c000000-0000-0000-0000-0000000000a2') as pass;
+select public.record_lead('sl-2', '9822200002', 'website');
+select 'Q56 a lead added later links and fills its blanks' t,
+  (select student_id = '5c000000-0000-0000-0000-0000000000a2' and student_name = 'Picker' and parent_name = 'Dad' and grade = 8
+       from public.leads where reference = 'sl-2') as pass;
+reset role; insert into auth.users (id, email) values ('5c000000-0000-0000-0000-0000000000a3', 'nolist@x.in');
+set role authenticated; select pg_temp.as_user('5c000000-0000-0000-0000-0000000000a3');
+do $$ begin perform public.complete_onboarding('student', 'X', null, 8::smallint, 'D', '9822200003', null, p_consent => true,
+  p_school_pick => '5c000000-0000-0000-0000-000000000099'); raise exception 'Q57x FAIL';
+exception when others then if sqlerrm like 'Q57%' then raise; end if; raise notice 'Q57 pass: %', sqlerrm; end $$;
+reset role;
