@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { ArrowRight, CircleCheck, KeyRound, Plus } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { createClass, createSchool, deleteStudent, exportStudent, grantAccess, moveAccess, setTeacherRevoked } from "../actions";
 
 function Status({ state }) {
@@ -20,6 +21,37 @@ export function NewSchool() {
       <button disabled={pending} className="btn-primary"><Plus className="h-4 w-4" /> {pending ? "Adding…" : "Add school"}</button>
       <div className="sm:col-span-3"><Status state={state} /></div>
     </form>
+  );
+}
+
+export function SignupSchoolToggle({ schoolId, schoolName, initialShow, statusAvailable }) {
+  const [show, setShow] = useState(initialShow);
+  const [pending, start] = useTransition();
+  const [error, setError] = useState("");
+
+  function toggle() {
+    const next = !show;
+    setShow(next);
+    setError("");
+    start(async () => {
+      const { error: updateError } = await createClient().rpc("admin_set_signup_school", { p_school: schoolId, p_show: next });
+      if (updateError) {
+        setShow(!next);
+        setError("Couldn’t save. Try again.");
+      }
+    });
+  }
+
+  if (!statusAvailable) return <span className="text-xs text-warning">Signup status unavailable</span>;
+  return (
+    <div className="min-w-36">
+      <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
+        <input type="checkbox" role="switch" checked={show} onChange={toggle} disabled={pending} aria-label={`Show ${schoolName} at signup`} className="h-5 w-5 accent-[var(--primary)]" />
+        <span>Show at signup</span>
+        {pending && <span className="text-xs text-muted">Saving…</span>}
+      </label>
+      {error && <p role="alert" className="text-xs text-danger">{error}</p>}
+    </div>
   );
 }
 
