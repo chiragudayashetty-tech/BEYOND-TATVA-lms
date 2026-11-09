@@ -48,6 +48,8 @@ export async function saveModule(_, fd) {
     release_at: istToIso(str(fd, "release")),
     is_free: fd.get("free") === "on",
     thumbnail_url: str(fd, "thumb"),
+    batch_week: num(fd, "week") || null,
+    batch1_week: num(fd, "week1") || null,
   };
   if (!row.title) return { ok: false, error: "Give the module a title." };
   const id = str(fd, "id");
