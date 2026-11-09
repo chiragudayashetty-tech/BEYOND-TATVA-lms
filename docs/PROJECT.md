@@ -1,6 +1,6 @@
 # Beyond Tatva LMS: project status
 
-_Maintained by Claude (lead). Last updated: 2026-11-01._
+_Maintained by Claude (lead). Last updated: 2026-11-09._
 
 AI course for Grades 8–10 in Udupi. **Payments happen on the website** (beyondtatva.in, separate repo
 `BEYOND-TATVA-web`); this LMS is for learning. Students sign in, watch weekly modules, take quizzes and
@@ -17,7 +17,10 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Login | Email link (built-in sender: testing only), Google. Phone hidden until DLT. |
 | Onboarding | One login per child: the student or a parent sets up the student account (parent WhatsApp required, child phone optional, consent tick). Teachers: teacher code. No parent accounts or codes. |
 | Course | 1 course, Module 0 free + 6 weekly modules (`release_at`), access via key/payment/admin. |
-| Video | YouTube (tracked, with fallback), Drive/Vimeo/Bunny embeds, MP4. 90% watched = complete. |
+| Video | YouTube (tracked, with fallback), Drive/Vimeo/Bunny embeds, MP4. 90% watched = complete. Bunny progress is tracked for real (saved every 15 s) and lessons resume where the student stopped (2026-11-08). |
+| Analytics v2 | Student scorecards, school roll-up (real school from linked workshop leads, Module 0 starts = Module 0 lessons only), PDF view tracking, honest scores from real progress (2026-11-08). |
+| Duplicate accounts | Duplicate student logins are marked so analytics count each child once; Studio duplicate review merges into a main account, with undo (2026-11-08). |
+| Signup school list | Sign-up offers a list of schools (2026-11-08). |
 | Studio | Content, Quizzes, Assignments (marking queue), Enrollments, Access keys, People. |
 | Quizzes | One per module, server-side marking, answers never sent to the browser. |
 | Assignments | Text, link, photos/PDF (private bucket); mark, feedback, send back. |
@@ -53,7 +56,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
   passing a course id over using the `COURSE_ID` constant in new code. The database (access, keys,
   enrollments, quizzes, assignments) is already per course; the screens assume one course today.
 
-**Live database:** migrations through `20261104000003_coupons` (applied 2026-11-04 after Chirag's "apply 13").
+**Live database:** all migrations on `main` through `20261108000011_duplicate_review` are applied (checked 2026-11-09). Nothing waiting for "apply".
 
 ## Road to launch (2026-11-02, timed on real pace: ~5–6 PRs/hour, migration PR 10–20 min)
 | Phase | What | Who | Time |
@@ -69,8 +72,8 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - **Phase 2 plan and Codex prompt: `docs/PHASE-2.md`** (2026-11-02).
 - **Backups:** nightly encrypted dump via GitHub Actions, 30 days: `docs/BACKUPS.md`. Needs Chirag's 2 GitHub secrets.
 - **Funnel: see `docs/FUNNEL-PLAN.md`.** Phase 1 approved 2026-11-01 and in progress. Payments (Razorpay KYC on hold) and WhatsApp messaging come later.
-- Open PRs at hand-off: #9 (simple homepage), #10 (Codex PWA, approved by lead: limit to phones later),
-  #11 (project notes).
+- No open PRs (2026-11-09). ~35 stale branches from 2026-10-31 to 11-05 remain on GitHub (superseded work); clean up later.
+- **Next: Phase D testing** — real phones with 2–3 families on signup → lesson → progress, exercising the 2026-11-08 progress/resume and duplicate features.
 
 ## Done 2026-11-01
 - `learn.beyondtatva.in` live (GoDaddy CNAME), Supabase Site URL + redirect, Google OAuth origin, Google app **In production**
