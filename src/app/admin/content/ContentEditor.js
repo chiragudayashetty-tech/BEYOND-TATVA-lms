@@ -116,7 +116,9 @@ function ModuleEditor({ m, videos, files, open, onToggle }) {
           <form action={action} className="grid gap-3 sm:grid-cols-2">
             <input type="hidden" name="id" value={m.id} />
             <Field label="Module title"><input name="title" className="input" defaultValue={m.title} required /></Field>
-            <Field label="Premiere (IST)" hint="Students can watch from this moment."><input name="release" type="datetime-local" className="input" defaultValue={toIstInput(m.release)} /></Field>
+            <Field label="Content ready from (IST)" hint="Modules with a week open on each batch's Sunday 10 AM, never before this. 2099 = Coming soon."><input name="release" type="datetime-local" className="input" defaultValue={toIstInput(m.release)} /></Field>
+            <Field label="Week in the course" hint="1–5. Empty = same date for everyone (Module 0)."><input name="week" type="number" min="1" max="52" className="input" defaultValue={m.week ?? ""} /></Field>
+            <Field label="Week for Batch 1" hint="Only if Batch 1 gets a different order. Empty = same as above."><input name="week1" type="number" min="1" max="52" className="input" defaultValue={m.week1 ?? ""} /></Field>
             <div className="sm:col-span-2"><Field label="Short description"><input name="blurb" className="input" defaultValue={m.blurb} /></Field></div>
             <Field label="Thumbnail image URL"><input name="thumb" className="input" defaultValue={m.thumb ?? ""} placeholder="https://…" /></Field>
             <label className="flex items-center gap-3 self-end rounded-xl border border-border bg-surface px-3 py-2.5 text-sm">

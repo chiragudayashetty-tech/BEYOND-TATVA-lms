@@ -7,7 +7,7 @@ import { COURSE_ID, buildCourse } from "./catalog";
 
 const CATALOG = {
   course: "id, title, tagline, description, grade, hero_url, price_inr, list_price_inr",
-  chapters: "id, title, blurb, position, release_at, is_free, thumbnail_url",
+  chapters: "id, title, blurb, position, release_at, is_free, thumbnail_url, batch_week, batch1_week",
   lessons: "id, chapter_id, title, description, position, minutes",
 };
 
@@ -43,7 +43,13 @@ export const getCourse = cache(async (courseId = COURSE_ID) => {
     ? supabase.from("lesson_progress").select("lesson_id, seconds_watched, last_position_seconds, completed_at, updated_at").eq("student_id", user.id)
     : Promise.resolve({ data: [] });
   const catalogP = live ? loadCatalog(supabase, courseId) : cachedCatalog(courseId).catch(() => loadCatalog(supabase, courseId));
-  const [{ course, chapters, lessons }, { data: rows }] = await Promise.all([catalogP, progress]);
+  // Weekly batches: each student's own module dates (their batch decides when a module opens).
+  const releases = user && user.id !== "preview" && !live
+    ? supabase.rpc("my_module_releases", { p_course: courseId })
+    : Promise.resolve({ data: [] });
+  const [{ course, chapters: baseChapters, lessons }, { data: rows }, { data: mine }] = await Promise.all([catalogP, progress, releases]);
+  const ownDate = new Map((mine ?? []).map((r) => [r.chapter_id, r.release_at]));
+  const chapters = baseChapters.map((ch) => (ownDate.has(ch.id) ? { ...ch, release_at: ownDate.get(ch.id) } : ch));
   const progressRows = rows ?? [];
   const done = new Set(progressRows.filter((r) => r.completed_at).map((r) => r.lesson_id));
   return buildCourse(course, chapters, lessons, done, progressRows);

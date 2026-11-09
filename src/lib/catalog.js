@@ -37,6 +37,8 @@ export function buildCourse(courseRow, chapterRows, lessonRows, done = new Set()
         release: ch.release_at,
         free: ch.is_free,
         thumb: ch.thumbnail_url,
+        week: ch.batch_week ?? null,
+        week1: ch.batch1_week ?? null,
         lessons,
         mins: lessons.reduce((a, l) => a + l.mins, 0),
         progress: lessons.length ? Math.round((doneCount / lessons.length) * 100) : 0,

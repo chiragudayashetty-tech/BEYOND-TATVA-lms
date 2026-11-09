@@ -856,3 +856,43 @@ set role authenticated; select pg_temp.as_user('5c000000-0000-0000-0000-00000000
 do $$ begin perform public.admin_duplicate_candidates(); raise exception 'Q62x FAIL';
 exception when others then if sqlerrm like 'Q62%' then raise; end if; raise notice 'Q62 pass: %', sqlerrm; end $$;
 reset role;
+-- Weekly batches
+reset role;
+insert into auth.users (id, email) values ('ba000000-0000-0000-0000-000000000001', 'b1@x.in'),
+  ('ba000000-0000-0000-0000-000000000002', 'b1late@x.in'), ('ba000000-0000-0000-0000-000000000003', 'b2@x.in');
+insert into public.profiles (id, role, full_name) values ('ba000000-0000-0000-0000-000000000001', 'teacher', 'Batch kid'), ('ba000000-0000-0000-0000-000000000002', 'teacher', 'Batch kid'),
+  ('ba000000-0000-0000-0000-000000000003', 'teacher', 'Batch kid') on conflict do nothing;
+delete from public.course_access where student_id::text like 'ba000000%';
+insert into public.course_access (student_id, course_id, source, granted_at) values
+  ('ba000000-0000-0000-0000-000000000001', 'ai-for-students', 'payment', '2026-11-07 20:44 Asia/Kolkata'),
+  ('ba000000-0000-0000-0000-000000000002', 'ai-for-students', 'payment', '2026-11-14 23:30 Asia/Kolkata'),
+  ('ba000000-0000-0000-0000-000000000003', 'ai-for-students', 'payment', '2026-11-15 09:00 Asia/Kolkata');
+update public.chapters set release_at = '2026-11-01' where course_id = 'ai-for-students' and position between 1 and 5;
+create function pg_temp.rel(u text, pos int) returns timestamptz language sql as $$
+  select public.chapter_release_for(ch.id, u::uuid) from public.chapters ch where ch.course_id = 'ai-for-students' and ch.position = pos $$;
+select 'K1 access 7 Nov is Batch 1, Module 1 on Sun 15 Nov 10:00 IST' t,
+  public.batch_number_for('ai-for-students', '2026-11-07 20:44 Asia/Kolkata') = 1
+  and pg_temp.rel('ba000000-0000-0000-0000-000000000001', 1) = '2026-11-15 10:00 Asia/Kolkata' as pass;
+select 'K2 Batch 1 order is 1, 3, 2, 4, 5' t,
+  pg_temp.rel('ba000000-0000-0000-0000-000000000001', 3) = '2026-11-22 10:00 Asia/Kolkata'
+  and pg_temp.rel('ba000000-0000-0000-0000-000000000001', 2) = '2026-11-29 10:00 Asia/Kolkata'
+  and pg_temp.rel('ba000000-0000-0000-0000-000000000001', 5) = '2026-12-13 10:00 Asia/Kolkata' as pass;
+select 'K3 access Saturday night is still Batch 1' t,
+  pg_temp.rel('ba000000-0000-0000-0000-000000000002', 1) = '2026-11-15 10:00 Asia/Kolkata' as pass;
+select 'K4 access Sunday 15 Nov is Batch 2, modules in order from 22 Nov' t,
+  public.batch_number_for('ai-for-students', '2026-11-15 09:00 Asia/Kolkata') = 2
+  and pg_temp.rel('ba000000-0000-0000-0000-000000000003', 1) = '2026-11-22 10:00 Asia/Kolkata'
+  and pg_temp.rel('ba000000-0000-0000-0000-000000000003', 2) = '2026-11-29 10:00 Asia/Kolkata'
+  and pg_temp.rel('ba000000-0000-0000-0000-000000000003', 3) = '2026-12-06 10:00 Asia/Kolkata' as pass;
+update public.chapters set release_at = '2099-12-31' where course_id = 'ai-for-students' and position = 4;
+select 'K5 a Coming soon module stays closed whatever the batch' t,
+  pg_temp.rel('ba000000-0000-0000-0000-000000000001', 4) = '2099-12-31' as pass;
+select 'K6 Module 0 keeps one date for everyone' t,
+  pg_temp.rel('ba000000-0000-0000-0000-000000000003', 0) = (select release_at from public.chapters where course_id = 'ai-for-students' and position = 0) as pass;
+set role authenticated; select pg_temp.as_user('ba000000-0000-0000-0000-000000000003');
+select 'K7 student cannot open a module before their batch date' t,
+  not public.can_open_chapter((select id from public.chapters where course_id = 'ai-for-students' and position = 1))
+  and (select count(*) = (select count(*) from public.chapters where course_id = 'ai-for-students') from public.my_module_releases('ai-for-students')) as pass;
+do $$ begin perform public.admin_student_batches('ai-for-students'); raise exception 'K8x FAIL';
+exception when others then if sqlerrm like 'K8%' then raise; end if; raise notice 'K8 pass: %', sqlerrm; end $$;
+reset role;
