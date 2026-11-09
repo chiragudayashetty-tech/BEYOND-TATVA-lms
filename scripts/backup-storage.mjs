@@ -7,7 +7,8 @@ import { dirname, join } from "node:path";
 const url = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 if (!url || !key) { console.error("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY"); process.exit(1); }
-const headers = { authorization: `Bearer ${key}`, apikey: key };
+// New-style secret keys (sb_secret_…) go only in the apikey header; old service_role JWTs (eyJ…) also as Bearer.
+const headers = key.startsWith("eyJ") ? { authorization: `Bearer ${key}`, apikey: key } : { apikey: key };
 const BUCKETS = ["submissions", "payment-proofs", "module-resources", "newsletters"];
 
 async function list(bucket, prefix) {
