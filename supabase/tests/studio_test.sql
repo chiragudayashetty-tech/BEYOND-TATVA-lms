@@ -406,6 +406,8 @@ exception when others then if sqlerrm like 'B7%' then raise; end if; raise notic
 reset role;
 
 -- ── Workshops ────────────────────────────────────────────────────────────────
+-- Workshop sign-up is closed since 2026-11-09 (U4); re-open it here only to keep testing the old logic.
+grant execute on function public.get_workshop(text), public.register_workshop(text, text, int, text, text, boolean) to anon, authenticated;
 set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
 insert into public.workshops (slug, title, starts_at, venue, seats, published) values
   ('udupi-ai-day', 'AI Day', now() + interval '7 days', 'Town Hall', 2, true),
@@ -910,26 +912,25 @@ insert into public.otp_sends (phone, sent_at) select '+919845022222', now() - in
 select 'Y14 OTP 6th send in an hour refused' t, public.otp_send_allowed('9845022222') = 'hourly_limit' as pass;
 select 'Y15 other phone unaffected' t, public.otp_send_allowed('9845033333') = 'ok' as pass;
 reset role;
--- Upload and sign-up limits (2026-11-09 review)
+-- Upload limits and closed workshops (2026-11-09)
 reset role;
 insert into auth.users (id, email) values ('cc000000-0000-0000-0000-000000000001', 'up@x.in');
 insert into storage.objects (bucket_id, name)
-  select 'submissions', 'cc000000-0000-0000-0000-000000000001/asg1/f' || g || '.jpg' from generate_series(1, 10) g;
+  select 'submissions', 'cc000000-0000-0000-0000-000000000001/asg1/f' || g || '.jpg' from generate_series(1, 15) g;
 set role authenticated; select pg_temp.as_user('cc000000-0000-0000-0000-000000000001');
-select 'U1 11th file in one assignment is refused, other assignment still fine' t,
-  not public.submission_upload_allowed('cc000000-0000-0000-0000-000000000001/asg1/f11.jpg')
+select 'U1 16th file in one assignment is refused, other assignment still fine' t,
+  not public.submission_upload_allowed('cc000000-0000-0000-0000-000000000001/asg1/f16.jpg')
   and public.submission_upload_allowed('cc000000-0000-0000-0000-000000000001/asg2/f1.jpg') as pass;
-do $$ begin insert into storage.objects (bucket_id, name) values ('submissions', 'cc000000-0000-0000-0000-000000000001/asg1/f11.jpg');
+do $$ begin insert into storage.objects (bucket_id, name) values ('submissions', 'cc000000-0000-0000-0000-000000000001/asg1/f16.jpg');
   raise exception 'U2x FAIL';
 exception when others then if sqlerrm like 'U2%' then raise; end if; raise notice 'U2 pass: %', sqlerrm; end $$;
 reset role;
-select set_config('request.jwt.claim.sub', '', false);
-insert into public.workshops (slug, title, starts_at, seats, published, created_by) values ('spam-test', 'Spam test', now() + interval '7 days', 500, true, null);
-insert into public.workshop_registrations (workshop_id, student_name, grade, parent_name, parent_phone, consent_at)
-  select (select id from public.workshops where slug = 'spam-test'), 'Kid', 9, 'Parent', '+9198450' || lpad(g::text, 5, '0'), now()
-  from generate_series(1, 40) g;
+insert into storage.objects (bucket_id, name)
+  select 'submissions', 'cc000000-0000-0000-0000-000000000001/a' || g || '/f.jpg' from generate_series(3, 47) g;
+select 'U3 60 files in total: no more anywhere' t,
+  not public.submission_upload_allowed('cc000000-0000-0000-0000-000000000001/new/f.jpg') as pass;
+revoke execute on function public.register_workshop(text, text, int, text, text, boolean) from anon, authenticated;
 set role anon;
-do $$ begin perform public.register_workshop('spam-test', 'Kid', 9, 'Parent', '9845099999', true); raise exception 'U3x FAIL';
-exception when others then if sqlerrm like 'U3%' or sqlerrm not like 'Lots of sign-ups%' then raise exception 'U3 FAIL %', sqlerrm; end if;
-  raise notice 'U3 pass: %', sqlerrm; end $$;
+do $$ begin perform public.register_workshop('test-ws', 'Kid', 9, 'Parent', '9845099999', true); raise exception 'U4x FAIL';
+exception when insufficient_privilege then raise notice 'U4 pass: workshop sign-up closed'; end $$;
 reset role;
