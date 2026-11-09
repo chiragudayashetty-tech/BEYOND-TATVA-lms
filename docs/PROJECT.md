@@ -1,9 +1,9 @@
 # Beyond Tatva LMS: project status
 
-_Maintained by Claude (lead). Last updated: 2026-11-09._
+_Maintained by Claude (lead). Last updated: 2026-11-09 (evening). If this file and the code disagree, the code on `main` wins: tell Claude._
 
-AI course for Grades 8–10 in Udupi. **Payments happen on the website** (beyondtatva.in, separate repo
-`BEYOND-TATVA-web`); this LMS is for learning. Students sign in, watch weekly modules, take quizzes and
+AI course for Grades 8–10 in Udupi. The website (beyondtatva.in, separate repo `BEYOND-TATVA-web`) markets
+and sells; this LMS is for learning and **also takes payment itself on `/unlock` (Razorpay)**. Students sign in, watch weekly modules, take quizzes and
 hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 
 ## Live
@@ -16,8 +16,9 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 |---|---|
 | Login | Email link (built-in sender: testing only), Google. Phone hidden until DLT. |
 | Onboarding | One login per child: the student or a parent sets up the student account (parent WhatsApp required, child phone optional, consent tick). Teachers: teacher code. No parent accounts or codes. |
-| Course | 1 course, Module 0 free + 6 weekly modules (`release_at`), access via key/payment/admin. |
-| Video | YouTube (tracked, with fallback), Drive/Vimeo/Bunny embeds, MP4. 90% watched = complete. Bunny progress is tracked for real (saved every 15 s) and lessons resume where the student stopped (2026-11-08). |
+| Course | 1 course, Module 0 free (one fixed date) + paid modules, access via key/payment/admin. |
+| Weekly batches | (2026-11-09) A student's batch = first Sunday 10:00 IST after they got course access; everyone before 15 Nov 2026 is Batch 1. Each paid module has a week (1–5) and opens on that batch Sunday. Batch 1 order: modules 1, 3, 2, 4, 5. Studio → Content shows each module's week and Batch 1 unlock date. |
+| Video | YouTube (tracked, with fallback), Drive/Vimeo/Bunny embeds, MP4. 90% watched = complete. Bunny progress is tracked for real (saved every 15 s) and lessons resume where the student stopped (2026-11-08). Full screen turns the phone to landscape; iPhone falls back to native video full screen (2026-11-09). |
 | Analytics v2 | Student scorecards, school roll-up (real school from linked workshop leads, Module 0 starts = Module 0 lessons only), PDF view tracking, honest scores from real progress (2026-11-08). |
 | Duplicate accounts | Duplicate student logins are marked so analytics count each child once; Studio duplicate review merges into a main account, with undo (2026-11-08). |
 | Signup school list | Sign-up offers a list of schools (2026-11-08). |
@@ -41,12 +42,12 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 
 ## Decisions (don't reopen without Chirag)
 - **Website and LMS are completely separate.** The website (www.beyondtatva.in) is the front door for
-  everyone: marketing, posts, selling, enrolling. The LMS (planned: learn.beyondtatva.in) is only for
+  everyone: marketing, posts, selling, enrolling. The LMS (learn.beyondtatva.in) is only for
   enrolled students and people who choose "Try Module 0 free". No automatic redirects between them,
   only links the owner places (website: "Log in" / "Start free"; LMS: "Get the full course").
 - **The login is the key** for individual buyers. **School deals use student keys** (2026-11-02): Studio → School keys makes one key per student, redeemed on /unlock.
 - **Teachers** must accept the teacher terms (no sharing/selling, legal consequences) before their code works; Studio can revoke a teacher (2026-11-02).
-- Payments only on the website; the LMS never takes money.
+- ~~Payments only on the website~~ **Superseded:** the LMS takes payment on `/unlock` via Razorpay (see table). The website also sells; both record into the same purchases.
 - Account = the student; parent phone stored for messages; access lives on one account (Studio can move it).
 - Free Module 0 on unlisted YouTube; paid modules move to **Bunny Stream** (signed links), on hold.
 - Phone/WhatsApp login waits for DLT registration.
@@ -56,7 +57,9 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
   passing a course id over using the `COURSE_ID` constant in new code. The database (access, keys,
   enrollments, quizzes, assignments) is already per course; the screens assume one course today.
 
-**Live database:** all migrations on `main` through `20261108000011_duplicate_review` are applied (checked 2026-11-09). Nothing waiting for "apply".
+**Live database (checked 2026-11-09):** every migration on `main` through `20261109000001_weekly_batches` is applied.
+⚠️ Live also has `otp_send_limits` (applied 2026-11-09 14:19 UTC) whose SQL file is **not on `main` or any branch**.
+Claude must add the matching migration file to the repo before any new migration; nobody else touches it.
 
 ## Road to launch (2026-11-02, timed on real pace: ~5–6 PRs/hour, migration PR 10–20 min)
 | Phase | What | Who | Time |
@@ -81,16 +84,10 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - Env vars set (Production): LMS `SUPABASE_SERVICE_ROLE_KEY`, `ENROLLMENT_WEBHOOK_SECRET`; website `ENROLLMENT_WEBHOOK_SECRET`, `LMS_URL`.
 - Leads/pipeline migration applied to Supabase.
 
-## Open at hand-off (2026-11-01)
-- Website (Codex): finish `codex/lead-forwarder` (bump `?v=` cache tags) and `codex/lms-domain`
-  (links/redirects → learn.beyondtatva.in). Then Claude sends a live test lead and checks Pipeline.
-- Website `LMS_URL` env var must be `https://learn.beyondtatva.in`.
-- Close PR #10 (replaced by #14).
-
 ## Waiting on Chirag
 - **Razorpay KYC** (blocks phase B). Vercel Preview secrets (`docs/PREVIEW-SECRETS.md`), `NEXT_PUBLIC_SUPPORT_WHATSAPP` in Vercel.
 - Parent consent text: mention the XP leaderboard (first name + initial; opt-out in Profile).
-- Real Module 0 videos and real premiere dates (Studio → Content).
+- Real Module 0 videos; set each paid module's week in Studio → Content (Batch 1 starts 15 Nov 2026).
 - Website: add the 3 snippets in `docs/website-enrollment.md`.
 
 ## Backlog (owner → task)
@@ -102,9 +99,6 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - Interactive video editor (questions on the video timeline): later.
 
 **Codex (builder: UI tasks, small PRs)**
-1. "Install as app" (PWA): manifest, icons, Android install prompt, iPhone "Add to Home Screen" guide, skippable.
-2. In-app browser warning: detect WhatsApp/Instagram/Facebook browsers on /login and ask to open in Chrome/Safari.
-3. Profile page: make "Edit profile" (name, avatar) work; "Help and support" page with WhatsApp contact.
-4. Loading skeletons (`loading.js`) for /course, /watch, /admin pages.
+- Earlier list (PWA install prompt, in-app browser warning, Profile edit + Help page, loading skeletons) is **done**. No open Codex task: wait for Claude to write the next one.
 
 Codex tasks that need a table, an API route or auth changes: stop and hand back to Claude (Claude builds all SQL/backend).
