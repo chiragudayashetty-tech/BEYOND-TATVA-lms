@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AddEnrollment, ApproveButton, AssignForm, RevokeButton } from "./EnrollmentForms";
 import UpiClaims from "./UpiClaims";
 import Coupons from "./Coupons";
+import MoreNotice from "../MoreNotice";
 
 export const metadata = { title: "Enrollments · Studio · Beyond Tatva" };
 
@@ -13,10 +14,11 @@ const label = { claimed: "Unlocked", pending: "Waiting for sign-in", revoked: "R
 const how = { email: "email", phone: "login phone", parent_phone: "parent phone", admin: "by you" };
 const date = (t) => new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
 
-export default async function EnrollmentsPage() {
+export default async function EnrollmentsPage({ searchParams }) {
+  const show = Math.min(Math.max(Number((await searchParams)?.show) || 500, 500), 5000);
   const supabase = await createClient();
   const [{ data: rows }, { data: students }, { data: upiRows }, { data: coupons }] = await Promise.all([
-    supabase.from("purchases").select("*").order("created_at", { ascending: false }).limit(500),
+    supabase.from("purchases").select("*").order("created_at", { ascending: false }).limit(show + 1),
     supabase.from("profiles").select("id, full_name, guardian_phone").eq("role", "student").order("full_name"),
     supabase.from("upi_claims").select("id, student_id, amount_paise, utr, payer_name, proof_path, coupon_code, created_at").eq("status", "pending").order("created_at"),
     supabase.from("coupons").select("id, code, price_inr, valid_from, valid_until, active").order("created_at", { ascending: false }).limit(20),
@@ -27,12 +29,14 @@ export default async function EnrollmentsPage() {
   const { data: signed } = proofPaths.length ? await supabase.storage.from("payment-proofs").createSignedUrls(proofPaths, 3600) : { data: [] };
   const proofUrl = Object.fromEntries((signed ?? []).map((x) => [x.path, x.signedUrl]));
   const upiClaims = (upiRows ?? []).map((c) => ({ ...c, student: name[c.student_id] ?? "Student", phone: phone[c.student_id], proof: proofUrl[c.proof_path] ?? null }));
-  const list = rows ?? [];
+  const more = (rows ?? []).length > show;
+  const list = (rows ?? []).slice(0, show);
   const count = (st) => list.filter((r) => r.status === st).length;
 
   return (
     <Shell roles={["admin"]}>
       <PageTitle title="Enrollments" subtitle="Everyone who paid. Website payments unlock on their own when the student signs in with the same verified email or phone. If only the parent's phone matches, approve it here." />
+      {more && <MoreNotice shown={show} href={`/admin/enrollments?show=${show * 2}`} what="payments" />}
       <Card title={`UPI payments to check (${upiClaims.length})`} className="mb-6"><UpiClaims claims={upiClaims} /></Card>
       <Card title="Coupons" className="mb-6"><Coupons coupons={coupons ?? []} /></Card>
       <div className="grid gap-6 xl:grid-cols-[1fr_1.6fr]">

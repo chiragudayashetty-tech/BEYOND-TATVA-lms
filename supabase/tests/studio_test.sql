@@ -896,3 +896,28 @@ select 'K7 student cannot open a module before their batch date' t,
 do $$ begin perform public.admin_student_batches('ai-for-students'); raise exception 'K8x FAIL';
 exception when others then if sqlerrm like 'K8%' then raise; end if; raise notice 'K8 pass: %', sqlerrm; end $$;
 reset role;
+-- Upload and sign-up limits (2026-11-09 review)
+reset role;
+insert into auth.users (id, email) values ('cc000000-0000-0000-0000-000000000001', 'up@x.in');
+insert into storage.objects (bucket_id, name)
+  select 'submissions', 'cc000000-0000-0000-0000-000000000001/asg1/f' || g || '.jpg' from generate_series(1, 10) g;
+set role authenticated; select pg_temp.as_user('cc000000-0000-0000-0000-000000000001');
+select 'U1 11th file in one assignment is refused, other assignment still fine' t,
+  not public.submission_upload_allowed('cc000000-0000-0000-0000-000000000001/asg1/f11.jpg')
+  and public.submission_upload_allowed('cc000000-0000-0000-0000-000000000001/asg2/f1.jpg') as pass;
+do $$ begin insert into storage.objects (bucket_id, name) values ('submissions', 'cc000000-0000-0000-0000-000000000001/asg1/f11.jpg');
+  raise exception 'U2x FAIL';
+exception when others then if sqlerrm like 'U2%' then raise; end if; raise notice 'U2 pass: %', sqlerrm; end $$;
+reset role;
+select set_config('request.jwt.claim.sub', '', false);
+insert into public.workshops (slug, title, starts_at, seats, published, created_by) values ('spam-test', 'Spam test', now() + interval '7 days', 500, true, null);
+insert into public.workshop_registrations (workshop_id, student_name, grade, parent_name, parent_phone, consent_at)
+  select (select id from public.workshops where slug = 'spam-test'), 'Kid', 9, 'Parent', '+9198450' || lpad(g::text, 5, '0'), now()
+  from generate_series(1, 40) g;
+set role anon;
+do $$ begin perform public.register_workshop('spam-test', 'Kid', 9, 'Parent', '9845099999', true); raise exception 'U3x FAIL';
+exception when others then if sqlerrm like 'U3%' or sqlerrm not like 'Lots of sign-ups%' then raise exception 'U3 FAIL %', sqlerrm; end if;
+  raise notice 'U3 pass: %', sqlerrm; end $$;
+reset role;
+select 'U4 otp limiter: second code within 60 s is a cooldown' t,
+  public.otp_send_allowed('9845011111') = 'ok' and public.otp_send_allowed('9845011111') = 'cooldown' as pass;
