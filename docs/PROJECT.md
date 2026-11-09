@@ -2,8 +2,8 @@
 
 _Maintained by Claude (lead). Last updated: 2026-11-09._
 
-AI course for Grades 8–10 in Udupi. **Payments happen on the website** (beyondtatva.in, separate repo
-`BEYOND-TATVA-web`); this LMS is for learning. Students sign in, watch weekly modules, take quizzes and
+AI course for Grades 8–10 in Udupi. **Payments happen only in this LMS** (Razorpay on `/unlock`, live). The website (beyondtatva.in, separate repo
+`BEYOND-TATVA-web`) markets and sends people here; it takes no money. Students sign in, watch weekly modules, take quizzes and
 hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 
 ## Live
@@ -46,7 +46,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
   only links the owner places (website: "Log in" / "Start free"; LMS: "Get the full course").
 - **The login is the key** for individual buyers. **School deals use student keys** (2026-11-02): Studio → School keys makes one key per student, redeemed on /unlock.
 - **Teachers** must accept the teacher terms (no sharing/selling, legal consequences) before their code works; Studio can revoke a teacher (2026-11-02).
-- Payments only on the website; the LMS never takes money.
+- Payments only in the LMS (Razorpay on `/unlock`). The website takes no money (Chirag, 2026-11-09).
 - WhatsApp login codes: 1 per minute and 5 per hour per number (`otp_send_allowed`, 2026-11-09); per-IP limits come from Supabase Auth rate limits.
 - Payment, order and enrollment API bodies are capped at 10 KB.
 - Account = the student; parent phone stored for messages; access lives on one account (Studio can move it).
@@ -65,7 +65,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 |---|---|---|---|
 | A | ~~Codex Sprint 1 tasks 4–8~~ **Done 2026-11-02** | Codex → Claude review | |
 | C | ~~CRM notes → bulk enrollment → workshops~~ **Done 2026-11-02**, plus dashboards/insights | Claude (SQL/backend) → Codex (UI) | |
-| B | Website payment → LMS, refunds (`docs/CODEX-PHASE-2.md`) | Codex (website) | ~1–2 h, **after Razorpay KYC** |
+| B | ~~Website payment → LMS~~ Dropped 2026-11-09: payments are live in the LMS only | | |
 | D | **Testing and fixing** (in progress, `docs/TESTING.md`): code freeze; automatic tests; real phones (cheap Android, iPhone, WhatsApp browser, slow 4G) with 2–3 families on the full path; Studio pass; security re-audit; backup restore drill; fix all critical/high | Everyone | ~1 day |
 | Launch | Vercel Pro, Supabase Pro, Resend sender, real Module 0 videos, Razorpay live | Chirag | 1 day |
 Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, interactive video questions, a second course.
@@ -73,7 +73,7 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 ## In planning
 - **Phase 2 plan and Codex prompt: `docs/PHASE-2.md`** (2026-11-02).
 - **Backups:** nightly encrypted dump via GitHub Actions, 30 days: `docs/BACKUPS.md`. Needs Chirag's 2 GitHub secrets.
-- **Funnel: see `docs/FUNNEL-PLAN.md`.** Phase 1 approved 2026-11-01 and in progress. Payments (Razorpay KYC on hold) and WhatsApp messaging come later.
+- **Funnel: see `docs/FUNNEL-PLAN.md`.** Phase 1 approved 2026-11-01 and in progress. Payments are live (LMS only); WhatsApp messaging come later.
 - No open PRs (2026-11-09). ~35 stale branches from 2026-10-31 to 11-05 remain on GitHub (superseded work); clean up later.
 - **Next: Phase D testing** — real phones with 2–3 families on signup → lesson → progress, exercising the 2026-11-08 progress/resume and duplicate features.
 
@@ -90,7 +90,7 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - Close PR #10 (replaced by #14).
 
 ## Waiting on Chirag
-- **Razorpay KYC** (blocks phase B). Vercel Preview secrets (`docs/PREVIEW-SECRETS.md`), `NEXT_PUBLIC_SUPPORT_WHATSAPP` in Vercel.
+Vercel Preview secrets (`docs/PREVIEW-SECRETS.md`), `NEXT_PUBLIC_SUPPORT_WHATSAPP` in Vercel.
 - Parent consent text: mention the XP leaderboard (first name + initial; opt-out in Profile).
 - Real Module 0 videos and real premiere dates (Studio → Content).
 - Website: add the 3 snippets in `docs/website-enrollment.md`.
