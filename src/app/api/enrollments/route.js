@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifySignature } from "@/lib/enrollments";
+import { readLimited } from "@/lib/body";
 
 // Website → LMS: called by beyondtatva.in after a payment succeeds (or is refunded).
 //
@@ -14,7 +15,8 @@ import { verifySignature } from "@/lib/enrollments";
 const str = (v, max = 200) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 
 export async function POST(request) {
-  const raw = await request.text();
+  const raw = await readLimited(request);
+  if (raw === null) return NextResponse.json({ error: "too large" }, { status: 413 });
   const ok = verifySignature(raw, request.headers.get("x-bt-timestamp"), request.headers.get("x-bt-signature"), process.env.ENROLLMENT_WEBHOOK_SECRET);
   if (!ok) return NextResponse.json({ error: "bad signature" }, { status: 401 });
 

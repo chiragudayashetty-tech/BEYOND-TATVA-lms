@@ -16,3 +16,11 @@ test("rejects swapped ids, wrong secret and missing fields", () => {
   assert.equal(paymentSignatureValid("order_1", "pay_1", "", secret), false);
   assert.equal(paymentSignatureValid("order_1", "pay_1", "short", secret), false);
 });
+
+import { readLimited } from "../src/lib/body.js";
+
+test("body limit refuses big requests", async () => {
+  const req = (s) => new Request("http://x", { method: "POST", body: s });
+  assert.equal(await readLimited(req("x".repeat(20)), 10), null);
+  assert.equal(await readLimited(req("hello"), 10), "hello");
+});

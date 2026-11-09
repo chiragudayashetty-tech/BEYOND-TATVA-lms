@@ -896,3 +896,17 @@ select 'K7 student cannot open a module before their batch date' t,
 do $$ begin perform public.admin_student_batches('ai-for-students'); raise exception 'K8x FAIL';
 exception when others then if sqlerrm like 'K8%' then raise; end if; raise notice 'K8 pass: %', sqlerrm; end $$;
 reset role;
+
+-- ── WhatsApp OTP send limits (audit 2026-11-09) ──────────────────────────────
+set role authenticated;
+do $$ begin perform public.otp_send_allowed('9845022222'); raise exception 'Y0 FAIL';
+exception when insufficient_privilege then raise notice 'Y0 pass: students cannot call the OTP limiter'; end $$;
+reset role;
+set role service_role;
+select 'Y12 OTP first send ok' t, public.otp_send_allowed('9845022222') = 'ok' as pass;
+select 'Y13 OTP resend within 60 s refused' t, public.otp_send_allowed('+91 98450 22222') = 'cooldown' as pass;
+update public.otp_sends set sent_at = now() - interval '2 minutes';
+insert into public.otp_sends (phone, sent_at) select '+919845022222', now() - interval '5 minutes' from generate_series(1, 4);
+select 'Y14 OTP 6th send in an hour refused' t, public.otp_send_allowed('9845022222') = 'hourly_limit' as pass;
+select 'Y15 other phone unaffected' t, public.otp_send_allowed('9845033333') = 'ok' as pass;
+reset role;

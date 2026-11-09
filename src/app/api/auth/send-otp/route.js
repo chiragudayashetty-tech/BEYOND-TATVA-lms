@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { otpTemplateMessage, verifyHookSignature, whatsappNumber } from "@/lib/whatsapp-otp";
 
 // Supabase Auth "Send SMS" hook: Supabase makes the code, we deliver it on WhatsApp (Meta Cloud API).
@@ -22,6 +23,13 @@ export async function POST(request) {
   const otp = String(body?.sms?.otp || "");
   if (!to) return fail(400, "Use a 10-digit Indian mobile number.");
   if (!/^\d{4,10}$/.test(otp)) return fail(400, "missing code");
+
+  // Limits (audit 2026-11-09): 1 code per minute, 5 per hour per number. Per-IP limits: Supabase Auth settings.
+  // If the check itself fails we still send, so a database hiccup doesn't block every login.
+  const { data: allowed, error: limitError } = await createAdminClient().rpc("otp_send_allowed", { p_phone: to });
+  if (limitError) console.error("otp limit check failed", limitError.message);
+  else if (allowed === "cooldown") return fail(429, "Please wait a minute before asking for another code.");
+  else if (allowed === "hourly_limit") return fail(429, "Too many codes for this number. Try again in an hour, or use Google or email.");
 
   const token = process.env.WHATSAPP_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
