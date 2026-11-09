@@ -47,7 +47,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
   only links the owner places (website: "Log in" / "Start free"; LMS: "Get the full course").
 - **The login is the key** for individual buyers. **School deals use student keys** (2026-11-02): Studio → School keys makes one key per student, redeemed on /unlock.
 - **Teachers** must accept the teacher terms (no sharing/selling, legal consequences) before their code works; Studio can revoke a teacher (2026-11-02).
-- ~~Payments only on the website~~ **Superseded:** the LMS takes payment on `/unlock` via Razorpay (see table). The website also sells; both record into the same purchases.
+- ~~Payments only on the website~~ **Superseded:** the LMS takes payment on `/unlock` via Razorpay (see table). The website markets; its Enroll buttons send people to `/unlock`.
 - Account = the student; parent phone stored for messages; access lives on one account (Studio can move it).
 - Free Module 0 on unlisted YouTube; paid modules move to **Bunny Stream** (signed links), on hold.
 - Phone/WhatsApp login waits for DLT registration.
