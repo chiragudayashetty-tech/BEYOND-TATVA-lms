@@ -23,6 +23,31 @@ const DEMO_CHECKPOINTS = [
   },
 ];
 
+// Phones: when a lesson video goes full screen, turn it sideways; turn it back on exit.
+// Works for our own player and for YouTube/Bunny/Drive iframes (their full screen is the iframe in our page).
+// Android Chrome supports this; iPhones ignore orientation.lock, but rotate their own video full screen.
+function useLandscapeOnFullscreen() {
+  useEffect(() => {
+    const o = typeof screen !== "undefined" ? screen.orientation : null;
+    if (!o?.lock) return;
+    let locked = false;
+    const onChange = () => {
+      const el = document.fullscreenElement;
+      const isVideo = el && (el.matches?.("video, iframe") || el.querySelector?.("video, iframe"));
+      if (isVideo) o.lock("landscape").then(() => { locked = true; }).catch(() => {});
+      else if (locked) { locked = false; try { o.unlock(); } catch {} }
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    return () => { document.removeEventListener("fullscreenchange", onChange); if (locked) { try { o.unlock(); } catch {} } };
+  }, []);
+}
+
+function enterFullscreen(box, video) {
+  if (document.fullscreenElement) return document.exitFullscreen();
+  if (box?.requestFullscreen) return box.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+  video?.webkitEnterFullscreen?.(); // older iPhones: native full screen, which rotates by itself
+}
+
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const SPEEDS = [1, 1.25, 1.5, 0.75];
 
@@ -153,7 +178,7 @@ function NativePlayer({ src, onAnswer, onProgress, onPauseProgress, startAt = 0 
           <button onClick={() => setMuted(!muted)} aria-label={muted ? "Unmute" : "Mute"} className="grid h-11 w-11 place-items-center rounded-lg hover:bg-white/15">{muted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}</button>
           <span className="ml-1 hidden tabular-nums text-white/80 min-[380px]:inline">{fmt(t)} / {fmt(dur)}</span>
           <button onClick={cycleSpeed} className="ml-auto min-h-11 rounded-lg px-2 text-xs font-semibold hover:bg-white/15">{SPEEDS[speed]}x</button>
-          <button onClick={() => (document.fullscreenElement ? document.exitFullscreen() : box.current?.requestFullscreen?.())} aria-label="Full screen" className="grid h-11 w-11 place-items-center rounded-lg hover:bg-white/15"><Maximize className="h-[18px] w-[18px]" /></button>
+          <button onClick={() => enterFullscreen(box.current, video.current)} aria-label="Full screen" className="grid h-11 w-11 place-items-center rounded-lg hover:bg-white/15"><Maximize className="h-[18px] w-[18px]" /></button>
         </div>
       </div>
     </div>
@@ -362,6 +387,7 @@ function BunnyPlayer({ embed, title, onProgress, onPauseProgress, startAt = 0 })
 // Picks the right player for whatever link the admin pasted.
 // onProgress(seconds, duration) is called while playing, for players that can report it.
 export default function VideoPlayer({ src, title = "Lesson video", onAnswer, onProgress, onPauseProgress, startAt = 0 }) {
+  useLandscapeOnFullscreen();
   if (!src) return <Notice title="Video coming soon" body="This lesson's video hasn't been uploaded yet." />;
   const v = parseVideo(src);
   if (!v) return <Notice icon={TriangleAlert} title="This video link isn't supported" body="Tell your teacher which lesson it is so they can fix the link." />;
