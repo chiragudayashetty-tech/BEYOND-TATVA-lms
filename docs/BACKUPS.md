@@ -4,7 +4,7 @@
 (`public`, `auth`, `storage` schemas), checks the key tables are in it, **encrypts it (AES-256)** and keeps it
 as a workflow artifact for **30 days**. Free. The repo is public, so nothing unencrypted ever leaves the runner.
 
-Uploaded files (since 2026-11-09): a second encrypted artifact `bt-files-<date>` (all Storage buckets via `scripts/backup-storage.mjs`), once Chirag adds GitHub secrets `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; until then the step only warns.
+Uploaded files (since 2026-11-09): a second encrypted artifact `bt-files-<date>` (all Storage buckets via `scripts/backup-storage.mjs`), once Chirag adds GitHub secrets `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (a legacy service-role JWT or a new `sb_secret_…` key both work, 2026-11-09); until then the step only warns.
 Previously not covered: uploaded files themselves (assignment photos/PDFs in Supabase Storage); only their database
 rows. Videos live on YouTube/Bunny. Move to Supabase Pro (daily backups + point-in-time) before scale.
 

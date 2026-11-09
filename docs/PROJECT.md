@@ -1,6 +1,6 @@
 # Beyond Tatva LMS: project status
 
-_Maintained by Claude (lead). Last updated: 2026-11-09 (evening). If this file and the code disagree, the code on `main` wins: tell Claude._
+_Maintained by Claude (lead). Last updated: 2026-11-09 (night). If this file and the code disagree, the code on `main` wins: tell Claude._
 
 AI course for Grades 8–10 in Udupi. **Payments happen only in this LMS** (Razorpay on `/unlock`, live). The website
 (beyondtatva.in, separate repo `BEYOND-TATVA-web`) markets and sends people here; it takes no money. Students sign in, watch weekly modules, take quizzes and
@@ -18,7 +18,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Onboarding | One login per child: the student or a parent sets up the student account (parent WhatsApp required, child phone optional, consent tick). Teachers: teacher code. No parent accounts or codes. |
 | Course | 1 course, Module 0 free (one fixed date) + paid modules, access via key/payment/admin. |
 | Weekly batches | (2026-11-09) A student's batch = first Sunday 10:00 IST after they got course access; everyone before 15 Nov 2026 is Batch 1. Each paid module has a week (1–5) and opens on that batch Sunday. Batch 1 order: modules 1, 3, 2, 4, 5. Studio → Content shows each module's week and Batch 1 unlock date. |
-| Video | YouTube (tracked, with fallback), Drive/Vimeo/Bunny embeds, MP4. 90% watched = complete. Bunny progress is tracked for real (saved every 15 s) and lessons resume where the student stopped (2026-11-08). Full screen turns the phone to landscape; iPhone falls back to native video full screen (2026-11-09). |
+| Video | YouTube (tracked, with fallback), Drive/Vimeo/Bunny embeds, MP4. 90% watched = complete. Bunny progress is tracked for real (saved every 15 s) and lessons resume where the student stopped (2026-11-08). Module and course progress bars count partly watched lessons too (2026-11-09, #128). Full screen turns the phone to landscape; iPhone falls back to native video full screen (2026-11-09). |
 | Analytics v2 | Student scorecards, school roll-up (real school from linked workshop leads, Module 0 starts = Module 0 lessons only), PDF view tracking, honest scores from real progress (2026-11-08). |
 | Duplicate accounts | Duplicate student logins are marked so analytics count each child once; Studio duplicate review merges into a main account, with undo (2026-11-08). |
 | Signup school list | Sign-up offers a list of schools (2026-11-08). |
@@ -82,6 +82,16 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - **Funnel: see `docs/FUNNEL-PLAN.md`.** Phase 1 approved 2026-11-01 and in progress. Payments now run in the LMS (see table); WhatsApp messaging comes later.
 - No open PRs (2026-11-09). ~35 stale branches from 2026-10-31 to 11-05 remain on GitHub (superseded work); clean up later.
 - **Next: Phase D testing** — real phones with 2–3 families on signup → lesson → progress, exercising the 2026-11-08 progress/resume and duplicate features.
+
+## Done 2026-11-09 (PRs #119–#128)
+- **Video:** full screen turns the phone to landscape; iPhone uses native full screen (#120).
+- **Weekly batches:** Studio → Content shows each module's week and Batch 1 unlock date (#119, #121); migration `20261109000001_weekly_batches` live.
+- **Payments:** LMS `/unlock` is the only place to pay; website takes no money (#123). Real ₹ payment tested by Chirag. After paying, `/unlock` does a full page load to `/course`.
+- **Review hardening (#122, #124):** WhatsApp OTP limits (1/min, 5/hour), 10 KB request body caps, Razorpay webhook `/api/razorpay-webhook`, Studio "Show more", nightly backup of uploaded files, load-test script.
+- **Upload limits + cleanup (#125):** 15 files per assignment, 60 per student; removed hand-in files are deleted; `/w/<slug>` workshop sign-up and UPI-screenshot card removed. Migration applied.
+- **Backups (#127):** storage backup script works with the new `sb_secret_` Supabase keys.
+- **Progress (#128):** module/course progress counts partly watched lessons.
+- **Still needs Chirag:** Razorpay webhook + `RAZORPAY_WEBHOOK_SECRET` in Vercel; GitHub secrets `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` for file backups.
 
 ## Done 2026-11-01
 - `learn.beyondtatva.in` live (GoDaddy CNAME), Supabase Site URL + redirect, Google OAuth origin, Google app **In production**
