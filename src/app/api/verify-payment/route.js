@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readJson } from "@/lib/body";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getSession } from "@/lib/supabase/server";
 import { COURSE_ID } from "@/lib/catalog";
@@ -13,7 +14,8 @@ export async function POST(request) {
   const keys = razorpayKeys();
   if (!keys) return NextResponse.json({ error: "Online payments aren't set up yet" }, { status: 500 });
 
-  const body = await request.json().catch(() => ({}));
+  const { tooBig, body } = await readJson(request);
+  if (tooBig) return NextResponse.json({ error: "Request too large" }, { status: 413 });
   const { razorpay_order_id: orderId, razorpay_payment_id: paymentId, razorpay_signature: signature } = body || {};
   if (!orderId || !paymentId || !signature) return NextResponse.json({ verified: false, error: "Missing payment details" }, { status: 400 });
   if (!paymentSignatureValid(orderId, paymentId, signature, keys.secret)) {

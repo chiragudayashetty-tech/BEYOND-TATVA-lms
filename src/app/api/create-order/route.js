@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readJson } from "@/lib/body";
 import { createClient, getSession } from "@/lib/supabase/server";
 import { COURSE_ID } from "@/lib/catalog";
 import { createOrder, razorpayKeys } from "@/lib/razorpay";
@@ -17,7 +18,8 @@ export async function POST(request) {
   if (!keys) return NextResponse.json({ error: "Online payments aren't set up yet" }, { status: 500 });
 
   const supabase = await createClient();
-  const body = await request.json().catch(() => ({}));
+  const { tooBig, body } = await readJson(request);
+  if (tooBig) return NextResponse.json({ error: "Request too large" }, { status: 413 });
   const code = typeof body?.coupon === "string" ? body.coupon.trim().toUpperCase().slice(0, 20) : "";
   const phone = String(body?.phone || "").replace(/\D/g, "").slice(-10);
   if (!/^[6-9]\d{9}$/.test(phone)) return NextResponse.json({ error: "Enter a valid 10-digit mobile number" }, { status: 400 });
