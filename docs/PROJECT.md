@@ -25,13 +25,13 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Studio | Content, Quizzes, Assignments (marking queue), Enrollments, Access keys, People. |
 | Quizzes | One per module, server-side marking, answers never sent to the browser. |
 | Assignments | Text, link, photos/PDF (private bucket); mark, feedback, send back. |
-| Website → LMS | `POST /api/enrollments` and `POST /api/leads` (signed). Website side not connected yet: `docs/website-enrollment.md`. |
+| Website → LMS | `POST /api/leads` (signed) carries website leads. `POST /api/enrollments` exists but isn't needed while all payment happens on `/unlock`. |
 | CRM notes | Pipeline "Notes (n)" per person, follow-ups due filter, due card on Studio home. |
 | School bulk enrollment | Studio → School keys → Upload class list (CSV, max 200): one key per child, classes by grade + section; redeeming joins the class. |
 | School outreach | Studio → School outreach (`/admin/outreach`, replaced Studio → Workshops 2026-11-08): add schools, status, contact, log calls/visits (dated history), next step + date, due/overdue filter. Reads/writes `outreach_schools` directly (admin RLS). Main record for outreach; the School Outreach sheet mirrors it every 5 min (see Google Sheets sync). Public `/w/<slug>` workshop sign-up still live. |
 | Student dashboard | Course / XP + rank / quick-check rings; XP leaderboard (first name + initial, opt-out in Profile); XP = 10 per right quick check + quiz XP once + up to 50 per marked assignment. No streaks (Chirag). |
 | Studio analytics | Funnel, sources, grades, revenue, module completion, quiz health + Insights: active students, paid-but-stopped 14+ d, lesson drop-off, sources that pay, refunds, schools, workshop funnel. Daily watch log (`learning_days`) since 2026-11-02. |
-| Razorpay in the LMS | `/unlock` → `POST /api/create-order` (price from DB, student id in order notes) → Razorpay modal → `POST /api/verify-payment` (HMAC signature + order belongs to this student) → `record_purchase` + `claim_purchases`. On when `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` are set in Vercel; the only payment option on `/unlock` (UPI screenshot flow removed). Any failure shows a WhatsApp button (`NEXT_PUBLIC_SUPPORT_WHATSAPP`). |
+| Payments (how it works now) | **One place to pay: LMS `/unlock`.** Every website Enroll button → LMS sign-in → `/unlock` (new Google sign-ins can pay before onboarding). Razorpay: `POST /api/create-order` (price from DB, coupon via `coupon_price`) → modal → `POST /api/verify-payment` (HMAC + order belongs to this student) → `record_purchase` + `claim_purchases`. Second option: **Pay via WhatsApp**: Chirag confirms the payment and sends an **access key**, which the student redeems in the key box on `/unlock`. `RAZORPAY_KEY_ID`/`SECRET` and `NEXT_PUBLIC_SUPPORT_WHATSAPP` are set in Vercel (Production + Preview, 2026-11-04). Whether they are **test or live** keys: only Chirag knows; check before launch. The website's own Razorpay checkout (`/api` in BEYOND-TATVA-web) is no longer the main path. |
 | Google Sheets sync | Two spreadsheets, never copies. **Workshop leads**: one tab per source: a tab per school workshop (auto-created when outreach status = "Workshop done" or a lead arrives), "Website" (website + Loki chat), "Manual"; all ↔ `leads` (`leads.tab` / `lead_tab()`). **School Outreach**: one row per school ↔ `outreach_schools`; **the LMS is the main record** (since 2026-11-08): every pull rewrites the tab from the LMS (adds, updates, removes schools deleted in Studio); sheet edits push only if the row's hidden **Version** (= `updated_at` at last pull) is still current, else skipped as `stale` and refreshed; Calls / Visits / History are LMS-only (Studio "Log call / Log visit"); a sheet row edited after its school was deleted in Studio is not re-created. `scripts/sheets-sync.gs` pushes edits (`POST /api/sheets`) and pulls every 5 min (`GET /api/sheets`, header `x-sheets-key` = `SHEETS_SYNC_SECRET`). Rows match by hidden **ID**; same phone + same/no child name is merged automatically (`sheet_merge_duplicates`), siblings kept and noted; "LMS email" links a lead to an account. LMS owns **Source / Signed up / Module 0 / Paid?**. |
 | Lead write-back | `leads.updated_source` ('sheet'/'studio'). A Studio → Today log sets 'studio'; the next pull (5 min) writes only the differing cells back into the Workshop leads sheet: Status / Next step / Next date / Do not contact. A sheet edit pushes with `touched` = the edited fields: for a 'studio' lead only those are taken (a stale row can't wipe a Studio log) and the lead flips to 'sheet' once the sheet has caught up. Last write wins. LMS-owned lead columns are now written cell by cell (formulas elsewhere survive). Schools follow the School outreach rules above (LMS is the main record). |
 | Studio → Today | `/admin/today` (first nav item, mobile tab): counts (schools/leads due today or overdue, paid this week), schools to follow up (next date ≤ 7 days or Meeting set / Workshop booked, not Not interested), leads to follow up (from `sheet_snapshot` via the service-role client after an admin check: not paid, not do-not-contact, due ≤ 7 days or status empty / "interested" / "call", not "not interested"), grouped by tab. Call, WhatsApp (prefilled greeting) and Log: schools → `logOutreach` (WhatsApp counts as a call) + status/next step/date; leads → `admin_log_lead_contact` (CRM note, follow-up 10:00 IST). |
@@ -66,7 +66,7 @@ Claude must add the matching migration file to the repo before any new migration
 |---|---|---|---|
 | A | ~~Codex Sprint 1 tasks 4–8~~ **Done 2026-11-02** | Codex → Claude review | |
 | C | ~~CRM notes → bulk enrollment → workshops~~ **Done 2026-11-02**, plus dashboards/insights | Claude (SQL/backend) → Codex (UI) | |
-| B | Website payment → LMS, refunds (`docs/CODEX-PHASE-2.md`) | Codex (website) | ~1–2 h, **after Razorpay KYC** |
+| B | ~~Website payment → LMS~~ **Replaced:** payment moved into the LMS `/unlock` (Razorpay + WhatsApp key). Left: refunds flow, a real ₹ test payment on live keys | Claude | ~1 h |
 | D | **Testing and fixing** (in progress, `docs/TESTING.md`): code freeze; automatic tests; real phones (cheap Android, iPhone, WhatsApp browser, slow 4G) with 2–3 families on the full path; Studio pass; security re-audit; backup restore drill; fix all critical/high | Everyone | ~1 day |
 | Launch | Vercel Pro, Supabase Pro, Resend sender, real Module 0 videos, Razorpay live | Chirag | 1 day |
 Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, interactive video questions, a second course.
@@ -74,7 +74,7 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 ## In planning
 - **Phase 2 plan and Codex prompt: `docs/PHASE-2.md`** (2026-11-02).
 - **Backups:** nightly encrypted dump via GitHub Actions, 30 days: `docs/BACKUPS.md`. Needs Chirag's 2 GitHub secrets.
-- **Funnel: see `docs/FUNNEL-PLAN.md`.** Phase 1 approved 2026-11-01 and in progress. Payments (Razorpay KYC on hold) and WhatsApp messaging come later.
+- **Funnel: see `docs/FUNNEL-PLAN.md`.** Phase 1 approved 2026-11-01 and in progress. Payments now run in the LMS (see table); WhatsApp messaging comes later.
 - No open PRs (2026-11-09). ~35 stale branches from 2026-10-31 to 11-05 remain on GitHub (superseded work); clean up later.
 - **Next: Phase D testing** — real phones with 2–3 families on signup → lesson → progress, exercising the 2026-11-08 progress/resume and duplicate features.
 
@@ -85,10 +85,9 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - Leads/pipeline migration applied to Supabase.
 
 ## Waiting on Chirag
-- **Razorpay KYC** (blocks phase B). Vercel Preview secrets (`docs/PREVIEW-SECRETS.md`), `NEXT_PUBLIC_SUPPORT_WHATSAPP` in Vercel.
+- **Razorpay:** confirm KYC is done and the Vercel keys are **live** (not `rzp_test_`), then one real ₹ payment end to end on `/unlock`.
 - Parent consent text: mention the XP leaderboard (first name + initial; opt-out in Profile).
 - Real Module 0 videos; set each paid module's week in Studio → Content (Batch 1 starts 15 Nov 2026).
-- Website: add the 3 snippets in `docs/website-enrollment.md`.
 
 ## Backlog (owner → task)
 **Claude (lead: database, security, integrations)**
