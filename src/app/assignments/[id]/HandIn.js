@@ -86,6 +86,10 @@ export default function HandIn({ assignment: a, moduleLabel, submission: sub, fi
         p_assignment: a.id, p_text: a.allow_text ? text : null, p_link: a.allow_link ? link : null, p_files: [...kept.map((k) => k.path), ...uploaded],
       });
       if (error) throw new Error(error.message);
+      // Files the student took out of this hand-in: delete them so they don't use up the upload limit.
+      const keptPaths = new Set(kept.map((k) => k.path));
+      const dropped = existing.map((k) => k.path).filter((path) => !keptPaths.has(path));
+      if (dropped.length) await supabase.storage.from("submissions").remove(dropped);
       setAdded([]);
       uploadedPaths.current.clear();
       previews.current.forEach((url) => URL.revokeObjectURL(url));
