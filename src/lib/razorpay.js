@@ -32,3 +32,12 @@ async function call(keys, method, path, body) {
 export const createOrder = (keys, payload) => call(keys, "POST", "/orders", payload);
 export const fetchOrder = (keys, orderId) => call(keys, "GET", `/orders/${encodeURIComponent(orderId)}`);
 
+
+// Webhook: HMAC-SHA256(raw body, WEBHOOK_SECRET) in the x-razorpay-signature header, compared in constant time.
+export function webhookSignatureValid(raw, signature, secret) {
+  if (!raw || !signature || !secret) return false;
+  const expected = createHmac("sha256", secret).update(raw).digest("hex");
+  const a = Buffer.from(expected);
+  const b = Buffer.from(String(signature));
+  return a.length === b.length && timingSafeEqual(a, b);
+}
