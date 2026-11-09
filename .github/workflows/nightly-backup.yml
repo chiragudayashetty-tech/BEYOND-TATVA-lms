@@ -23,6 +23,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - name: Check secrets
         env:
           DB: ${{ secrets.SUPABASE_DB_URL }}
@@ -69,4 +73,30 @@ jobs:
           path: bt-db-*.dump.gpg
           retention-days: 30
           if-no-files-found: error
+          compression-level: 0
+
+      # Uploaded files (assignment photos/PDFs, payment proofs, module attachments). Skipped until
+      # SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are added as GitHub secrets (docs/BACKUPS.md).
+      - name: Files backup (encrypted)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then echo "::warning::Files not backed up: add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY secrets"; exit 0; fi
+          umask 077
+          node scripts/backup-storage.mjs
+          tar -cf files.tar storage-backup
+          gpg --batch --yes --pinentry-mode loopback --passphrase-fd 3 \
+            --symmetric --cipher-algo AES256 --output "bt-files-$STAMP.tar.gpg" files.tar 3<<<"$PASS"
+          rm -rf storage-backup files.tar
+
+      - name: Upload files backup (encrypted only)
+        if: hashFiles('bt-files-*.tar.gpg') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: bt-files-${{ env.STAMP }}
+          path: bt-files-*.tar.gpg
+          retention-days: 30
           compression-level: 0

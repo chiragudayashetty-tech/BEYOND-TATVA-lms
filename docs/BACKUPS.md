@@ -4,7 +4,8 @@
 (`public`, `auth`, `storage` schemas), checks the key tables are in it, **encrypts it (AES-256)** and keeps it
 as a workflow artifact for **30 days**. Free. The repo is public, so nothing unencrypted ever leaves the runner.
 
-Not covered: uploaded files themselves (assignment photos/PDFs in Supabase Storage); only their database
+Uploaded files (since 2026-11-09): a second encrypted artifact `bt-files-<date>` (all Storage buckets via `scripts/backup-storage.mjs`), once Chirag adds GitHub secrets `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; until then the step only warns.
+Previously not covered: uploaded files themselves (assignment photos/PDFs in Supabase Storage); only their database
 rows. Videos live on YouTube/Bunny. Move to Supabase Pro (daily backups + point-in-time) before scale.
 
 ## One-time setup (Chirag, ~5 minutes)
@@ -37,3 +38,8 @@ On any computer with Postgres 17 and gpg (or ask Claude to do it in a cloud sess
 4. Point the LMS env vars (`NEXT_PUBLIC_SUPABASE_URL`, anon key, service role key) at the new project,
    redeploy, re-add the Google OAuth redirect URL and Site URL in Supabase Auth settings.
 Claude does steps 2–4 with Chirag; the restore itself takes minutes.
+
+## Recovery targets (agreed 2026-11-09)
+- Data loss: at most 24 h (nightly backup). Payments are also in Razorpay, so a lost payment can be re-recorded from there.
+- Recovery time: half a day to a new Supabase project (steps above), then update Vercel env vars.
+- Restore drill: **not done yet**: Claude + Chirag, one session, before launch (needs `BACKUP_PASSPHRASE`).

@@ -76,7 +76,12 @@ export default function RazorpayPay({ price, enabled, name, email, phone, whatsa
       handler: async (resp) => {
         setMsg({ tone: "info", text: "Payment received. Unlocking your course…" });
         const { ok: verified, data } = await post("/api/verify-payment", resp);
-        if (verified && data.unlocked) { setBusy(false); return router.refresh(); }
+        if (verified && data.unlocked) {
+          // Full page load, not router.refresh(): the client page cache (staleTimes 30 s) kept
+          // showing the pay page and a locked course right after paying.
+          setMsg({ tone: "info", text: "Payment done! Opening your course…" });
+          return window.location.replace("/course");
+        }
         if (verified && data.paid && data.next) {
           setMsg({ tone: "info", text: "Payment done! Now one minute of details and your course opens." });
           return router.replace(data.next);
