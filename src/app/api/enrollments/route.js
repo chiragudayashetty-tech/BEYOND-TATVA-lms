@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifySignature } from "@/lib/enrollments";
+import { readLimited } from "@/lib/body";
 
-// Website → LMS: called by beyondtatva.in after a payment succeeds (or is refunded).
+// Website → LMS. Retired for payments (audit 2026-11-09): the LMS Razorpay checkout is the only way to pay,
+// so "enrollment.paid" is refused (410). "enrollment.refunded" stays for any older website payment.
 //
 // POST /api/enrollments
 //   x-bt-timestamp: unix seconds          x-bt-signature: hex HMAC-SHA256(ENROLLMENT_WEBHOOK_SECRET, `${timestamp}.${rawBody}`)
@@ -14,7 +16,8 @@ import { verifySignature } from "@/lib/enrollments";
 const str = (v, max = 200) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 
 export async function POST(request) {
-  const raw = await request.text();
+  const raw = await readLimited(request);
+  if (raw === null) return NextResponse.json({ error: "too large" }, { status: 413 });
   const ok = verifySignature(raw, request.headers.get("x-bt-timestamp"), request.headers.get("x-bt-signature"), process.env.ENROLLMENT_WEBHOOK_SECRET);
   if (!ok) return NextResponse.json({ error: "bad signature" }, { status: 401 });
 
@@ -30,15 +33,7 @@ export async function POST(request) {
   const db = createAdminClient();
   let result;
   if (body.event === "enrollment.paid") {
-    if (!str(body.email) && !str(body.phone)) return NextResponse.json({ error: "email or phone is required" }, { status: 400 });
-    result = await db.rpc("record_purchase", {
-      p_reference: reference,
-      p_email: str(body.email),
-      p_phone: str(body.phone, 20),
-      p_student_name: str(body.student_name, 80),
-      p_parent_name: str(body.parent_name, 80),
-      p_amount_paise: Number.isInteger(body.amount_paise) ? body.amount_paise : null,
-    });
+    return NextResponse.json({ error: "Payments are taken in the LMS now; enrollment.paid is retired" }, { status: 410 });
   } else if (body.event === "enrollment.refunded") {
     result = await db.rpc("revoke_purchase", { p_reference: reference });
   } else {
