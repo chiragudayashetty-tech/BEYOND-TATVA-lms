@@ -82,3 +82,12 @@ test("Bunny play message is recognised (resume backup)", () => {
   const origin = "https://iframe.mediadelivery.net";
   assert.deepEqual(parseBunnyMessage({ context: "player.js", event: "play" }, origin, origin), { event: "play" });
 });
+
+test("module progress counts partly watched lessons, 100% only when finished", async () => {
+  const { buildCourse } = await import("../src/lib/catalog.js");
+  const course = buildCourse({ id: "c", title: "C" }, [{ id: "ch0", position: 0, title: "M0" }],
+    [{ id: "l1", chapter_id: "ch0", position: 1, title: "L1", minutes: 10 }], new Set(),
+    [{ lesson_id: "l1", seconds_watched: 510, last_position_seconds: 510, completed_at: null }]);
+  assert.equal(course.modules[0].progress, 85);
+  assert.equal(course.progress, 85);
+});

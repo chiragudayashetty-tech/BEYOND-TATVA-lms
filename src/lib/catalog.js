@@ -5,6 +5,11 @@ export const COURSE_ID = "ai-for-students";
 
 // Shapes database rows into the course object the UI uses.
 // `done` is a Set of completed lesson ids for the viewer (empty for visitors).
+// Progress counts partly watched lessons too: a finished lesson is 100%, an unfinished one counts its
+// watched %, so "85% watched" on a lesson and its module's progress bar agree.
+const lessonPct = (l) => (l.done ? 100 : Math.min(l.progressPct ?? 0, 99));   // 100% only when finished
+const avgPct = (ls) => (ls.length ? Math.round(ls.reduce((a, l) => a + lessonPct(l), 0) / ls.length) : 0);
+
 export function buildCourse(courseRow, chapterRows, lessonRows, done = new Set(), progressRows = []) {
   const progressByLesson = new Map(progressRows.map((row) => [row.lesson_id, row]));
   const modules = chapterRows
@@ -46,7 +51,7 @@ export function buildCourse(courseRow, chapterRows, lessonRows, done = new Set()
           : null,
         lessons,
         mins: lessons.reduce((a, l) => a + l.mins, 0),
-        progress: lessons.length ? Math.round((doneCount / lessons.length) * 100) : 0,
+        progress: avgPct(lessons),
       };
     });
   const lessons = modules.flatMap((m) => m.lessons);
@@ -68,7 +73,7 @@ export function buildCourse(courseRow, chapterRows, lessonRows, done = new Set()
     continueWatching,
     lessonCount: lessons.length,
     mins: lessons.reduce((a, l) => a + l.mins, 0),
-    progress: lessons.length ? Math.round((doneAll / lessons.length) * 100) : 0,
+    progress: avgPct(lessons),
   };
 }
 
