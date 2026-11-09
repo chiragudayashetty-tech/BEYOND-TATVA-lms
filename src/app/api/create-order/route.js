@@ -3,8 +3,6 @@ import { createClient, getSession } from "@/lib/supabase/server";
 import { COURSE_ID } from "@/lib/catalog";
 import { createOrder, razorpayKeys } from "@/lib/razorpay";
 import { hasPendingPurchase } from "@/lib/pending-purchase";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { readJson } from "@/lib/body";
 
 // POST /api/create-order { coupon? } → { order_id, amount, currency, key_id }
 // Signed-in students without access only. The price comes from the database (Admin → Content),
@@ -19,8 +17,7 @@ export async function POST(request) {
   if (!keys) return NextResponse.json({ error: "Online payments aren't set up yet" }, { status: 500 });
 
   const supabase = await createClient();
-  const { tooBig, body } = await readJson(request);
-  if (tooBig) return NextResponse.json({ error: "Request too large" }, { status: 413 });
+  const body = await request.json().catch(() => ({}));
   const code = typeof body?.coupon === "string" ? body.coupon.trim().toUpperCase().slice(0, 20) : "";
   const phone = String(body?.phone || "").replace(/\D/g, "").slice(-10);
   if (!/^[6-9]\d{9}$/.test(phone)) return NextResponse.json({ error: "Enter a valid 10-digit mobile number" }, { status: 400 });
@@ -46,21 +43,6 @@ export async function POST(request) {
     if (r.status === 401) return NextResponse.json({ error: "Razorpay authentication failed" }, { status: 401 });
     if (!r.ok) {
       console.error("razorpay order failed", r.status, r.data?.error?.description);
-      return NextResponse.json({ error: "Could not start the payment. Please try again." }, { status: 500 });
-    }
-    // Saved before checkout opens: verify-payment and the Razorpay webhook unlock only orders found here.
-    const { error: saveError } = await createAdminClient().rpc("create_payment_order", {
-      p_order_id: r.data.id,
-      p_user: user.id,
-      p_course: COURSE_ID,
-      p_amount_paise: r.data.amount,
-      p_coupon: code || null,
-      p_email: user.email || null,
-      p_phone: user.email ? null : user.phone || null,
-      p_student_name: (profile?.full_name || user.user_metadata?.full_name || "").slice(0, 80) || null,
-    });
-    if (saveError) {
-      console.error("save payment order failed", r.data.id, saveError.message);
       return NextResponse.json({ error: "Could not start the payment. Please try again." }, { status: 500 });
     }
     return NextResponse.json({ order_id: r.data.id, amount: r.data.amount, currency: r.data.currency, key_id: keys.id });
