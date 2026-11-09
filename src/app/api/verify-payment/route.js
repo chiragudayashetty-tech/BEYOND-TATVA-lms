@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getSession } from "@/lib/supabase/server";
 import { COURSE_ID } from "@/lib/catalog";
-import { paymentSignatureValid, razorpayKeys } from "@/lib/razorpay";
+import { fetchOrder, paymentSignatureValid, razorpayKeys } from "@/lib/razorpay";
 import { readJson } from "@/lib/body";
 
 // POST /api/verify-payment { razorpay_order_id, razorpay_payment_id, razorpay_signature }
@@ -24,7 +24,27 @@ export async function POST(request) {
   }
 
   const admin = createAdminClient();
-  const { data: order } = await admin.from("payment_orders").select("user_id, course_id").eq("id", orderId).maybeSingle();
+  let { data: order } = await admin.from("payment_orders").select("user_id, course_id").eq("id", orderId).maybeSingle();
+  // Orders started before payment_orders existed (checkout open during the deploy): check Razorpay's notes, then save.
+  if (!order) {
+    let rz;
+    try {
+      const r = await fetchOrder(keys, orderId);
+      if (!r.ok) throw new Error(`order ${r.status}`);
+      rz = r.data;
+    } catch (e) {
+      console.error("razorpay order lookup failed", orderId, e.message);
+      return NextResponse.json({ verified: true, unlocked: false, error: "Payment received; unlocking is delayed. We'll sort it out, or message us with your payment ID." }, { status: 502 });
+    }
+    if (rz.notes?.student_id === user.id && rz.notes?.course === COURSE_ID) {
+      await admin.rpc("create_payment_order", {
+        p_order_id: orderId, p_user: user.id, p_course: COURSE_ID, p_amount_paise: rz.amount, p_coupon: rz.notes?.coupon || null,
+        p_email: user.email || null, p_phone: user.email ? null : user.phone || null,
+        p_student_name: (profile?.full_name || user.user_metadata?.full_name || "").slice(0, 80) || null,
+      });
+      order = { user_id: user.id, course_id: COURSE_ID };
+    }
+  }
   if (!order || order.user_id !== user.id || order.course_id !== COURSE_ID) {
     return NextResponse.json({ verified: false, error: "This payment belongs to a different account" }, { status: 400 });
   }

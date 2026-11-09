@@ -2,7 +2,7 @@
 
 _Maintained by Claude (lead). Last updated: 2026-11-09._
 
-AI course for Grades 8–10 in Udupi. **Payments happen in this LMS** (Razorpay, `/unlock`; decided 2026-11-09). The website
+AI course for Grades 8–10 in Udupi. **Payments happen in this LMS** (Razorpay, `/unlock`, live and working per Chirag 2026-11-09). The website
 (beyondtatva.in, `BEYOND-TATVA-web`) markets and sends people here; it takes no money. Students sign in, watch weekly modules, take quizzes and
 hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 
@@ -30,7 +30,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | School outreach | Studio → School outreach (`/admin/outreach`, replaced Studio → Workshops 2026-11-08): add schools, status, contact, log calls/visits (dated history), next step + date, due/overdue filter. Reads/writes `outreach_schools` directly (admin RLS). Main record for outreach; the School Outreach sheet mirrors it every 5 min (see Google Sheets sync). Public `/w/<slug>` workshop sign-up still live. |
 | Student dashboard | Course / XP + rank / quick-check rings; XP leaderboard (first name + initial, opt-out in Profile); XP = 10 per right quick check + quiz XP once + up to 50 per marked assignment. No streaks (Chirag). |
 | Studio analytics | Funnel, sources, grades, revenue, module completion, quiz health + Insights: active students, paid-but-stopped 14+ d, lesson drop-off, sources that pay, refunds, schools, workshop funnel. Daily watch log (`learning_days`) since 2026-11-02. |
-| Razorpay in the LMS (only payment path) | `/unlock` → `POST /api/create-order` (price from DB; order saved in `payment_orders` with the buyer's login) → Razorpay modal → `POST /api/verify-payment` (HMAC signature + saved order belongs to this account) → `settle_payment`. **Webhook** `POST /api/razorpay-webhook` (`payment.captured`, `order.paid`, `refund.processed`; secret `RAZORPAY_WEBHOOK_SECRET`) runs the same `settle_payment` / `refund_payment`, so a closed tab still unlocks; each event id counts once (`webhook_events`). Full refund removes payment access; partial refunds change nothing. Studio exceptions: `admin_payment_exceptions()` (paid 30+ min but not unlocked; refunded but still has access). Website `enrollment.paid` retired (410). Any failure shows a WhatsApp button (`NEXT_PUBLIC_SUPPORT_WHATSAPP`). |
+| Razorpay in the LMS (only payment path) | `/unlock` → `POST /api/create-order` (price from DB; order saved in `payment_orders` with the buyer's login) → Razorpay modal → `POST /api/verify-payment` (HMAC signature + saved order belongs to this account) → `settle_payment`. **Webhook** `POST /api/razorpay-webhook` (`payment.captured`, `order.paid`, `refund.processed`; secret `RAZORPAY_WEBHOOK_SECRET`) runs the same `settle_payment` / `refund_payment`, so a closed tab still unlocks; each event id counts once (`webhook_events`). Full refund removes payment access; partial refunds change nothing. Orders started before the 2026-11-09 deploy fall back to Razorpay's order notes. Studio exceptions: `admin_payment_exceptions()` (paid 30+ min but not unlocked; refunded but still has access). Website `enrollment.paid` retired (410). Any failure shows a WhatsApp button (`NEXT_PUBLIC_SUPPORT_WHATSAPP`). |
 | Google Sheets sync | Two spreadsheets, never copies. **Workshop leads**: one tab per source: a tab per school workshop (auto-created when outreach status = "Workshop done" or a lead arrives), "Website" (website + Loki chat), "Manual"; all ↔ `leads` (`leads.tab` / `lead_tab()`). **School Outreach**: one row per school ↔ `outreach_schools`; **the LMS is the main record** (since 2026-11-08): every pull rewrites the tab from the LMS (adds, updates, removes schools deleted in Studio); sheet edits push only if the row's hidden **Version** (= `updated_at` at last pull) is still current, else skipped as `stale` and refreshed; Calls / Visits / History are LMS-only (Studio "Log call / Log visit"); a sheet row edited after its school was deleted in Studio is not re-created. `scripts/sheets-sync.gs` pushes edits (`POST /api/sheets`) and pulls every 5 min (`GET /api/sheets`, header `x-sheets-key` = `SHEETS_SYNC_SECRET`). Rows match by hidden **ID**; same phone + same/no child name is merged automatically (`sheet_merge_duplicates`), siblings kept and noted; "LMS email" links a lead to an account. LMS owns **Source / Signed up / Module 0 / Paid?**. |
 | Lead write-back | `leads.updated_source` ('sheet'/'studio'). A Studio → Today log sets 'studio'; the next pull (5 min) writes only the differing cells back into the Workshop leads sheet: Status / Next step / Next date / Do not contact. A sheet edit pushes with `touched` = the edited fields: for a 'studio' lead only those are taken (a stale row can't wipe a Studio log) and the lead flips to 'sheet' once the sheet has caught up. Last write wins. LMS-owned lead columns are now written cell by cell (formulas elsewhere survive). Schools follow the School outreach rules above (LMS is the main record). |
 | Studio → Today | `/admin/today` (first nav item, mobile tab): counts (schools/leads due today or overdue, paid this week), schools to follow up (next date ≤ 7 days or Meeting set / Workshop booked, not Not interested), leads to follow up (from `sheet_snapshot` via the service-role client after an admin check: not paid, not do-not-contact, due ≤ 7 days or status empty / "interested" / "call", not "not interested"), grouped by tab. Call, WhatsApp (prefilled greeting) and Log: schools → `logOutreach` (WhatsApp counts as a call) + status/next step/date; leads → `admin_log_lead_contact` (CRM note, follow-up 10:00 IST). |
@@ -65,15 +65,15 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 |---|---|---|---|
 | A | ~~Codex Sprint 1 tasks 4–8~~ **Done 2026-11-02** | Codex → Claude review | |
 | C | ~~CRM notes → bulk enrollment → workshops~~ **Done 2026-11-02**, plus dashboards/insights | Claude (SQL/backend) → Codex (UI) | |
-| B | ~~Website payment → LMS~~ replaced 2026-11-09: LMS Razorpay webhook + refunds built (Claude); Studio exceptions screen (Codex); live test **after Razorpay KYC** | Claude / Codex | |
+| B | ~~Website payment → LMS~~ replaced 2026-11-09: LMS Razorpay webhook + refunds built (Claude); Studio exceptions screen (Codex); live after Chirag's "apply" + Razorpay webhook setup | Claude / Codex | |
 | D | **Testing and fixing** (in progress, `docs/TESTING.md`): code freeze; automatic tests; real phones (cheap Android, iPhone, WhatsApp browser, slow 4G) with 2–3 families on the full path; Studio pass; security re-audit; backup restore drill; fix all critical/high | Everyone | ~1 day |
-| Launch | Vercel Pro, Supabase Pro, Resend sender, real Module 0 videos, Razorpay live | Chirag | 1 day |
+| Launch | Vercel Pro, Supabase Pro, Resend sender, real Module 0 videos (Razorpay live ✓) | Chirag | 1 day |
 Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, interactive video questions, a second course.
 
 ## In planning
 - **Phase 2 plan and Codex prompt: `docs/PHASE-2.md`** (2026-11-02).
 - **Backups:** nightly encrypted dump via GitHub Actions, 30 days: `docs/BACKUPS.md`. Needs Chirag's 2 GitHub secrets.
-- **Funnel: see `docs/FUNNEL-PLAN.md`.** Phase 1 approved 2026-11-01 and in progress. Payments (Razorpay KYC on hold) and WhatsApp messaging come later.
+- **Funnel: see `docs/FUNNEL-PLAN.md`.** Phase 1 approved 2026-11-01 and in progress. Payments are live (LMS Razorpay); WhatsApp messaging come later.
 - No open PRs (2026-11-09). ~35 stale branches from 2026-10-31 to 11-05 remain on GitHub (superseded work); clean up later.
 - **Next: Phase D testing** — real phones with 2–3 families on signup → lesson → progress, exercising the 2026-11-08 progress/resume and duplicate features.
 
@@ -90,7 +90,7 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - Close PR #10 (replaced by #14).
 
 ## Waiting on Chirag
-- **Razorpay KYC** (blocks phase B). Vercel Preview secrets (`docs/PREVIEW-SECRETS.md`), `NEXT_PUBLIC_SUPPORT_WHATSAPP` in Vercel.
+- **Razorpay webhook** (after migration 20261109000002 is applied): Dashboard → Webhooks → `/api/razorpay-webhook`, events payment.captured, order.paid, refund.processed; secret → Vercel `RAZORPAY_WEBHOOK_SECRET`. Supabase Auth OTP rate limit (per-IP). Rotate `SHEETS_SYNC_SECRET`. Vercel Preview secrets (`docs/PREVIEW-SECRETS.md`), `NEXT_PUBLIC_SUPPORT_WHATSAPP` in Vercel.
 - Parent consent text: mention the XP leaderboard (first name + initial; opt-out in Profile).
 - Real Module 0 videos and real premiere dates (Studio → Content).
 - Website: add the 3 snippets in `docs/website-enrollment.md`.
