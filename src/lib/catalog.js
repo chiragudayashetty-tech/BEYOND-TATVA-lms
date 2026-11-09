@@ -39,6 +39,11 @@ export function buildCourse(courseRow, chapterRows, lessonRows, done = new Set()
         thumb: ch.thumbnail_url,
         week: ch.batch_week ?? null,
         week1: ch.batch1_week ?? null,
+        // Studio only: when Batch 1 gets this module (never before its ready date).
+        batch1Opens: ch.batch_week && courseRow.batch1_start
+          ? new Date(Math.max(new Date(ch.release_at ?? 0).getTime(),
+            new Date(courseRow.batch1_start).getTime() + ((ch.batch1_week ?? ch.batch_week) - 1) * 7 * 864e5)).toISOString()
+          : null,
         lessons,
         mins: lessons.reduce((a, l) => a + l.mins, 0),
         progress: lessons.length ? Math.round((doneCount / lessons.length) * 100) : 0,

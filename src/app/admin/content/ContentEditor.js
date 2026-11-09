@@ -32,6 +32,8 @@ function Field({ label, children, hint }) {
   );
 }
 
+const fmtIst = (d) => new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" });
+
 function CourseForm({ course }) {
   const [state, action, pending] = useActionState(saveCourse, null);
   return (
@@ -103,7 +105,11 @@ function ModuleEditor({ m, videos, files, open, onToggle }) {
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold">{m.title}</div>
           <div className="flex flex-wrap items-center gap-x-3 text-xs text-muted">
-            <span className="inline-flex items-center gap-1"><CalendarClock className="h-3 w-3" />{m.release ? new Date(m.release).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }) : "No date"}</span>
+            {m.week ? (
+              <span className="inline-flex items-center gap-1"><CalendarClock className="h-3 w-3" />Week {m.week} · Batch 1 opens {m.batch1Opens && new Date(m.batch1Opens).getUTCFullYear() < 2099 ? fmtIst(m.batch1Opens) : "Coming soon"} · later batches on their Sunday</span>
+            ) : (
+              <span className="inline-flex items-center gap-1"><CalendarClock className="h-3 w-3" />{m.release ? fmtIst(m.release) : "No date"}</span>
+            )}
             <span className="inline-flex items-center gap-1"><Film className="h-3 w-3" />{withVideo}/{m.lessons.length} videos</span>
           </div>
         </div>
