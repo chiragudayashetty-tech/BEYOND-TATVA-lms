@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Award, CalendarClock, Check, ChevronDown, CircleCheck, ClipboardList, Gift, KeyRound, Lock, PlayCircle, Sparkles } from "lucide-react";
 import { quizBadge, submissionBadge } from "@/components/activity";
 import Shell from "@/components/shell/Shell";
-import { Badge, Card, IconTile, Progress } from "@/components/ui";
+import { Badge, Card, IconTile, Progress, RichText } from "@/components/ui";
 import { NextStepCard, PremiereCard, Thumb, firstLesson, iconFor, moduleState } from "@/components/course";
 import Countdown from "@/components/Countdown";
 import { fmtPremiere, isComingSoon, isReleased, nextPremiere, nextStep } from "@/lib/catalog";
@@ -49,7 +49,7 @@ export default async function CoursePage({ searchParams }) {
               <div className="p-6">
                 <Badge tone="primary">{course.grade}</Badge>
                 <h1 className="mt-3 text-3xl font-semibold">{course.title}</h1>
-                <p className="mt-2 text-muted">{course.description}</p>
+                <RichText text={course.description} className="mt-3 text-[15px] leading-relaxed text-muted" />
                 <div className="mt-5 grid grid-cols-3 gap-3 text-center">
                   {[[`0–${course.modules.length - 1}`, "Modules"], [String(course.lessonCount), "Lessons"], ["Sun", "10 AM weekly"]].map(([v, l]) => (
                     <div key={l} className="rounded-xl bg-surface-2 py-3">
