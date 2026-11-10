@@ -6,7 +6,7 @@ const { chromium } = require("playwright");
 
 const baseURL = "http://127.0.0.1:3100";
 const studentPages = ["/browse", "/course", "/dashboard", "/progress", "/planner", "/certificates", "/profile", "/search", "/unlock", "/activities"];
-const studioPages = ["/admin/workshops", "/admin", "/admin/content", "/admin/quizzes", "/admin/assignments", "/admin/enrollments", "/admin/reconcile", "/admin/people", "/admin/access", "/admin/pipeline", "/admin/analytics", "/admin/automations"];
+const studioPages = ["/admin/today", "/admin/outreach", "/admin", "/admin/content", "/admin/quizzes", "/admin/assignments", "/admin/enrollments", "/admin/reconcile", "/admin/people", "/admin/access", "/admin/pipeline", "/admin/analytics", "/admin/automations"];
 let server; let browser;
 
 before(async () => {
@@ -46,6 +46,7 @@ async function inspectPage(path, width, cookies = []) {
       const style = getComputedStyle(el); const rect = el.getBoundingClientRect();
       if (style.display === "none" || style.visibility === "hidden" || rect.width === 0 || rect.height === 0) return false;
       if (el.closest("[data-preview-switcher], nextjs-portal")) return false; // dev-only tools
+      if (el.disabled || el.closest("details:not([open]) > :not(summary)")) return false; // "coming soon" buttons and folded-away panels can't be tapped
       return true;
     }).map((el) => {
       el.scrollIntoView({ block: "center" }); // check what is on top once it's on screen, not below the fold

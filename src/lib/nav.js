@@ -32,19 +32,20 @@ export const nav = {
   },
   // Studio: only accounts on the studio_admins allowlist ever get this role.
   admin: {
+    // `group` starts a new headed section in the sidebar, so 13 links read as 4 short lists.
     main: [
       { href: "/admin/today", label: "Today", icon: "CalendarCheck" },
-      { href: "/admin", label: "Studio", icon: "LayoutDashboard" },
-      { href: "/admin/content", label: "Content", icon: "Clapperboard" },
+      { href: "/admin", label: "Studio home", icon: "LayoutDashboard" },
+      { href: "/admin/content", label: "Content", icon: "Clapperboard", group: "Teach" },
       { href: "/admin/quizzes", label: "Quizzes", icon: "ListChecks" },
       { href: "/admin/assignments", label: "Assignments", icon: "ClipboardCheck" },
-      { href: "/admin/enrollments", label: "Enrollments", icon: "UserCheck" },
+      { href: "/admin/enrollments", label: "Enrollments", icon: "UserCheck", group: "Students and payments" },
       { href: "/admin/reconcile", label: "Reconciliation", icon: "ReceiptText" },
       { href: "/admin/people", label: "Schools & people", icon: "Users" },
       { href: "/admin/access", label: "School keys", icon: "KeyRound" },
-      { href: "/admin/pipeline", label: "Pipeline", icon: "Contact" },
-      { href: "/admin/analytics", label: "Analytics", icon: "ChartLine" },
+      { href: "/admin/pipeline", label: "Pipeline", icon: "Contact", group: "Grow" },
       { href: "/admin/outreach", label: "School outreach", icon: "School" },
+      { href: "/admin/analytics", label: "Analytics", icon: "ChartLine" },
       { href: "/admin/automations", label: "Automations", icon: "Workflow" },
     ],
     more: [

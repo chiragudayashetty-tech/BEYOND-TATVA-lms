@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowRight, CircleCheck, CircleX, RotateCcw, Sparkles, Troph
 import { Badge, Progress } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 
-export default function QuizRunner({ quiz, questions, best }) {
+export default function QuizRunner({ quiz, questions, best, backHref = "/course" }) {
   const router = useRouter();
   const [answers, setAnswers] = useState(() => questions.map(() => null));
   const [i, setI] = useState(0);
@@ -28,7 +28,8 @@ export default function QuizRunner({ quiz, questions, best }) {
     setError("");
     const { data, error } = await createClient().rpc("submit_quiz", { p_quiz: quiz.id, p_answers: answers });
     setBusy(false);
-    if (error) return setError(error.message);
+    // Database messages are written for students ("Take a short break…"); a dropped connection is not.
+    if (error) return setError(/fetch|network|load failed/i.test(error.message) ? "We couldn't send your answers. Check your internet and tap Submit again. Your answers are still here." : error.message);
     setResult(data);
     router.refresh(); // XP and module status
   }
@@ -52,8 +53,11 @@ export default function QuizRunner({ quiz, questions, best }) {
           {!result.revealed && <p className="mt-2 text-sm text-muted">You&apos;ll see the right answers once you pass, or after your 3rd try. Look back at the lesson and try again.</p>}
           {result.passed && result.xp > 0 && <div className="mt-3"><Badge tone="warning"><Sparkles className="h-3 w-3" /> +{result.xp} XP</Badge></div>}
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
-            <button onClick={retry} className="btn-secondary"><RotateCcw className="h-4 w-4" /> Try again</button>
-            <Link href="/course" className="btn-primary">Back to the course</Link>
+            {result.passed
+              ? <><Link href="/course" className="btn-primary">Continue the course <ArrowRight className="h-4 w-4" /></Link>
+                <button onClick={retry} className="btn-secondary"><RotateCcw className="h-4 w-4" /> Try for a better score</button></>
+              : <><button onClick={retry} className="btn-primary"><RotateCcw className="h-4 w-4" /> Try again</button>
+                <Link href={backHref} className="btn-secondary">Watch the lesson again</Link></>}
           </div>
         </div>
         <ol className="space-y-3">
@@ -107,7 +111,7 @@ export default function QuizRunner({ quiz, questions, best }) {
                   event.currentTarget.parentElement.querySelectorAll('[role="radio"]')[next]?.focus();
                 }}
                 onClick={() => setAnswers((a) => a.map((x, k) => (k === i ? j : x)))}
-                className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left text-sm font-medium transition ${on ? "border-primary bg-primary-soft ring-4 ring-primary/10" : "border-border hover:bg-surface-2"}`}>
+                className={`flex min-h-12 w-full items-center gap-3 rounded-xl border p-3 text-left text-sm font-medium transition ${on ? "border-primary bg-primary-soft ring-4 ring-primary/10" : "border-border hover:bg-surface-2"}`}>
                 <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-md text-xs font-semibold ${on ? "bg-primary text-primary-fg" : "bg-surface-2"}`}>{String.fromCharCode(65 + j)}</span>
                 {o}
               </button>

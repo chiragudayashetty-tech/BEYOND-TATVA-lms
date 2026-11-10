@@ -171,7 +171,7 @@ function NewModule() {
 export default function ContentEditor({ course, videos, resources = {} }) {
   const [open, setOpen] = useState(null);
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+    <div className="grid gap-6 xl:grid-cols-[1fr_380px] [&>*]:min-w-0">
       <div className="space-y-4">
         <ul className="space-y-3">
           {course.modules.map((m) => (
