@@ -45,7 +45,8 @@ function CourseForm({ course }) {
         <Field label="Original price (₹, shown crossed out)" hint="Optional. Leave empty to hide the crossed-out price and the Save % badge."><input name="list_price" type="number" min={1} max={100000} className="input" defaultValue={course.listPrice ?? ""} /></Field>
       </div>
       <Field label="Tagline"><input name="tagline" className="input" defaultValue={course.tagline} /></Field>
-      <Field label="Description"><textarea name="description" rows={3} className="input" defaultValue={course.description} /></Field>
+      <Field label="Description"><textarea name="description" rows={8} className="input" defaultValue={course.description} /></Field>
+      <p className="-mt-2 text-xs text-muted">Shown as you type it: press Enter for a new line, leave an empty line between sections, start a line with &quot;- &quot; for a bullet point, and put **two stars** around words to make them bold.</p>
       <Field label="Hero video URL" hint="Plays muted on the course page and landing page."><input name="hero" className="input" defaultValue={course.hero ?? ""} placeholder="https://…" /></Field>
       <button disabled={pending} className="btn-primary"><Save className="h-4 w-4" /> {pending ? "Saving…" : "Save course"}</button>
     </form>

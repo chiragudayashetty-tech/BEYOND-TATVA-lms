@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CalendarClock, CircleCheck, ClipboardList, Lock, PlayCircle, Sparkles, Zap } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
-import { Avatar, Badge } from "@/components/ui";
+import { Avatar, Badge, RichText } from "@/components/ui";
 import { quizBadge, submissionBadge } from "@/components/activity";
 import { canWatch, isComingSoon, isReleased } from "@/lib/catalog";
 import { parseVideo, tracksProgress } from "@/lib/video";
@@ -190,7 +190,7 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
         <div className="py-5">
           {tab === "Overview" && (
             <div className="max-w-2xl space-y-3 text-sm leading-relaxed text-muted">
-              {lesson.description && <p>{lesson.description}</p>}
+              <RichText text={lesson.description} />
               {autoTracked
                 ? <p>Your progress saves as you watch. The lesson completes automatically after you watch 90%. Quick questions inside the video earn 10 XP each.</p>
                 : video ? <p>This video can&apos;t be tracked on its own yet, so the lesson won&apos;t tick itself off. You can still watch it and move on.</p>

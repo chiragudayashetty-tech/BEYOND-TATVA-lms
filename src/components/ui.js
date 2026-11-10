@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRight, Inbox } from "lucide-react";
+import { parseRichText } from "@/lib/rich-text";
 
 // Small shared building blocks used across every role's pages.
 
@@ -154,6 +155,20 @@ export function Empty({ icon, title, body, action }) {
       <h3 className="mt-4 font-semibold">{title}</h3>
       <p className="mt-1 max-w-sm text-sm text-muted">{body}</p>
       {action && <div className="mt-5">{action}</div>}
+    </div>
+  );
+}
+
+// Shows text typed in Studio with its line breaks, "- " bullets and **bold** (see lib/rich-text.js).
+export function RichText({ text, className = "" }) {
+  const blocks = parseRichText(text);
+  if (!blocks.length) return null;
+  const line = (parts) => parts.map((s, i) => (s.bold ? <strong key={i} className="font-semibold text-fg">{s.text}</strong> : s.text));
+  return (
+    <div className={`space-y-3 ${className}`}>
+      {blocks.map((b, i) => b.type === "list"
+        ? <ul key={i} className="list-disc space-y-1 pl-5 marker:text-primary">{b.items.map((it, j) => <li key={j}>{line(it)}</li>)}</ul>
+        : <p key={i}>{b.lines.map((l, j) => <span key={j}>{j > 0 && <br />}{line(l)}</span>)}</p>)}
     </div>
   );
 }
