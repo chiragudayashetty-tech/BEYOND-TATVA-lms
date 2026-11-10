@@ -31,7 +31,7 @@ function LockScreen({ module: m, price }) {
           {upcoming && m.release && !isComingSoon(m) && <Countdown to={m.release} />}
           {!m.free && (
             <div className="flex flex-wrap justify-center gap-2">
-              <Link href="/unlock" className="btn bg-white text-[#0f172a] hover:bg-white/90"><KeyRound className="h-4 w-4" /> Unlock for ₹{price}</Link>
+              <Link href="/unlock" className="web-only btn bg-white text-[#0f172a] hover:bg-white/90"><KeyRound className="h-4 w-4" /> Unlock for ₹{price}</Link>
               <Link href="/unlock#key" className="btn border border-white/25 text-white hover:bg-white/10">I have a key</Link>
             </div>
           )}

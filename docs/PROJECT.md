@@ -98,6 +98,7 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - Certificates: completion rule, certificate ID, public QR verification page, PDF.
 - Resend email sender + login code email templates (before students use email login).
 - Bunny Stream signed playback for paid modules (on hold).
+- **Play Store app** (TWA, no payment inside the app): checklist and status in `docs/PLAY-STORE.md`. Code side done; waiting on Chirag's Play Console account.
 - Automations (WhatsApp provider + email), CRM: after launch.
 - Interactive video editor (questions on the video timeline): later.
 

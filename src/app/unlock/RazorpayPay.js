@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, CreditCard, MessageCircle, ShieldCheck, Tag } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { isInApp } from "@/lib/android-app";
 
 // Razorpay Standard Checkout: create order on our server → Razorpay modal → our server checks the
 // signature and unlocks. If anything fails, the student gets a WhatsApp button to reach us.
@@ -56,6 +57,7 @@ export default function RazorpayPay({ price, enabled, name, email, phone, whatsa
   const fail = (text, paymentId) => { setBusy(false); setMsg({ tone: "error", text, paymentId }); };
 
   async function pay() {
+    if (isInApp()) return; // never take a payment inside the Play Store app (src/lib/android-app.js)
     if (!/^[6-9]\d{9}$/.test(mobile)) return setMsg({ tone: "error", text: "Enter a parent's 10-digit mobile number to continue." });
     setBusy(true);
     setMsg(null);
