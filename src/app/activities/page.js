@@ -38,7 +38,7 @@ export default async function StudyKitPage() {
           </div>
           <div className="border-t border-border p-4 sm:p-5">
             {!hasAccess ? (
-              <p className="flex items-center gap-2 text-sm text-muted"><Lock className="h-4 w-4" /> Included with the full course. <Link href="/unlock" className="font-medium text-primary">Unlock it</Link></p>
+              <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted"><Lock className="h-4 w-4" /> Included with the full course. <Link href="/unlock" className="inline-flex min-h-11 min-w-11 items-center font-medium text-primary underline">Unlock it</Link></p>
             ) : newsletters.length ? (
               <ModuleResources files={newsletters.map((n) => ({ ...n, title: `${n.title} · ${fmt(n.issue_date)}` }))} />
             ) : (

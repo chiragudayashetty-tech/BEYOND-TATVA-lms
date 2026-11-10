@@ -99,3 +99,41 @@ export const fmtPremiere = (iso) =>
     : iso
     ? new Date(iso).toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" })
     : "Not scheduled";
+
+// The one thing a student should do next, so every screen can show the same clear button.
+// Order: a lesson they left half-way → the next unwatched lesson → that module's quiz → its assignment
+// → unlock → wait for the next module → all done.
+// `activities` is getActivities(): { quizzes, assignments, best, submissions } (only open modules are in it).
+export function nextStep(course, hasAccess, activities = {}, now = Date.now()) {
+  const resume = continueWatching(course, hasAccess);
+  if (resume) return { kind: "resume", lesson: resume, module: moduleOfLesson(course, resume) };
+  for (const m of course.modules) {
+    if (!canWatch(m, hasAccess, now) || !m.lessons.length) continue;
+    const lesson = m.lessons.find((l) => !l.done);
+    if (lesson) return { kind: "lesson", lesson, module: m, started: m.lessons.some((l) => l.done) };
+    const quiz = (activities.quizzes ?? []).find((q) => q.chapter_id === m.id && !activities.best?.[q.id]?.passed);
+    if (quiz) return { kind: "quiz", quiz, module: m };
+    const assignment = (activities.assignments ?? []).find((a) => a.chapter_id === m.id
+      && (!activities.submissions?.[a.id] || activities.submissions[a.id].status === "returned"));
+    if (assignment) return { kind: "assignment", assignment, module: m };
+  }
+  const locked = !hasAccess && course.modules.find((m) => isReleased(m, now) && !m.free);
+  if (locked) return { kind: "unlock", module: locked };
+  const upcoming = nextPremiere(course, now);
+  if (upcoming) return { kind: "wait", module: upcoming };
+  return { kind: course.lessons.length && course.lessons.every((l) => l.done) ? "done" : "none" };
+}
+
+// Where the step's button goes and what it says (short, for 13–15 year olds).
+export function stepLink(courseId, step) {
+  switch (step?.kind) {
+    case "resume": return { href: `/watch/${courseId}?l=${step.lesson.n}`, label: "Continue watching", title: step.lesson.title, hint: `Module ${step.module.n} · Lesson ${step.lesson.idx} of ${step.module.lessons.length}` };
+    case "lesson": return { href: `/watch/${courseId}?l=${step.lesson.n}`, label: step.started ? "Next lesson" : `Start Module ${step.module.n}`, title: step.lesson.title, hint: `Module ${step.module.n} · Lesson ${step.lesson.idx} of ${step.module.lessons.length}` };
+    case "quiz": return { href: `/quiz/${step.quiz.id}`, label: "Take the quiz", title: step.quiz.title, hint: `You finished the Module ${step.module.n} videos. Now check what you learned.` };
+    case "assignment": return { href: `/assignments/${step.assignment.id}`, label: "Do the assignment", title: step.assignment.title, hint: `Module ${step.module.n} · hand in your work` };
+    case "unlock": return { href: "/unlock", label: "Unlock the course", title: `Module ${step.module.n}: ${step.module.title}`, hint: "You finished the free module. Unlock the rest to keep going." };
+    case "wait": return { href: `/course#m${step.module.n}`, label: "See the course", title: `Module ${step.module.n}: ${step.module.title}`, hint: `You're all caught up. This module opens ${fmtPremiere(step.module.release)}.` };
+    case "done": return { href: "/certificates", label: "See your certificate", title: "You finished the course!", hint: "Every lesson is done. Well done!" };
+    default: return null;
+  }
+}

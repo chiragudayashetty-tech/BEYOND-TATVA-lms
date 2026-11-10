@@ -12,7 +12,7 @@ export default async function SchoolsPage({ searchParams }) {
   const schools = data ?? [];
   return <Shell roles={["admin"]}>
     <PageTitle title="School analytics" subtitle={`Student activity and conversion for the last ${days} days.`}>
-      <div className="flex gap-1 rounded-xl border border-border p-1">{[7, 30, 90].map((range) => <Link key={range} href={`/admin/analytics/schools?days=${range}`} className={`inline-flex min-h-10 items-center rounded-lg px-3 text-sm ${days === range ? "bg-primary-soft text-primary" : "text-muted"}`}>{range} days</Link>)}</div>
+      <div className="flex gap-1 rounded-xl border border-border p-1">{[7, 30, 90].map((range) => <Link key={range} href={`/admin/analytics/schools?days=${range}`} className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm ${days === range ? "bg-primary-soft text-primary" : "text-muted"}`}>{range} days</Link>)}</div>
     </PageTitle>
     <nav className="mb-4 flex flex-wrap gap-2"><Link className="btn-secondary" href={`/admin/analytics?days=${days}`}>Overview</Link><Link className="btn-secondary" href={`/admin/analytics/students?days=${days}`}>Students</Link><Link className="btn-primary" href={`/admin/analytics/schools?days=${days}`}>Schools</Link></nav>
     {error ? <Card><Empty title="School data unavailable" body="The school scorecards could not be loaded. Please try again." /></Card> : <Card title={`${schools.length} schools`}>

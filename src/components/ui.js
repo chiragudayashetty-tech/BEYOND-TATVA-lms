@@ -37,7 +37,7 @@ export function Card({ title, action, children, className = "", pad = true }) {
 
 export function ViewAll({ href, children = "View all" }) {
   return (
-    <Link href={href} className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-sm font-medium text-primary hover:underline">
+    <Link href={href} className="inline-flex min-h-11 shrink-0 items-center gap-0.5 whitespace-nowrap text-sm font-medium text-primary hover:underline">
       {children} <ChevronRight className="h-4 w-4" />
     </Link>
   );

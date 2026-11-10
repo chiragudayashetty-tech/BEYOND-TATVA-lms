@@ -23,7 +23,7 @@ export default async function OutreachPage({ searchParams }) {
   const counts = Object.fromEntries(OUTREACH_STATUSES.map((st) => [st, all.filter((s) => (s.status || "Not contacted") === st).length]));
   const rows = filter === "due" ? due : filter ? all.filter((s) => (s.status || "Not contacted") === filter) : all;
   const chip = (key, label, n) => (
-    <Link key={key} href={key ? `?status=${encodeURIComponent(key)}` : "?"} className={`chip ${filter === key || (!filter && !key) ? "bg-primary text-primary-fg" : "bg-surface-2"}`}>{label} · {n}</Link>
+    <Link key={key} href={key ? `?status=${encodeURIComponent(key)}` : "?"} className={`chip min-h-11 px-4 ${filter === key || (!filter && !key) ? "bg-primary text-primary-fg" : "bg-surface-2"}`}>{label} · {n}</Link>
   );
 
   return (

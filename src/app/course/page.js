@@ -3,9 +3,9 @@ import { Award, CalendarClock, Check, ChevronDown, CircleCheck, ClipboardList, G
 import { quizBadge, submissionBadge } from "@/components/activity";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, IconTile, Progress } from "@/components/ui";
-import { ContinueWatchingCard, PremiereCard, Thumb, iconFor, moduleState } from "@/components/course";
+import { NextStepCard, PremiereCard, Thumb, firstLesson, iconFor, moduleState } from "@/components/course";
 import Countdown from "@/components/Countdown";
-import { continueWatching, fmtPremiere, isComingSoon, isReleased, nextPremiere } from "@/lib/catalog";
+import { fmtPremiere, isComingSoon, isReleased, nextPremiere, nextStep } from "@/lib/catalog";
 import { getActivities, getCourse, getModuleResources } from "@/lib/data";
 import ModuleResources from "@/components/ModuleResources";
 import { getSession } from "@/lib/supabase/server";
@@ -25,7 +25,7 @@ export default async function CoursePage({ searchParams }) {
   const [{ hasAccess }, course, activities, resources] = await Promise.all([getSession(), getCourse(), getActivities(), getModuleResources()]);
   const quizByChapter = Object.fromEntries(activities.quizzes.map((q) => [q.chapter_id, q]));
   const next = nextPremiere(course);
-  const resumeLesson = continueWatching(course, hasAccess);
+  const step = nextStep(course, hasAccess, activities);
   const released = course.modules.filter((m) => isReleased(m)).length;
 
   return (
@@ -41,6 +41,9 @@ export default async function CoursePage({ searchParams }) {
               </div>
             </div>
           )}
+          {/* First thing on the page, so a student never has to scroll to find where to go next. */}
+          {step.kind !== "unlock" && <NextStepCard step={step} courseId={course.id} />}
+
           <div className="card overflow-hidden">
             <div className="grid md:grid-cols-[1fr_1fr]">
               <div className="p-6">
@@ -76,8 +79,6 @@ export default async function CoursePage({ searchParams }) {
 
           {next && <PremiereCard module={next} hasAccess={hasAccess} />}
 
-          <ContinueWatchingCard lesson={resumeLesson} courseId={course.id} />
-
           <Card title="Modules" action={<span className="text-sm text-muted">{released} of {course.modules.length} out</span>}>
             <ol className="relative">
               {course.modules.map((m, i) => {
@@ -107,7 +108,9 @@ export default async function CoursePage({ searchParams }) {
                               ? <>Coming soon</>
                               : state === "upcoming"
                               ? <>Premieres {fmtPremiere(m.release)} · in <span className="font-semibold text-fg"><Countdown to={m.release} compact /></span></>
-                              : <>{m.lessons.length} lessons · {m.mins} min</>}
+                              : m.lessons.length === 0
+                              ? <>Lessons coming soon</>
+                              : <>{m.lessons.length} {m.lessons.length === 1 ? "lesson" : "lessons"} · {m.mins} min</>}
                           </div>
                           {(state === "progress" || state === "done") && <Progress value={m.progress} tone={state === "done" ? "success" : "primary"} className="mt-3 h-1.5 max-w-xs" />}
                         </div>
@@ -121,7 +124,7 @@ export default async function CoursePage({ searchParams }) {
                               return (
                                 <li key={l.id}>
                                   <Row {...(playable ? { href: `/watch/${course.id}?l=${l.n}` } : {})}
-                                    className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${playable ? "hover:bg-surface-2" : "text-subtle"} ${l.current ? "bg-primary-soft" : ""}`}>
+                                    className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm ${playable ? "hover:bg-surface-2" : "text-subtle"} ${l.current ? "bg-primary-soft" : ""}`}>
                                     {l.done ? <CircleCheck className="h-4 w-4 text-success" /> : playable ? <PlayCircle className="h-4 w-4 text-primary" /> : <Lock className="h-3.5 w-3.5" />}
                                     <span className="flex-1 font-medium">{li + 1}. {l.title}</span>
                                     {l.current && <Badge tone="primary">Up next</Badge>}
@@ -132,7 +135,7 @@ export default async function CoursePage({ searchParams }) {
                             })}
                           {quizByChapter[m.id] && (
                             <li>
-                              <Link href={`/quiz/${quizByChapter[m.id].id}`} className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-surface-2">
+                              <Link href={`/quiz/${quizByChapter[m.id].id}`} className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-surface-2">
                                 <Sparkles className="h-4 w-4 text-warning" /><span className="flex-1 font-medium">{quizByChapter[m.id].title}</span>
                                 {quizBadge(activities.best[quizByChapter[m.id].id])}
                               </Link>
@@ -140,7 +143,7 @@ export default async function CoursePage({ searchParams }) {
                           )}
                           {activities.assignments.filter((a) => a.chapter_id === m.id).map((a) => (
                             <li key={a.id}>
-                              <Link href={`/assignments/${a.id}`} className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-surface-2">
+                              <Link href={`/assignments/${a.id}`} className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-surface-2">
                                 <ClipboardList className="h-4 w-4 text-primary" /><span className="flex-1 font-medium">{a.title}</span>
                                 {submissionBadge(activities.submissions[a.id], a)}
                               </Link>
@@ -149,16 +152,31 @@ export default async function CoursePage({ searchParams }) {
                           </ul>
                         );
                         // Locked and upcoming modules fold their lessons away to keep the page short on phones.
-                        return playable ? list : (
+                        if (playable) return list;
+                        if (!m.lessons.length) return null; // nothing to peek at yet
+                        return (
                           <details className="group mt-2">
-                            <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-muted hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
-                              <ChevronDown className="h-4 w-4 transition group-open:rotate-180" /> See what&apos;s inside ({m.lessons.length} lessons)
+                            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-muted hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
+                              <ChevronDown className="h-4 w-4 transition group-open:rotate-180" /> See what&apos;s inside ({m.lessons.length} {m.lessons.length === 1 ? "lesson" : "lessons"})
                             </summary>
                             {list}
                           </details>
                         );
                       })()}
 
+                      {playable && m.lessons.length > 0 && (() => {
+                        // One big button per open module: start, carry on, or (videos done) take the quiz.
+                        const quiz = quizByChapter[m.id];
+                        const quizDue = state === "done" && quiz && !activities.best[quiz.id]?.passed;
+                        return (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {quizDue && <Link href={`/quiz/${quiz.id}`} className="btn-primary w-full sm:w-auto"><Sparkles className="h-4 w-4" /> Take the quiz</Link>}
+                            <Link href={`/watch/${course.id}?l=${firstLesson(m).n}`} className={`${state === "done" ? "btn-secondary" : "btn-primary"} w-full sm:w-auto`}>
+                              <PlayCircle className="h-4 w-4" /> {state === "done" ? "Watch again" : state === "progress" ? "Continue module" : `Start Module ${m.n}`}
+                            </Link>
+                          </div>
+                        );
+                      })()}
                       {state === "locked" && (
                         <Link href="/unlock" className="btn-secondary mt-3"><KeyRound className="h-4 w-4" /> Unlock module {m.n}</Link>
                       )}

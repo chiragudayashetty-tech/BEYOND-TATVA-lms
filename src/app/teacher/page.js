@@ -67,7 +67,7 @@ export default async function TeacherPage() {
         <StatCard label="Class accuracy" value={accuracy == null ? "–" : `${accuracy}%`} hint="In-video quick checks" icon={Target} tone="warning" />
       </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_340px]">
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_340px] [&>*]:min-w-0">
         {students.length === 0 ? (
           <Empty icon={Users} title={classes.length ? "No students yet" : "No class assigned yet"}
             body={classes.length ? "Students appear here after they sign up with your school code." : "Beyond Tatva will assign your class. It will show here once that's done."} />
