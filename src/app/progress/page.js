@@ -1,17 +1,19 @@
-import { CheckCircle2, Flame, Target, Zap } from "lucide-react";
+import { CheckCircle2, Sparkles, Target, Zap } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Card, IconTile, PageTitle, Progress, StatCard } from "@/components/ui";
 import { iconFor } from "@/components/course";
 import { isReleased } from "@/lib/catalog";
-import { getCourse, getStudentStats } from "@/lib/data";
+import { getCourse, getLearningStats } from "@/lib/data";
 
 export const metadata = { title: "Progress · Beyond Tatva" };
 
 export default async function ProgressPage() {
-  const [course, stats] = await Promise.all([getCourse(), getStudentStats()]);
+  const [course, stats] = await Promise.all([getCourse(), getLearningStats()]);
   const done = course.lessons.filter((l) => l.done).length;
-  const correct = stats.xp / 10;
-  const accuracy = stats.answers ? Math.round((correct / stats.answers) * 100) : null;
+  // Real counts from my_learning_stats (XP also includes quizzes and assignments, so it can't be used for accuracy).
+  const answered = stats?.checks_answered ?? 0;
+  const correct = stats?.checks_correct ?? 0;
+  const accuracy = answered ? Math.round((correct / answered) * 100) : null;
   const released = course.modules.filter((m) => isReleased(m));
 
   return (
@@ -20,9 +22,9 @@ export default async function ProgressPage() {
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Lessons completed" value={`${done} / ${course.lessonCount}`} hint={`${course.progress}% of the course`} icon={CheckCircle2} tone="success" />
-        <StatCard label="Quick-check accuracy" value={accuracy == null ? "–" : `${accuracy}%`} hint={stats.answers ? `${correct} of ${stats.answers} correct` : "Answer one in a lesson"} icon={Target} />
-        <StatCard label="XP" value={stats.xp} hint="10 per correct answer" icon={Zap} tone="warning" />
-        <StatCard label="Streak" value={`${stats.streak} ${stats.streak === 1 ? "day" : "days"}`} hint="Days in a row with learning" icon={Flame} tone="danger" />
+        <StatCard label="Quick-check accuracy" value={accuracy == null ? "–" : `${accuracy}%`} hint={answered ? `${correct} of ${answered} correct` : "Answer one in a lesson"} icon={Target} />
+        <StatCard label="XP" value={stats?.xp ?? 0} hint="Quick checks, quizzes and assignments" icon={Zap} tone="warning" />
+        <StatCard label="Quizzes passed" value={stats?.quizzes_passed ?? 0} hint="One quiz in every module" icon={Sparkles} tone="primary" />
       </div>
 
       <Card title="By module" className="mt-6">
