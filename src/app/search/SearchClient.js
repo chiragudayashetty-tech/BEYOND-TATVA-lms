@@ -24,7 +24,7 @@ export default function SearchClient({ initial = "", course }) {
       <div className="no-scrollbar mt-4 flex gap-2 overflow-x-auto pb-1">
         {topics.map((t) => (
           <button key={t} onClick={() => setQ(q === t ? "" : t)}
-            className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${q === t ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface text-muted hover:text-fg"}`}>
+            className={`min-h-11 shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition ${q === t ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface text-muted hover:text-fg"}`}>
             {t}
           </button>
         ))}
@@ -36,7 +36,7 @@ export default function SearchClient({ initial = "", course }) {
             const out = isReleased(l.m);
             return (
               <li key={l.id}>
-                <Link href={out ? `/watch/${course.id}?l=${l.n}` : `/course#m${l.m.n}`} className="flex items-center gap-3 px-4 py-3 transition hover:bg-surface-2">
+                <Link href={out ? `/watch/${course.id}?l=${l.n}` : `/course#m${l.m.n}`} className="flex min-h-12 items-center gap-3 px-4 py-3 transition hover:bg-surface-2">
                   {out ? <PlayCircle className="h-5 w-5 text-primary" /> : <CalendarClock className="h-5 w-5 text-subtle" />}
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-semibold">{l.title}</div>

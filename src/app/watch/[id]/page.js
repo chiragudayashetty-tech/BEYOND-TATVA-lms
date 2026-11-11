@@ -11,7 +11,7 @@ import LessonView from "./LessonView";
 
 export const metadata = { title: "Lesson · Beyond Tatva" };
 
-function LockScreen({ module: m, price }) {
+function LockScreen({ module: m, price, hasAccess }) {
   const upcoming = !isReleased(m);
   return (
     <div className="mx-auto max-w-3xl">
@@ -29,7 +29,8 @@ function LockScreen({ module: m, price }) {
             <p className="mt-2 text-sm text-white/70">{upcoming ? (isComingSoon(m) ? "Coming soon" : `Premieres ${fmtPremiere(m.release)}`) : "This module is part of the full course."}</p>
           </div>
           {upcoming && m.release && !isComingSoon(m) && <Countdown to={m.release} />}
-          {!m.free && (
+          {hasAccess && upcoming && <p className="rounded-full bg-white/10 px-4 py-2 text-sm">You&apos;re all set. It opens here on its own.</p>}
+          {!m.free && !hasAccess && (
             <div className="flex flex-wrap justify-center gap-2">
               <Link href="/unlock" className="web-only btn bg-white text-[#0f172a] hover:bg-white/90"><KeyRound className="h-4 w-4" /> Unlock for ₹{price}</Link>
               <Link href="/unlock#key" className="btn border border-white/25 text-white hover:bg-white/10">I have a key</Link>
@@ -55,7 +56,7 @@ export default async function WatchPage({ params, searchParams }) {
     <Shell roles={["student", "teacher"]}>
       {allowed
         ? <LessonView key={lesson.id} course={course} lesson={lesson} hasAccess={hasAccess} video={video} activities={activities} canSave={Boolean(user) && user.id !== "preview"} userId={user?.id} />
-        : <LockScreen module={m} price={course.price} />}
+        : <LockScreen module={m} price={course.price} hasAccess={hasAccess} />}
     </Shell>
   );
 }

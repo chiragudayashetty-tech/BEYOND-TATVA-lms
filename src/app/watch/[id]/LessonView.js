@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CalendarClock, CircleCheck, ClipboardList, Lock, PlayCircle, Sparkles, Zap } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
-import { Avatar, Badge } from "@/components/ui";
+import { Avatar, Badge, RichText } from "@/components/ui";
 import { quizBadge, submissionBadge } from "@/components/activity";
 import { canWatch, isComingSoon, isReleased } from "@/lib/catalog";
 import { parseVideo, tracksProgress } from "@/lib/video";
@@ -109,13 +109,31 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
   const moduleAssignments = activities.assignments.filter((assignment) => assignment.chapter_id === mod?.id);
   const nextRaw = course.lessons.find((l) => l.n === lesson.n + 1);
   const next = nextRaw && canWatch(course.modules.find((m) => m.n === nextRaw.module), hasAccess) ? nextRaw : null;
+  // What comes after this video: the next lesson, else this module's quiz or assignment, else back to the course.
+  const quizDue = moduleQuizzes.find((quiz) => !activities.best[quiz.id]?.passed);
+  const assignmentDue = moduleAssignments.find((a) => !activities.submissions[a.id] || activities.submissions[a.id].status === "returned");
+  const lastInModule = !next || next.module !== lesson.module;
+  const after = lastInModule && quizDue ? { href: `/quiz/${quizDue.id}`, label: "Take the quiz", text: "Now check what you learned in the module quiz." }
+    : lastInModule && assignmentDue ? { href: `/assignments/${assignmentDue.id}`, label: "Do the assignment", text: "Now try the assignment for this module." }
+    : next ? { href: `/watch/${course.id}?l=${next.n}`, label: "Next lesson", text: `Up next: ${next.title}` }
+    : nextRaw && !hasAccess ? { href: "/unlock", label: "Unlock the next module", text: "You finished the free module. Unlock the rest to keep going." }
+    : { href: "/course", label: "Back to the course", text: "You're all caught up." };
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
       <div className="min-w-0">
         <Link href="/course" className="btn-ghost -ml-3 mb-3"><ArrowLeft className="h-4 w-4" /> {course.title}</Link>
         <VideoPlayer src={video} title={lesson.title} onAnswer={saveAnswer} onProgress={onProgress} onPauseProgress={onPauseProgress} startAt={startAt} />
-        {resumeNote && <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted"><span>{resumeNote}</span><button type="button" className="font-medium text-primary underline" onClick={() => { playerRef.current.position = 0; setStartAt(-1); }}>Start over</button></div>}
+        {resumeNote && <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted"><span>{resumeNote}</span><button type="button" className="min-h-11 px-2 font-medium text-primary underline" onClick={() => { playerRef.current.position = 0; setStartAt(-1); }}>Start over</button></div>}
+
+        {done && <div role="status" className="mt-4 flex flex-col gap-3 rounded-2xl border border-success/40 bg-success-soft p-4 sm:flex-row sm:items-center">
+          <CircleCheck className="h-6 w-6 shrink-0 text-success" />
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold">Lesson complete. Nice work!</div>
+            <div className="text-sm text-muted">{after.text}</div>
+          </div>
+          <Link href={after.href} className="btn-primary w-full justify-center sm:w-auto">{after.label} <ArrowRight className="h-4 w-4" /></Link>
+        </div>}
 
         {(moduleQuizzes.length > 0 || moduleAssignments.length > 0) && <section className="mt-5 rounded-2xl border border-border bg-surface p-4 sm:p-5" aria-labelledby="lesson-tasks-title">
           <h2 id="lesson-tasks-title" className="text-base font-semibold">After this video</h2>
@@ -162,7 +180,7 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
         <div className="mt-6 border-b border-border">
           <div className="flex gap-6">
             {tabs.map((t) => (
-              <button key={t} onClick={() => setTab(t)} className={`-mb-px border-b-2 pb-3 text-sm font-medium transition ${tab === t ? "border-primary text-primary" : "border-transparent text-muted hover:text-fg"}`}>
+              <button key={t} onClick={() => setTab(t)} className={`-mb-px min-h-11 min-w-11 border-b-2 pb-2 text-sm font-medium transition ${tab === t ? "border-primary text-primary" : "border-transparent text-muted hover:text-fg"}`}>
                 {t}
               </button>
             ))}
@@ -172,10 +190,11 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
         <div className="py-5">
           {tab === "Overview" && (
             <div className="max-w-2xl space-y-3 text-sm leading-relaxed text-muted">
-              {lesson.description && <p>{lesson.description}</p>}
+              <RichText text={lesson.description} />
               {autoTracked
                 ? <p>Your progress saves as you watch. The lesson completes automatically after you watch 90%. Quick questions inside the video earn 10 XP each.</p>
-                : <p>Progress tracking is not available for this video. Your lesson status will update when tracking is supported.</p>}
+                : video ? <p>This video can&apos;t be tracked on its own yet, so the lesson won&apos;t tick itself off. You can still watch it and move on.</p>
+                : <p>The video for this lesson is being uploaded. Check back soon.</p>}
             </div>
           )}
           {tab === "Notes" && (
@@ -189,7 +208,7 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
 
         <div className="flex justify-between gap-3 border-t border-border pt-5">
           {prev ? <Link href={`/watch/${course.id}?l=${prev.n}`} className="btn-secondary"><ArrowLeft className="h-4 w-4" /> Previous</Link> : <span />}
-          {next && <Link href={`/watch/${course.id}?l=${next.n}`} className="btn-primary">Next lesson <ArrowRight className="h-4 w-4" /></Link>}
+          <Link href={after.href} className={done || next ? "btn-primary" : "btn-secondary"}>{after.label} <ArrowRight className="h-4 w-4" /></Link>
         </div>
       </div>
 
@@ -209,13 +228,13 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
                 </div>
                 {open ? m.lessons.map((l, li) => (
                   <Link key={l.id} href={`/watch/${course.id}?l=${l.n}`}
-                    className={`flex items-center gap-3 rounded-xl px-2 py-2.5 text-sm transition ${l.n === lesson.n ? "bg-primary-soft text-primary" : "hover:bg-surface-2"}`}>
+                    className={`flex min-h-11 items-center gap-3 rounded-xl px-2 py-2.5 text-sm transition ${l.n === lesson.n ? "bg-primary-soft text-primary" : "hover:bg-surface-2"}`}>
                     {l.done ? <CircleCheck className="h-4 w-4 shrink-0 text-success" /> : <PlayCircle className="h-4 w-4 shrink-0 opacity-60" />}
                     <span className="flex-1 font-medium">{li + 1}. {l.title}</span>
                     <span className="text-xs text-muted">{l.mins}m</span>
                   </Link>
                 )) : (
-                  <Link href={isReleased(m) ? "/unlock" : `/course#m${m.n}`} className="mx-2 block rounded-xl border border-dashed border-border px-3 py-2 text-xs text-muted hover:bg-surface-2">
+                  <Link href={isReleased(m) ? "/unlock" : `/course#m${m.n}`} className="mx-2 flex min-h-11 items-center rounded-xl border border-dashed border-border px-3 py-2 text-xs text-muted hover:bg-surface-2">
                     {isReleased(m) ? "Unlock to watch" : isComingSoon(m) ? "Coming soon" : `Premieres Sun ${new Date(m.release).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}, 10 AM`}
                   </Link>
                 )}

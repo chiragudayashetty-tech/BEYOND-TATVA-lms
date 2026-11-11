@@ -1,6 +1,6 @@
 # Beyond Tatva LMS: project status
 
-_Maintained by Claude (lead). Last updated: 2026-11-09 (evening). If this file and the code disagree, the code on `main` wins: tell Claude._
+_Maintained by Claude (lead). Last updated: 2026-11-10. If this file and the code disagree, the code on `main` wins: tell Claude._
 
 AI course for Grades 8–10 in Udupi. **Payments happen only in this LMS** (Razorpay on `/unlock`, live). The website
 (beyondtatva.in, separate repo `BEYOND-TATVA-web`) markets and sends people here; it takes no money. Students sign in, watch weekly modules, take quizzes and
@@ -39,6 +39,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Limits (2026-11-09) | Uploads: 10 MB + photo/PDF only (bucket), max **15 files per assignment, 60 per student** (DB rule); files a student removes are deleted on save. WhatsApp login codes: 1/min, 5/hour per phone. Studio Assignments/Enrollments show "Show more" when a list hits its limit. |
 | Load test | `scripts/load-test.mjs`: N test accounts sign in and open dashboard/course/lesson at once, prints p50/p95/p99. Preview only (refuses production). Not run yet. |
 | Removed 2026-11-09 | Workshop sign-up page `/w/<slug>` and Studio's UPI-screenshot card (0 claims ever). |
+| Next step + phone pass (2026-11-10, on branch `claude/eloquent-carson-kh7eqx`, not merged yet) | One "next step" everywhere (`nextStep()` in `src/lib/catalog.js`): half-watched lesson → next lesson → module quiz → assignment → unlock → wait → certificate. Shown on the dashboard hero, top of the course page and after a lesson ("Lesson complete" + one button). Each open module has one big Start / Continue / Take the quiz button. Dashboard lost its duplicate "Start here" and "Continue watching" cards. Paid students no longer see "Unlock for ₹" on a module that hasn't opened yet. Studio sidebar grouped (Teach / Students and payments / Grow); Studio home links every section (Reconciliation, School keys, Analytics were unreachable on a phone). Tap targets ≥ 44 px and no sideways scroll on Studio home, Content, Teacher. Security headers on every response (`next.config.mjs`): no framing, nosniff, referrer policy, HSTS. Smoke suite: 35 pass; the 2 `/course` failures are only the test sandbox blocking the hero video. |
 | Coupons | Studio → Enrollments → Coupons (code + price + time window). Applied on `/unlock`, priced on the server via `coupon_price`. |
 | Module attachments | Studio → Content → module → Attachments (PDF/images ≤ 25 MB); students View/Download/Download all on open modules. |
 | Tests | `npm test`, `npm run test:db`, `npm run test:e2e` (Playwright smoke; 2 checks parked as TODO). |

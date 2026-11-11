@@ -28,11 +28,12 @@ export function SidebarLinks({ items }) {
   const pathname = usePathname();
   return (
     <ul className="space-y-0.5">
-      {items.map(({ href, label, icon }) => {
+      {items.map(({ href, label, icon, group }) => {
         const Icon = Icons[icon] ?? Icons.Circle;
         const active = isActive(pathname, href);
         return (
           <li key={href}>
+            {group && <div className="mx-3 mb-1.5 mt-5 text-[11px] font-semibold uppercase tracking-wider text-subtle">{group}</div>}
             <Link href={href} aria-current={active ? "page" : undefined}
               className={`relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${active ? "bg-primary-soft text-primary" : "text-muted hover:bg-surface-2 hover:text-fg"}`}>
               <Icon className="h-[18px] w-[18px]" strokeWidth={active ? 2.25 : 1.75} />

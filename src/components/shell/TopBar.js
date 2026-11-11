@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Bell, Flame, LogOut, Search, Settings, User } from "lucide-react";
+import { Bell, LogOut, Search, Settings, User } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Avatar } from "@/components/ui";
 
@@ -15,7 +15,7 @@ function useOutside(ref, close) {
   }, [ref, close]);
 }
 
-export default function TopBar({ name, role, greeting, streak }) {
+export default function TopBar({ name, role, greeting }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [menu, setMenu] = useState(null);
@@ -47,11 +47,6 @@ export default function TopBar({ name, role, greeting, streak }) {
 
         <div ref={ref} className="flex items-center gap-2">
           <Link href="/search" aria-label="Search" className="grid h-11 w-11 place-items-center rounded-xl border border-border bg-surface text-muted md:hidden"><Search className="h-[18px] w-[18px]" /></Link>
-          {streak != null && (
-            <span className="hidden h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 text-sm font-semibold sm:flex" title="Day streak">
-              <Flame className="h-4 w-4 text-warning" /> {streak}
-            </span>
-          )}
           <ThemeToggle />
           <div className="relative">
             <button onClick={() => setMenu(menu === "bell" ? null : "bell")} aria-label="Notifications"

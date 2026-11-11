@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, Clapperboard, ClipboardCheck, Contact, Film, GraduationCap, KeyRound, ListChecks, School, UserCheck, Users, Workflow } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarClock, ChartLine, CheckCircle2, Clapperboard, ClipboardCheck, Contact, Film, GraduationCap, KeyRound, ListChecks, ReceiptText, School, UserCheck, Users, Workflow } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, IconTile, StatCard } from "@/components/ui";
 import { iconFor } from "@/components/course";
@@ -14,9 +14,12 @@ const sections = [
   { href: "/admin/quizzes", icon: ListChecks, title: "Quizzes", body: "One quiz per module: questions, pass mark, XP" },
   { href: "/admin/assignments", icon: ClipboardCheck, title: "Assignments", body: "Set work per module and mark what students hand in" },
   { href: "/admin/enrollments", icon: UserCheck, title: "Enrollments", body: "Website payments, manual enrollments and refunds" },
+  { href: "/admin/reconcile", icon: ReceiptText, title: "Reconciliation", body: "Check payments against access: who paid and who can watch" },
   { href: "/admin/people", icon: School, title: "Schools and people", body: "Schools, join codes, classes, teachers and students" },
+  { href: "/admin/access", icon: KeyRound, title: "School keys", body: "Make access keys for a school and upload a class list" },
   { href: "/admin/pipeline", icon: Contact, title: "Pipeline", body: "Leads to paid: who signed in, watched Module 0 and bought" },
   { href: "/admin/outreach", icon: School, title: "School outreach", body: "Schools to approach: calls, visits and the next follow-up" },
+  { href: "/admin/analytics", icon: ChartLine, title: "Analytics", body: "Funnel, revenue, student scores and school results" },
   { href: "/admin/automations", icon: Workflow, title: "Automations", body: "Reminders, emails, WhatsApp and Sheets sync" },
 ];
 
@@ -45,8 +48,8 @@ export default async function AdminPage() {
         <StatCard label="To mark" value={stats.to_review ?? 0} hint={`${stats.enrollments_pending ?? 0} paid, not signed in yet`} icon={ClipboardCheck} />
       </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.3fr_1fr]">
-        <Card title="Release schedule" action={<Link href="/admin/content" className="text-sm font-medium text-primary hover:underline">Edit</Link>}>
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1.3fr_1fr] [&>*]:min-w-0">
+        <Card title="Release schedule" action={<Link href="/admin/content" className="inline-flex min-h-11 min-w-11 items-center justify-end text-sm font-medium text-primary hover:underline">Edit</Link>}>
           <ul className="divide-y divide-border">
             {course.modules.map((m) => {
               const out = isReleased(m);

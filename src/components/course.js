@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Bot, Brain, CalendarClock, Gift, Lock, MessageSquareText, Palette, PenLine, PlayCircle, Sparkles, Wrench } from "lucide-react";
+import { ArrowRight, Award, Bot, Brain, CalendarClock, Gift, KeyRound, Lock, MessageSquareText, Palette, PenLine, PlayCircle, Sparkles, Wrench } from "lucide-react";
 import Countdown from "./Countdown";
 import { Badge, IconTile, Progress } from "./ui";
-import { canWatch, fmtPremiere, isComingSoon, isReleased } from "@/lib/catalog";
+import { canWatch, fmtPremiere, isComingSoon, isReleased, stepLink } from "@/lib/catalog";
 
 const moduleIcons = [Sparkles, Brain, PenLine, Wrench, MessageSquareText, Palette, Bot];
 export const iconFor = (m) => moduleIcons[m?.n ?? 0] ?? Brain;
@@ -41,17 +41,23 @@ function StateBadge({ m, state }) {
 
 export const firstLesson = (m) => m.lessons.find((l) => l.current) ?? m.lessons.find((l) => !l.done) ?? m.lessons[0];
 
-export function ContinueWatchingCard({ lesson, courseId }) {
-  if (!lesson) return null;
+// One clear "do this next" card: the same step on the dashboard, the course page and after a lesson.
+const stepIcons = { quiz: Sparkles, assignment: PenLine, unlock: KeyRound, wait: CalendarClock, done: Award };
+export function NextStepCard({ step, courseId, className = "" }) {
+  const link = stepLink(courseId, step);
+  if (!link) return null;
+  const Icon = stepIcons[step.kind] ?? PlayCircle;
+  const pct = step.kind === "resume" ? step.lesson.progressPct : null;
   return (
-    <section className="card flex flex-col gap-3 border-primary/20 bg-primary-soft/40 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5" aria-label="Continue watching">
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-fg"><PlayCircle className="h-5 w-5" /></span>
+    <section className={`card flex flex-col gap-3 border-primary/30 bg-primary-soft/40 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5 ${className}`} aria-label="Your next step">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-fg"><Icon className="h-5 w-5" /></span>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Continue watching</p>
-        <h2 className="mt-0.5 truncate font-semibold">{lesson.title}</h2>
-        <div className="mt-2 flex items-center gap-2"><Progress value={lesson.progressPct ?? 0} className="h-1.5 flex-1" /><span title={lesson.progressPct == null ? "The video length is unavailable, so a percentage cannot be calculated." : undefined} className="text-xs tabular-nums text-muted">{lesson.progressPct == null ? "–" : `${lesson.progressPct}%`} watched</span></div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Your next step</p>
+        <h2 className="mt-0.5 font-semibold">{link.title}</h2>
+        <p className="mt-0.5 text-sm text-muted">{link.hint}</p>
+        {pct != null && <div className="mt-2 flex items-center gap-2"><Progress value={pct} className="h-1.5 flex-1" /><span className="text-xs tabular-nums text-muted">{pct}% watched</span></div>}
       </div>
-      <Link href={`/watch/${courseId}?l=${lesson.n}`} className="btn-primary w-full justify-center sm:w-auto">Resume</Link>
+      <Link href={link.href} className="btn-primary w-full justify-center sm:w-auto">{link.label} <ArrowRight className="h-4 w-4" /></Link>
     </section>
   );
 }

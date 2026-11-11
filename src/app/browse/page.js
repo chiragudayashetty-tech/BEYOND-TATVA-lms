@@ -1,24 +1,24 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, Crown, Gift, KeyRound, Play } from "lucide-react";
+import { ArrowRight, Crown, Gift, KeyRound } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Card, IconTile, Ring, ViewAll } from "@/components/ui";
-import { ContinueHero, ContinueWatchingCard, ModuleCard, PremiereCard, firstLesson } from "@/components/course";
-import { canWatch, continueWatching, nextPremiere } from "@/lib/catalog";
-import { getCourse, getLearningStats, getLeaderboard } from "@/lib/data";
+import { ContinueHero, ModuleCard, PremiereCard } from "@/components/course";
+import { canWatch, nextPremiere, nextStep, stepLink } from "@/lib/catalog";
+import { getActivities, getCourse, getLearningStats, getLeaderboard } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 import InstallPrompt from "@/components/InstallPrompt";
 
 export const metadata = { title: "Dashboard · Beyond Tatva" };
 
 export default async function Dashboard() {
-  const [{ hasAccess, profile }, course, stats, board] = await Promise.all([getSession(), getCourse(), getLearningStats(), getLeaderboard()]);
+  const [{ hasAccess, profile }, course, stats, board, activities] = await Promise.all([getSession(), getCourse(), getLearningStats(), getLeaderboard(), getActivities()]);
   const next = nextPremiere(course);
-  const resumeLesson = continueWatching(course, hasAccess);
-  const current = course.modules.find((m) => m.progress < 100 && m.lessons.length && canWatch(m, hasAccess)) ?? course.modules[0];
+  // One clear button: the same "next step" the course page and the lesson page show.
+  const step = nextStep(course, hasAccess, activities);
+  const go = stepLink(course.id, step);
+  // The module shown in the big card below: the one the next lesson is in, else the first unfinished open one.
+  const current = step.lesson ? step.module : course.modules.find((m) => m.progress < 100 && m.lessons.length && canWatch(m, hasAccess));
   const done = course.lessons.filter((l) => l.done).length;
-  const nextLesson = current ? firstLesson(current) : null;
-  const firstModule = course.modules[0];
-  const firstModuleLesson = firstLesson(firstModule);
   const firstName = profile?.full_name?.trim().split(/\s+/)[0] || "there";
   // Friendly nudge: the XP gap to the next rank, from the leaderboard (only real numbers).
   const me = board?.me;
@@ -56,24 +56,13 @@ export default async function Dashboard() {
           <p className="rounded-2xl rounded-bl-sm bg-surface px-4 py-2.5 text-sm font-semibold text-fg">{tip}</p>
         </div>
         <h1 className="text-2xl font-semibold sm:text-3xl">Hi {firstName}!</h1>
-        {nextLesson && <Link href={`/watch/${course.id}?l=${nextLesson.n}`} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[15px] font-bold text-[#3b2fc0] sm:self-start">
-          <Play className="h-4 w-4 fill-current" /> {current.progress > 0 ? "Continue" : "Start"} · Lesson {nextLesson.idx ?? 1}
-        </Link>}
+        {go && <div>
+          <p className="mb-2 text-sm text-white/85">{step.lesson ? `${go.hint} · ${go.title}` : go.hint}</p>
+          <Link href={go.href} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[15px] font-bold text-[#3b2fc0] sm:inline-flex">
+            {go.label} <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>}
       </section>
-
-      {firstModule && <section className="mb-4 rounded-3xl border border-primary/20 bg-surface p-4 shadow-sm sm:flex sm:items-center sm:gap-5 sm:p-5" aria-labelledby="start-module-title">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          <IconTile icon={BookOpen} size="lg" />
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Start here · Module {firstModule.n}</p>
-            <h2 id="start-module-title" className="mt-0.5 text-lg font-semibold">{firstModule.title}</h2>
-            <p className="mt-1 text-sm text-muted">Watch the first lesson and try the quick checks. You can find the quiz and assignment in Learning tasks.</p>
-          </div>
-        </div>
-        {firstModuleLesson && <Link href={`/watch/${course.id}?l=${firstModuleLesson.n}`} className="btn-primary mt-4 w-full sm:mt-0 sm:w-auto"><Play className="h-4 w-4 fill-current" /> {firstModule.progress > 0 ? `Continue Module ${firstModule.n}` : `Start Module ${firstModule.n}`} <ArrowRight className="h-4 w-4" /></Link>}
-      </section>}
-
-      <div className="mb-5"><ContinueWatchingCard lesson={resumeLesson} courseId={course.id} /></div>
 
       <div className="mb-4 grid grid-cols-1 gap-3 min-[360px]:grid-cols-3 lg:mb-6">
         <Tile tone="primary-soft"><Ring value={course.progress} size={64} stroke={7}><span className="text-sm font-semibold">{course.progress}%</span></Ring><TileText title="Course" sub={`${done} of ${course.lessonCount} lessons`} /></Tile>
@@ -82,7 +71,7 @@ export default async function Dashboard() {
       </div>
 
       <div className="grid gap-4 lg:gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <ContinueHero course={course} module={current} />
+        {current && <ContinueHero course={course} module={current} />}
         {next ? <PremiereCard module={next} hasAccess={hasAccess} /> : (
           <Card title="All modules are out"><p className="text-sm text-muted">Finish the course to earn your certificate.</p></Card>
         )}
