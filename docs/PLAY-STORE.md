@@ -30,7 +30,16 @@ not a sales channel.
 - [x] `/.well-known/assetlinks.json` (public), filled from `ANDROID_SHA256_FINGERPRINTS`.
 - [x] `/delete-account` (public, no sign-in): how to ask for account deletion. Linked from Profile and Help.
 - [x] Manifest: description, language, category.
+- [x] "Get the Beyond Tatva app" card on the student home page for Android phones in the browser (never inside
+      the app). Off until `NEXT_PUBLIC_PLAY_STORE_URL` is set in Vercel; it then replaces "Add to home screen".
 - [x] Tests: `tests/android-app.test.mjs`.
+
+## How people move between browser and app
+- **Paid in the browser, no app yet:** the home page card above, the WhatsApp welcome message and the website
+  point to the Play link.
+- **Has the app, has not paid:** the app says nothing about paying (Google's rule). The nudge happens outside the
+  app: Studio → **Today** and **Pipeline → "Finished Module 0"** list these families with a WhatsApp button; send
+  the browser pay link there. Workshop handouts carry the pay link/QR. School keys work inside the app.
 
 ## B. Chirag: accounts and decisions (only you can do these)
 - [ ] **Open a Play Console developer account** (one-time US$25; ID + address check takes a few days. Start today.)
@@ -85,7 +94,8 @@ not a sales channel.
 
 ## F. Release
 - [ ] 12 testers opted in for 14 days → apply for production access → send for review (usually a few days).
-- [ ] After approval: put the Play link on the website and in the WhatsApp welcome message.
+- [ ] After approval: set `NEXT_PUBLIC_PLAY_STORE_URL` in Vercel and redeploy; put the Play link on the website
+      and in the WhatsApp welcome message.
 
 ## Known risks
 - **Access key box in the app.** Keys from schools are fine. If a reviewer reads it as a way around Play Billing,

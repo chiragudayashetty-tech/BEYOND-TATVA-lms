@@ -4,6 +4,10 @@
 // Buying happens only in a normal browser; the app is for learning.
 export const ANDROID_PACKAGE = process.env.NEXT_PUBLIC_ANDROID_PACKAGE || "in.beyondtatva.app";
 
+// The app's Play Store page. Empty until the app is public; then Android phones in the browser are offered it.
+const playUrl = process.env.NEXT_PUBLIC_PLAY_STORE_URL || "";
+export const PLAY_STORE_URL = playUrl.startsWith("https://play.google.com/store/apps/") ? playUrl : null;
+
 // Runs in <head> before first paint. The app is recognised by its referrer on launch (android-app://<package>)
 // or by its start URL (/?app=android), then remembered for this tab only. sessionStorage, not a cookie or
 // localStorage: those are shared with Chrome on the same phone, and Chrome must keep showing the pay page.
