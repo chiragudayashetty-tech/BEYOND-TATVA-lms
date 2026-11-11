@@ -1,0 +1,11 @@
+# Build output and machine files
+.gradle/
+build/
+app/build/
+local.properties
+# Signing keys and passwords never go in git (docs/PLAY-STORE.md)
+*.jks
+*.keystore
+keystore.properties
+*.aab
+*.apk

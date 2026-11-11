@@ -1,0 +1,53 @@
+// The Play Store app: learn.beyondtatva.in inside a Trusted Web Activity (Chrome without the address bar).
+// There is no app code here, only settings. See android/README.md and docs/PLAY-STORE.md.
+plugins {
+    id "com.android.application"
+}
+
+// Signing details come from android/keystore.properties (not in git) or from environment variables.
+def keys = new Properties()
+def keysFile = rootProject.file("keystore.properties")
+if (keysFile.exists()) keysFile.withInputStream { keys.load(it) }
+def key = { String name -> keys.getProperty(name) ?: System.getenv("BT_" + name.toUpperCase()) }
+
+android {
+    namespace "in.beyondtatva.app"
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "in.beyondtatva.app" // permanent once uploaded to Play
+        minSdk 24
+        targetSdk 36
+        versionCode 1          // add 1 for every upload to Play
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            if (key("storeFile")) {
+                storeFile file(key("storeFile"))
+                storePassword key("storePassword")
+                keyAlias key("keyAlias")
+                keyPassword key("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt")
+            if (key("storeFile")) signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation "com.google.androidbrowserhelper:androidbrowserhelper:2.7.4"
+}

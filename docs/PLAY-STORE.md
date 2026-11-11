@@ -1,7 +1,7 @@
 # Play Store app: checklist
 
 **Decision (Chirag, 2026-11-10):** put the LMS on Google Play, with **no payment inside the app** so Google takes no
-commission. The app is the same site (`lms.beyondtatva.in`) inside a Trusted Web Activity (TWA): Chrome without the
+commission. The app is the same site (`learn.beyondtatva.in`) inside a Trusted Web Activity (TWA): Chrome without the
 address bar. No second codebase; every deploy to Vercel updates the app at once.
 
 ## The rule we are working inside
@@ -53,23 +53,28 @@ not a sales channel.
       onboarded as a student, full access granted from Studio. Google's reviewer cannot use an email link or
       WhatsApp code. Put the email + password in Play Console → App access.
 - [ ] Check the privacy policy (https://www.beyondtatva.in/privacy) covers the LMS: profile, progress, uploaded
-      assignment files, parent phone number. Add a line pointing to `lms.beyondtatva.in/delete-account`.
+      assignment files, parent phone number. Add a line pointing to `learn.beyondtatva.in/delete-account`.
 
-## C. Build the app file (about 30 minutes, after B)
-1. Open https://www.pwabuilder.com, enter `https://lms.beyondtatva.in`, choose **Package for stores → Android**.
-2. Settings: package ID `in.beyondtatva.app`, app name `Beyond Tatva`, **start URL `/?app=android`**,
-   display `standalone`, signing key: "create new". Download the zip.
-3. **Keep the zip's signing key file and its passwords safe (password manager + one offline copy). Never commit
-   them.** Losing them means asking Google to reset the upload key.
-4. Upload the `.aab` to Play Console → Testing → Closed testing. Accept "Play App Signing".
-5. Play Console → Test and release → App integrity → App signing: copy the **SHA-256 of the app signing key**
-   (and of the upload key). In Vercel set `ANDROID_SHA256_FINGERPRINTS` to both, comma separated, and redeploy.
-6. Check `https://lms.beyondtatva.in/.well-known/assetlinks.json` shows them. Install the test build: there must be
-   **no browser bar** at the top. If there is one, the fingerprints or package name do not match.
+## C. The app file (built 2026-11-11, version 1.0.0)
+The Android project is in `android/` (see `android/README.md`). Chirag has the signed `app-release.aab`, a test
+`.apk`, and the upload key + password (kept out of git).
+
+- [x] Android project, icons from the dark logo, signed `.aab` for Play and `.apk` for testing.
+- [ ] **Chirag: store the upload key file and its password** in a password manager + one offline copy. Losing
+      them means asking Google to reset the upload key.
+- [ ] Merge and deploy this branch **before** anyone outside the team gets the app (until then the live site
+      still shows prices inside it).
+- [ ] In Vercel set `ANDROID_SHA256_FINGERPRINTS` to the upload key's SHA-256 and redeploy:
+      `E6:D2:57:84:7D:D8:3C:48:2D:CA:C4:CE:65:04:BF:B2:7A:C5:92:93:1B:01:8C:DB:6F:7E:46:47:E1:5D:96:CB`
+- [ ] Install the test `.apk` on an Android phone: there must be **no browser bar** at the top.
+- [ ] Play Console → Create app → Testing → Closed testing → upload the `.aab`. Accept "Play App Signing".
+- [ ] Play Console → Test and release → App integrity → App signing: copy the **SHA-256 of the app signing key**,
+      add it to `ANDROID_SHA256_FINGERPRINTS` after the first one (comma separated), redeploy.
+- [ ] Check `https://learn.beyondtatva.in/.well-known/assetlinks.json` lists both.
 
 ## D. Play Console forms
 - [ ] **Store listing:** name "Beyond Tatva"; short description (80 chars) e.g. "AI course for Grades 8–10: lessons,
-      quizzes, projects and a certificate."; full description; 512×512 icon; 1024×500 feature graphic; at least 4
+      quizzes, projects and a certificate."; full description; 512×512 icon (`android/store/play-icon-512.png`); 1024×500 feature graphic; at least 4
       phone screenshots (dashboard, course, lesson, quiz). No prices and no "buy on our website" in the listing text.
 - [ ] **Category:** Education. **Ads:** No. **Price:** Free.
 - [ ] **Target age:** 13–15, 16–17, 18+. Do **not** tick under 13 (that brings the Families policy). Risk: some
@@ -78,7 +83,7 @@ not a sales channel.
       (answer "users can interact: no", "shares user info with others: limited/name only" as the form words it).
 - [ ] **Data safety:** collected: name, email, phone number (parent's), files and photos (assignments), app
       activity (progress, quiz results). Not shared with third parties for ads. Encrypted in transit: yes.
-      Deletion: yes, URL `https://lms.beyondtatva.in/delete-account`. Payment info: not collected in the app.
+      Deletion: yes, URL `https://learn.beyondtatva.in/delete-account`. Payment info: not collected in the app.
 - [ ] **Privacy policy URL:** `https://www.beyondtatva.in/privacy`.
 - [ ] **App access:** "All or some functionality is restricted" → the reviewer login from B.
 - [ ] **Note to the reviewer:** "This app does not sell anything. Module 0 is free for every account. The other
