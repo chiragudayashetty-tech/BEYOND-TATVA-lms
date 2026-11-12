@@ -7,7 +7,7 @@ import { ArrowLeft, ArrowRight, CalendarClock, CircleCheck, ClipboardList, Lock,
 import VideoPlayer from "@/components/VideoPlayer";
 import { Avatar, Badge, RichText } from "@/components/ui";
 import { quizBadge, submissionBadge } from "@/components/activity";
-import { canWatch, isComingSoon, isReleased } from "@/lib/catalog";
+import { canWatch, isComingSoon, isReleased, quizOpen } from "@/lib/catalog";
 import { parseVideo, tracksProgress } from "@/lib/video";
 import { createClient } from "@/lib/supabase/client";
 
@@ -110,7 +110,7 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
   const nextRaw = course.lessons.find((l) => l.n === lesson.n + 1);
   const next = nextRaw && canWatch(course.modules.find((m) => m.n === nextRaw.module), hasAccess) ? nextRaw : null;
   // What comes after this video: the next lesson, else this module's quiz or assignment, else back to the course.
-  const quizDue = moduleQuizzes.find((quiz) => !activities.best[quiz.id]?.passed);
+  const quizDue = moduleQuizzes.find((quiz) => quizOpen(activities.best[quiz.id]));
   const assignmentDue = moduleAssignments.find((a) => !activities.submissions[a.id] || activities.submissions[a.id].status === "returned");
   const lastInModule = !next || next.module !== lesson.module;
   const after = lastInModule && quizDue ? { href: `/quiz/${quizDue.id}`, label: "Take the quiz", text: "Now check what you learned in the module quiz." }
@@ -192,7 +192,7 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
             <div className="max-w-2xl space-y-3 text-sm leading-relaxed text-muted">
               <RichText text={lesson.description} />
               {autoTracked
-                ? <p>Your progress saves as you watch. The lesson completes automatically after you watch 90%. Quick questions inside the video earn 10 XP each.</p>
+                ? <p>Your progress saves as you watch. The lesson completes automatically after you watch 90%. Quick questions inside the video earn 10 XP each, and finishing every video in a module earns 100 XP.</p>
                 : video ? <p>This video can&apos;t be tracked on its own yet, so the lesson won&apos;t tick itself off. You can still watch it and move on.</p>
                 : <p>The video for this lesson is being uploaded. Check back soon.</p>}
             </div>

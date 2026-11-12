@@ -100,6 +100,13 @@ export const fmtPremiere = (iso) =>
     ? new Date(iso).toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" })
     : "Not scheduled";
 
+// Learning rules (the database enforces them: migration 20261112000001). Screens read these so the
+// numbers a student sees always match what they earn.
+export const QUIZ_TRIES = 2;
+export const XP_RULES = { quizAnswer: 10, module: 100, assignment: 50, quickCheck: 10 };
+// A quiz still needs doing while it isn't passed and a try is left.
+export const quizOpen = (best) => !best?.passed && (best?.tries ?? 0) < QUIZ_TRIES;
+
 // The one thing a student should do next, so every screen can show the same clear button.
 // Order: a lesson they left half-way → the next unwatched lesson → that module's quiz → its assignment
 // → unlock → wait for the next module → all done.
@@ -111,7 +118,7 @@ export function nextStep(course, hasAccess, activities = {}, now = Date.now()) {
     if (!canWatch(m, hasAccess, now) || !m.lessons.length) continue;
     const lesson = m.lessons.find((l) => !l.done);
     if (lesson) return { kind: "lesson", lesson, module: m, started: m.lessons.some((l) => l.done) };
-    const quiz = (activities.quizzes ?? []).find((q) => q.chapter_id === m.id && !activities.best?.[q.id]?.passed);
+    const quiz = (activities.quizzes ?? []).find((q) => q.chapter_id === m.id && quizOpen(activities.best?.[q.id]));
     if (quiz) return { kind: "quiz", quiz, module: m };
     const assignment = (activities.assignments ?? []).find((a) => a.chapter_id === m.id
       && (!activities.submissions?.[a.id] || activities.submissions[a.id].status === "returned"));

@@ -65,7 +65,7 @@ export async function getLessonVideo(lessonId) {
 // Dashboard stats from my_learning_stats() (migration 10): XP with breakdown, lessons, quizzes, assignments, quick checks.
 // Preview (no real student) gets a fixed sample so the screens can be built and tested.
 const PREVIEW_STATS = {
-  xp: 340, xp_breakdown: { checks: 120, quizzes: 100, assignments: 120, total: 340 }, minutes_total: 95,
+  xp: 340, xp_breakdown: { checks: 60, quizzes: 80, modules: 100, assignments: 100, total: 340 }, minutes_total: 95,
   lessons_done: 7, quizzes_passed: 1, assignments_graded: 3, checks_answered: 14, checks_correct: 12,
 };
 const PREVIEW_BOARD = {
@@ -145,8 +145,9 @@ export const getActivities = cache(async () => {
   const best = {};
   for (const a of attempts ?? []) {
     const b = best[a.quiz_id];
-    if (!b || a.score > b.score) best[a.quiz_id] = { score: a.score, total: a.total, passed: a.passed || Boolean(b?.passed) };
-    else if (a.passed) b.passed = true;
+    // tries: how many of the 2 allowed tries are used (see QUIZ_TRIES in lib/catalog.js).
+    if (!b || a.score > b.score) best[a.quiz_id] = { score: a.score, total: a.total, passed: a.passed || Boolean(b?.passed), tries: (b?.tries ?? 0) + 1 };
+    else { b.tries += 1; if (a.passed) b.passed = true; }
   }
   return {
     quizzes: quizzes ?? [],

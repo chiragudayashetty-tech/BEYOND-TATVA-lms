@@ -7,14 +7,20 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, CircleCheck, CircleX, RotateCcw, Sparkles, Trophy } from "lucide-react";
 import { Badge, Progress } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
+import { QUIZ_TRIES, XP_RULES } from "@/lib/catalog";
 
-export default function QuizRunner({ quiz, questions, best, backHref = "/course" }) {
+// `tries`: this student's earlier tries, oldest first. `limited`: students get QUIZ_TRIES tries (staff are not counted).
+export default function QuizRunner({ quiz, questions, tries = [], limited = false, backHref = "/course" }) {
   const router = useRouter();
   const [answers, setAnswers] = useState(() => questions.map(() => null));
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
+  const [used, setUsed] = useState(tries.length);
+  const best = tries.length ? tries.reduce((a, b) => (b.score > a.score ? b : a)) : null;
+  const passedBefore = tries.some((t) => t.passed);
+  const left = Math.max(QUIZ_TRIES - used, 0);
 
   if (!questions.length) {
     return <div className="card p-8 text-center"><h1 className="text-xl font-semibold">{quiz.title}</h1><p className="mt-2 text-muted">Questions are coming soon.</p></div>;
@@ -31,6 +37,7 @@ export default function QuizRunner({ quiz, questions, best, backHref = "/course"
     // Database messages are written for students ("Take a short break…"); a dropped connection is not.
     if (error) return setError(/fetch|network|load failed/i.test(error.message) ? "We couldn't send your answers. Check your internet and tap Submit again. Your answers are still here." : error.message);
     setResult(data);
+    setUsed(data.attempt ?? used + 1);
     router.refresh(); // XP and module status
   }
 
@@ -38,6 +45,24 @@ export default function QuizRunner({ quiz, questions, best, backHref = "/course"
     setAnswers(questions.map(() => null));
     setI(0);
     setResult(null);
+  }
+
+  // Both tries used (and not just now): show how it went instead of the questions.
+  if (limited && !result && used >= QUIZ_TRIES) {
+    const avg = tries.reduce((a, t) => a + t.score, 0) / tries.length;
+    return (
+      <div className="card mx-auto max-w-2xl p-6 text-center">
+        <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary-soft text-primary"><Trophy className="h-7 w-7" /></span>
+        <h1 className="mt-3 text-2xl font-semibold">{quiz.title}</h1>
+        <p className="mt-1 text-muted">You&apos;ve used both tries for this quiz.</p>
+        <ul className="mx-auto mt-4 max-w-xs space-y-2 text-left text-sm">
+          {tries.map((t, k) => <li key={k} className="flex justify-between rounded-xl bg-surface-2 px-4 py-3"><span>Try {k + 1}</span><span className="font-semibold">{t.score} of {t.total} right</span></li>)}
+        </ul>
+        <div className="mt-4"><Badge tone="warning"><Sparkles className="h-3 w-3" /> {Math.round(avg * XP_RULES.quizAnswer)} XP from this quiz</Badge></div>
+        <p className="mt-2 text-xs text-muted">XP is {XP_RULES.quizAnswer} for each right answer, on the average of your tries.</p>
+        <Link href="/course" className="btn-primary mt-5">Continue the course <ArrowRight className="h-4 w-4" /></Link>
+      </div>
+    );
   }
 
   if (result) {
@@ -50,14 +75,19 @@ export default function QuizRunner({ quiz, questions, best, backHref = "/course"
           </span>
           <h1 className="mt-3 text-2xl font-semibold">{result.passed ? "You passed!" : "Not yet. Try again!"}</h1>
           <p className="mt-1 text-muted">{result.score} of {result.total} correct ({pct}%). Pass mark is {result.pass_percent}%.</p>
-          {!result.revealed && <p className="mt-2 text-sm text-muted">You&apos;ll see the right answers once you pass, or after your 3rd try. Look back at the lesson and try again.</p>}
-          {result.passed && result.xp > 0 && <div className="mt-3"><Badge tone="warning"><Sparkles className="h-3 w-3" /> +{result.xp} XP</Badge></div>}
+          {!result.revealed && <p className="mt-2 text-sm text-muted">You&apos;ll see the right answers after your second try. Look back at the lesson first: you have 1 try left.</p>}
+          {limited && <div className="mt-3"><Badge tone="warning"><Sparkles className="h-3 w-3" /> {result.xp} XP from this quiz</Badge></div>}
+          {limited && <p className="mt-2 text-xs text-muted">
+            {left > 0
+              ? `You can try once more. Your XP will be the average of both tries, so it can go up or down.`
+              : `That was your last try. XP is ${XP_RULES.quizAnswer} for each right answer, on the average of your tries.`}
+          </p>}
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
-            {result.passed
+            {result.passed || (limited && left === 0)
               ? <><Link href="/course" className="btn-primary">Continue the course <ArrowRight className="h-4 w-4" /></Link>
-                <button onClick={retry} className="btn-secondary"><RotateCcw className="h-4 w-4" /> Try for a better score</button></>
-              : <><button onClick={retry} className="btn-primary"><RotateCcw className="h-4 w-4" /> Try again</button>
-                <Link href={backHref} className="btn-secondary">Watch the lesson again</Link></>}
+                {(!limited || left > 0) && <button onClick={retry} className="btn-secondary"><RotateCcw className="h-4 w-4" /> Use my last try</button>}</>
+              : <><Link href={backHref} className="btn-primary">Watch the lesson again</Link>
+                <button onClick={retry} className="btn-secondary"><RotateCcw className="h-4 w-4" /> Try again{limited ? " (last try)" : ""}</button></>}
           </div>
         </div>
         <ol className="space-y-3">
@@ -88,10 +118,15 @@ export default function QuizRunner({ quiz, questions, best, backHref = "/course"
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold">{quiz.title}</h1>
-          <p className="text-sm text-muted">{questions.length} questions · pass with {quiz.pass_percent}% · {quiz.xp} XP</p>
+          <p className="text-sm text-muted">{questions.length} questions · pass with {quiz.pass_percent}% · {XP_RULES.quizAnswer} XP for each right answer</p>
         </div>
-        {best && <Badge tone={best.passed ? "success" : "neutral"}>Best: {best.score}/{best.total}{best.passed ? " · passed" : ""}</Badge>}
+        {best && <Badge tone={passedBefore ? "success" : "neutral"}>First try: {best.score}/{best.total}{passedBefore ? " · passed" : ""}</Badge>}
       </div>
+      {limited && <p className="mb-3 rounded-xl bg-primary-soft px-4 py-3 text-sm">
+        {used === 0
+          ? `You get ${QUIZ_TRIES} tries. Your XP is the average of your tries, so take your time on each one.`
+          : "This is your last try. Your XP will be the average of both tries."}
+      </p>}
       <Progress value={(answered / questions.length) * 100} className="h-1.5" />
 
       <div className="card mt-4 p-5 sm:p-6">

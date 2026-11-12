@@ -57,3 +57,9 @@ test("everything watched and nothing left means done", () => {
   const all = buildCourse(course, chapters.slice(0, 2), lessons, new Set(["a", "b", "c"]));
   assert.equal(step(all, true).kind, "done");
 });
+
+test("a failed quiz is offered again only while a try is left", () => {
+  const c = build(["a", "b"]);
+  assert.equal(step(c, false, { quizzes: [quiz], best: { q0: { passed: false, tries: 1 } } }).kind, "quiz");
+  assert.equal(step(c, false, { quizzes: [quiz], best: { q0: { passed: false, tries: 2 } } }).kind, "unlock");
+});

@@ -47,13 +47,13 @@ export default async function StudentActivityPage({ params }) {
     <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
       <StatCard label="Learning score" value={`${summary.score ?? 0}/100`} hint="Across six learning areas" />
       <StatCard label="Lessons finished" value={`${summary.lessons_completed}/${summary.lessons_total}`} hint={`${summary.watch_minutes ?? 0} minutes watched`} />
-      <StatCard label="Quizzes passed" value={`${summary.quizzes_passed}/${summary.quizzes_total}`} hint={summary.quiz_avg_best_pct == null ? "No published quizzes" : `Best score avg ${summary.quiz_avg_best_pct}%`} />
+      <StatCard label="Quizzes passed" value={`${summary.quizzes_passed}/${summary.quizzes_total}`} hint={summary.quiz_avg_best_pct == null ? "No published quizzes" : `Average score ${summary.quiz_avg_best_pct}% (all tries)`} />
       <StatCard label="Assignments" value={`${summary.assignments_submitted}/${summary.assignments_total}`} hint={`${summary.assignments_graded} marked`} />
       <StatCard label="Resources opened" value={`${summary.resources_opened}/${summary.resources_total}`} hint={`${summary.resource_downloads} downloads`} />
       <StatCard label="Last active" value={summary.last_active ? date(summary.last_active) : <span title="No tracked learning activity yet">–</span>} hint={`${summary.active_days_30} active days in 30d`} />
     </div>
     <div className="grid gap-5 xl:grid-cols-2">
-      <Card title="Learning score breakdown" action={<details className="relative text-xs text-muted"><summary className="min-h-11 cursor-pointer list-none py-3">How the score works ⓘ</summary><div className="absolute right-0 z-10 mt-1 w-72 rounded-xl border border-border bg-surface p-3 shadow-lg"><p>Each part is capped at its points:</p><ul className="mt-2 list-disc space-y-1 pl-4"><li>Lessons completed: 35</li><li>Quiz scores: 25</li><li>Checkpoints: 10</li><li>Assignments submitted: 10</li><li>PDFs and resources opened: 5</li><li>Active days in the last 30: 15 (full at 10 days)</li></ul></div></details>}>
+      <Card title="Learning score breakdown" action={<details className="relative text-xs text-muted"><summary className="min-h-11 cursor-pointer list-none py-3">How the score works ⓘ</summary><div className="absolute right-0 z-10 mt-1 w-72 rounded-xl border border-border bg-surface p-3 shadow-lg"><p>Each part is capped at its points:</p><ul className="mt-2 list-disc space-y-1 pl-4"><li>Lessons completed: 35</li><li>Quiz scores: 25 (average of the student&apos;s tries, 2 per quiz)</li><li>Checkpoints: 10</li><li>Assignments submitted: 10</li><li>PDFs and resources opened: 5</li><li>Active days in the last 30: 15 (full at 10 days)</li></ul></div></details>}>
         <div className="space-y-4">{weights.map((label, index) => {
           const values = [lessonScore, quizScore, checkScore, assignmentScore, resourceScore, activeScore];
           const maxima = [35, 25, 10, 10, 5, 15];

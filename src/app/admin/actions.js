@@ -190,12 +190,16 @@ export async function saveQuiz(_, fd) {
     chapter_id: str(fd, "chapter"),
     title: str(fd, "title"),
     pass_percent: num(fd, "pass") ?? 60,
-    xp: num(fd, "xp") ?? 100,
     published: fd.get("published") === "on",
   };
   if (!row.chapter_id || !row.title) return { ok: false, error: "Give the quiz a title." };
   const id = str(fd, "id");
   return run((s) => (id ? s.from("quizzes").update(row).eq("id", id) : s.from("quizzes").insert(row)));
+}
+
+// Give a student both tries back on a quiz (admin_reset_quiz_attempts checks the admin role).
+export async function resetQuizTries(quizId, studentId) {
+  return run((s) => s.rpc("admin_reset_quiz_attempts", { p_quiz: quizId, p_student: studentId }));
 }
 
 export async function deleteQuiz(id) {

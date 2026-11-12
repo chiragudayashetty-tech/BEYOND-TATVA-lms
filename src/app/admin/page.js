@@ -11,7 +11,7 @@ export const metadata = { title: "Studio · Beyond Tatva" };
 
 const sections = [
   { href: "/admin/content", icon: Clapperboard, title: "Content", body: "Course, modules, lessons, videos and premiere dates" },
-  { href: "/admin/quizzes", icon: ListChecks, title: "Quizzes", body: "One quiz per module: questions, pass mark, XP" },
+  { href: "/admin/quizzes", icon: ListChecks, title: "Quizzes", body: "One quiz per module: questions, pass mark, and each student's results" },
   { href: "/admin/assignments", icon: ClipboardCheck, title: "Assignments", body: "Set work per module and mark what students hand in" },
   { href: "/admin/enrollments", icon: UserCheck, title: "Enrollments", body: "Website payments, manual enrollments and refunds" },
   { href: "/admin/reconcile", icon: ReceiptText, title: "Reconciliation", body: "Check payments against access: who paid and who can watch" },
