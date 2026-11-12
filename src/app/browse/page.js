@@ -3,7 +3,7 @@ import { ArrowRight, Crown, Gift, KeyRound } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Card, IconTile, Ring, ViewAll } from "@/components/ui";
 import { ContinueHero, ModuleCard, PremiereCard } from "@/components/course";
-import { canWatch, nextPremiere, nextStep, stepLink } from "@/lib/catalog";
+import { QUIZ_TRIES, XP_RULES, canWatch, nextPremiere, nextStep, stepLink } from "@/lib/catalog";
 import { getActivities, getCourse, getLearningStats, getLeaderboard } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -25,15 +25,16 @@ export default async function Dashboard() {
   const ahead = me && board.top.find((p) => p.rank === me.rank - 1);
   const tip = !stats ? "Let's learn something new today." : me?.rank === 1 ? "You're #1. Keep it up!"
     : ahead ? `${ahead.xp - me.xp + 1} XP more and you pass ${ahead.me ? "the next learner" : ahead.name} for #${ahead.rank}!`
-    : stats.xp ? `You have ${stats.xp} XP. Keep going!` : "Answer a quick check to earn your first XP.";
+    : stats.xp ? `You have ${stats.xp} XP. Keep going!` : "Finish a video or take a quiz to earn your first XP.";
   const top3 = (board?.top ?? []).slice(0, 3);
   const bars = { 1: "h-24 bg-primary text-primary-fg", 2: "h-16 bg-primary-soft text-primary", 3: "h-14 bg-warning text-[#1e1b3a]" };
   const podium = [top3[1], top3[0], top3[2]].filter(Boolean).map((p) => ({ ...p, bar: bars[p.rank] ?? bars[3], order: "" }));
   const rest = (board?.top ?? []).slice(3, 10);
   const earn = stats ? [
-    { badge: "+10", label: "Each right quick check", value: stats.xp_breakdown?.checks ?? 0, chip: "bg-primary-soft text-primary" },
-    { badge: "Quiz XP", label: "Pass a module quiz", value: stats.xp_breakdown?.quizzes ?? 0, chip: "bg-warning-soft text-warning" },
-    { badge: "up to 50", label: "Each marked assignment", value: stats.xp_breakdown?.assignments ?? 0, chip: "bg-success-soft text-success" },
+    { badge: `+${XP_RULES.quizAnswer}`, label: "Each right quiz answer", note: `${QUIZ_TRIES} tries per quiz. Your XP is the average of your tries.`, value: stats.xp_breakdown?.quizzes ?? 0, chip: "bg-warning-soft text-warning" },
+    { badge: `+${XP_RULES.module}`, label: "Each module fully watched", note: "Finish every video in the module.", value: stats.xp_breakdown?.modules ?? 0, chip: "bg-primary-soft text-primary" },
+    { badge: `up to ${XP_RULES.assignment}`, label: "Each marked assignment", note: "Full marks give all 50.", value: stats.xp_breakdown?.assignments ?? 0, chip: "bg-success-soft text-success" },
+    { badge: `+${XP_RULES.quickCheck}`, label: "Each right quick check", note: "The questions inside a video.", value: stats.xp_breakdown?.checks ?? 0, chip: "bg-surface-2 text-muted" },
   ] : [];
 
   return (
@@ -86,15 +87,15 @@ export default async function Dashboard() {
               <div className={`mb-1.5 truncate text-xs font-bold ${p.me ? "text-primary" : ""}`}>{p.me ? "You" : p.name}</div>
               <div className={`flex flex-col justify-center rounded-t-2xl font-bold ${p.bar}`}><span className={p.rank === 1 ? "text-2xl" : "text-xl"}>{p.rank}</span><span className="text-[11px] font-medium">{p.xp} XP</span></div>
             </li>)}
-          </ol> : <p className="text-sm text-muted">Be the first: answer a quick check to earn XP.</p>}
+          </ol> : <p className="text-sm text-muted">Be the first: finish a module or take a quiz to earn XP.</p>}
           {rest.length > 0 && <ol className="mt-3 space-y-2">{rest.map((p) => <li key={`${p.rank}-${p.name}`} className={`flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm ${p.me ? "bg-primary-soft font-bold" : "bg-surface-2"}`}><span className="w-6 font-semibold text-muted">{p.rank}</span><span className="min-w-0 flex-1 truncate font-semibold">{p.me ? "You" : p.name}</span><span className="text-muted">{p.xp} XP</span></li>)}</ol>}
           {board.me && !board.top.some((p) => p.me) && <div className="mt-2 flex min-h-11 items-center gap-3 rounded-xl bg-primary-soft px-3 text-sm font-bold"><span className="w-6">{board.me.rank}</span><span className="flex-1">You</span><span>{board.me.xp} XP</span></div>}
           {board.me?.hidden && <p className="mt-3 rounded-xl bg-surface-2 p-3 text-sm">You&apos;re hidden from the leaderboard. <Link href="/profile" className="font-medium text-primary underline">Change this in Profile</Link></p>}
         </div>}
         {stats && <div className="card rounded-3xl p-5">
-          <h2 className="mb-3 text-lg font-semibold">Ways to earn XP</h2>
+          <h2 className="mb-3 text-lg font-semibold">How you earn XP</h2>
           <ul className="space-y-3">{earn.map((e) => <li key={e.label} className="flex min-h-11 items-center gap-3 text-sm font-semibold">
-            <span className={`min-w-[76px] rounded-lg py-1.5 text-center text-xs font-bold ${e.chip}`}>{e.badge}</span><span className="flex-1">{e.label}</span><span className="text-xs text-muted">{e.value} XP</span>
+            <span className={`min-w-[76px] rounded-lg py-1.5 text-center text-xs font-bold ${e.chip}`}>{e.badge}</span><span className="flex-1">{e.label}<span className="block text-xs font-normal text-muted">{e.note}</span></span><span className="text-xs text-muted">{e.value} XP</span>
           </li>)}</ul>
         </div>}
       </section>}

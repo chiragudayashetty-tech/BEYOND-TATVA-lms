@@ -28,7 +28,7 @@ export default async function QuizzesPage() {
 
   return (
     <Shell roles={["admin"]}>
-      <PageTitle title="Quizzes" subtitle="One quiz per module. Students see it once the module is open to them and the quiz is published. Answers never reach the student's device." />
+      <PageTitle title="Quizzes" subtitle="One quiz per module. Students see it once the module is open to them and the quiz is published. Answers never reach the student's device. Each student gets 2 tries; open a quiz and tap Review results to see who answered what." />
       <QuizEditor modules={course.modules.map((m) => ({ id: m.id, n: m.n, title: m.title }))} quizzes={quizzes ?? []} questions={questions} stats={summary} />
     </Shell>
   );

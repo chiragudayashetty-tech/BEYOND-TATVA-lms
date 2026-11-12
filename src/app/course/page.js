@@ -5,7 +5,7 @@ import Shell from "@/components/shell/Shell";
 import { Badge, Card, IconTile, Progress, RichText } from "@/components/ui";
 import { NextStepCard, PremiereCard, Thumb, firstLesson, iconFor, moduleState } from "@/components/course";
 import Countdown from "@/components/Countdown";
-import { fmtPremiere, isComingSoon, isReleased, nextPremiere, nextStep } from "@/lib/catalog";
+import { fmtPremiere, isComingSoon, isReleased, nextPremiere, nextStep, quizOpen } from "@/lib/catalog";
 import { getActivities, getCourse, getModuleResources } from "@/lib/data";
 import ModuleResources from "@/components/ModuleResources";
 import { getSession } from "@/lib/supabase/server";
@@ -167,7 +167,7 @@ export default async function CoursePage({ searchParams }) {
                       {playable && m.lessons.length > 0 && (() => {
                         // One big button per open module: start, carry on, or (videos done) take the quiz.
                         const quiz = quizByChapter[m.id];
-                        const quizDue = state === "done" && quiz && !activities.best[quiz.id]?.passed;
+                        const quizDue = state === "done" && quiz && quizOpen(activities.best[quiz.id]);
                         return (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {quizDue && <Link href={`/quiz/${quiz.id}`} className="btn-primary w-full sm:w-auto"><Sparkles className="h-4 w-4" /> Take the quiz</Link>}

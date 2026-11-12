@@ -141,7 +141,7 @@ select 'Q4 student reads questions' t, count(*) = 3 as pass from (select id, pro
 do $$ begin perform correct_index from public.quiz_questions; raise exception 'Q5 FAIL'; exception when insufficient_privilege then raise notice 'Q5 pass: answers hidden from students'; end $$;
 select 'Q6 Studio answer function empty for students' t, count(*) = 0 as pass from public.studio_quiz_questions((select id from public.quizzes limit 1));
 do $$ begin perform public.submit_quiz((select id from public.quizzes limit 1), array[0, 1]); raise exception 'Q7 FAIL'; exception when others then if sqlerrm like 'Q7%' then raise; end if; raise notice 'Q7 pass: %', sqlerrm; end $$;
-select 'Q8 2 of 3 passes at 60%' t, (r ->> 'score')::int = 2 and (r ->> 'passed')::boolean and (r ->> 'xp')::int = 100
+select 'Q8 2 of 3 passes at 60%, 10 XP per right answer' t, (r ->> 'score')::int = 2 and (r ->> 'passed')::boolean and (r ->> 'xp')::int = 20 and (r ->> 'attempts_left')::int = 1
   and (r -> 'results' -> 1 ->> 'correct')::boolean = false and r -> 'results' -> 1 ->> 'explanation' = 'Always check.' as pass
   from (select public.submit_quiz((select id from public.quizzes limit 1), array[0, 0, 0]) as r) x;
 reset role; update public.quiz_attempts set created_at = created_at - interval '1 minute';
@@ -313,7 +313,7 @@ do $$ begin perform public.save_answer(pg_temp.lesson(1), 'x', true); raise exce
 exception when others then if sqlerrm like 'M2h%' then raise; end if; raise notice 'M2h pass: %', sqlerrm; end $$;
 reset role;
 
--- ── M3: quiz answers only after a pass or the 3rd attempt ────────────────────
+-- ── M3: two tries per quiz; answers only after a pass or the 2nd try ────────────────────
 set role authenticated; select pg_temp.as_user('f2222222-2222-2222-2222-222222222222');
 select 'M3a 1st failed attempt hides answers' t, (r ->> 'revealed')::boolean = false and r -> 'results' -> 0 ->> 'correct_index' is null
   and r -> 'results' -> 0 ->> 'explanation' is null and (r -> 'results' -> 0 ->> 'correct') is not null as pass
@@ -321,10 +321,14 @@ select 'M3a 1st failed attempt hides answers' t, (r ->> 'revealed')::boolean = f
 do $$ begin perform public.submit_quiz((select id from public.quizzes where title = 'AI 101 quiz'), array[1, 0, 1]); raise exception 'M3b FAIL';
 exception when others then if sqlerrm like 'M3b%' then raise; end if; raise notice 'M3b pass: %', sqlerrm; end $$;
 reset role; update public.quiz_attempts set created_at = created_at - interval '1 minute'; set role authenticated; select pg_temp.as_user('f2222222-2222-2222-2222-222222222222');
-select 'M3c 2nd failed attempt still hidden' t, (public.submit_quiz((select id from public.quizzes where title = 'AI 101 quiz'), array[1, 0, 1]) ->> 'revealed')::boolean = false as pass;
+select 'M3c 2nd (last) try reveals; XP is the average of both tries (0 and 3 right = 15)' t, (r ->> 'revealed')::boolean and (r -> 'results' -> 0 ->> 'correct_index')::int = 0
+  and (r ->> 'xp')::int = 15 and (r ->> 'attempts_left')::int = 0 as pass
+  from (select public.submit_quiz((select id from public.quizzes where title = 'AI 101 quiz'), array[0, 1, 0]) as r) x;
 reset role; update public.quiz_attempts set created_at = created_at - interval '1 minute'; set role authenticated; select pg_temp.as_user('f2222222-2222-2222-2222-222222222222');
-select 'M3d 3rd attempt reveals' t, (r ->> 'revealed')::boolean and (r -> 'results' -> 0 ->> 'correct_index')::int = 0 as pass
-  from (select public.submit_quiz((select id from public.quizzes where title = 'AI 101 quiz'), array[1, 0, 1]) as r) x;
+do $$ begin perform public.submit_quiz((select id from public.quizzes where title = 'AI 101 quiz'), array[0, 0, 0]); raise exception 'M3d FAIL';
+exception when others then if sqlerrm like 'M3d%' then raise; end if; raise notice 'M3d pass: no 3rd try (%)', sqlerrm; end $$;
+do $$ begin perform public.admin_reset_quiz_attempts((select id from public.quizzes where title = 'AI 101 quiz'), auth.uid()); raise exception 'M3e FAIL';
+exception when others then if sqlerrm like 'M3e%' then raise; end if; raise notice 'M3e pass: students cannot reset tries (%)', sqlerrm; end $$;
 reset role;
 
 -- ── M4: Studio export and delete ─────────────────────────────────────────────
@@ -468,8 +472,9 @@ reset role;
 -- ── XP, leaderboard, owner insights ──────────────────────────────────────────
 insert into public.assignment_submissions (assignment_id, student_id, status, marks)
   select id, 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'graded', round(max_marks * 0.8) from public.assignments limit 1;
-select 'K1 XP adds checks, quizzes and graded assignments (8/10 marks = 40 XP)' t,
-  (x ->> 'assignments')::int = 40 and (x ->> 'total')::int = (x ->> 'checks')::int + (x ->> 'quizzes')::int + 40 as pass
+select 'K1 XP adds checks, quizzes, watched modules and graded assignments (8/10 marks = 40 XP)' t,
+  (x ->> 'assignments')::int = 40 and (x ->> 'modules')::int % 100 = 0
+  and (x ->> 'total')::int = (x ->> 'checks')::int + (x ->> 'quizzes')::int + (x ->> 'modules')::int + 40 as pass
   from (select public.student_xp('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee') x) s;
 set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
 do $$ begin perform public.student_xp(auth.uid()); raise exception 'K2 FAIL';

@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { ChevronDown, Plus, Trash2, X } from "lucide-react";
+import Link from "next/link";
+import { ChartLine, ChevronDown, Plus, Trash2, X } from "lucide-react";
 import FormStatus from "@/components/FormStatus";
 import { Badge } from "@/components/ui";
 import { deleteQuestion, deleteQuiz, saveQuestion, saveQuiz } from "../actions";
@@ -15,7 +16,6 @@ function QuizSettings({ module: m, quiz }) {
       {quiz && <input type="hidden" name="id" value={quiz.id} />}
       <label><span className="label">Quiz title</span><input name="title" className="input" defaultValue={quiz?.title ?? `Module ${m.n} quiz`} required maxLength={120} /></label>
       <label><span className="label">Pass mark %</span><input name="pass" type="number" min={1} max={100} className="input" defaultValue={quiz?.pass_percent ?? 60} required /></label>
-      <label><span className="label">XP for passing</span><input name="xp" type="number" min={0} max={1000} className="input" defaultValue={quiz?.xp ?? 100} required /></label>
       <div className="flex flex-wrap items-center gap-3 sm:col-span-3">
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="published" defaultChecked={quiz?.published ?? false} className="h-4 w-4 accent-[var(--primary)]" /> Published (students can take it)</label>
         <button disabled={pending} className="btn-primary px-3 py-2">{pending ? "Saving…" : quiz ? "Save quiz" : "Create quiz"}</button>
@@ -87,8 +87,8 @@ function ModuleQuiz({ module: m, quiz, questions, stats, open, onToggle }) {
           <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted">
             {quiz ? <>
               <Badge tone={quiz.published ? "success" : "neutral"}>{quiz.published ? "Published" : "Draft"}</Badge>
-              <span>{questions.length} questions · pass {quiz.pass_percent}% · {quiz.xp} XP</span>
-              {stats && <span>· {stats.passed}/{stats.students} students passed ({stats.attempts} attempts)</span>}
+              <span>{questions.length} questions · pass {quiz.pass_percent}% · 10 XP per right answer · 2 tries</span>
+              {stats && <span>· {stats.passed}/{stats.students} students passed ({stats.attempts} tries)</span>}
             </> : <span>No quiz yet</span>}
           </div>
         </div>
@@ -96,6 +96,7 @@ function ModuleQuiz({ module: m, quiz, questions, stats, open, onToggle }) {
       </button>
       {open && (
         <div className="space-y-4 border-t border-border bg-surface-2 p-4">
+          {quiz && <Link href={`/admin/quizzes/${quiz.id}`} className="btn-secondary w-full sm:w-auto"><ChartLine className="h-4 w-4" /> Review results{stats ? ` (${stats.students} students)` : ""}</Link>}
           <QuizSettings module={m} quiz={quiz} />
           {quiz && (
             <>

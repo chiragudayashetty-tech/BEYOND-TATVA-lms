@@ -23,7 +23,7 @@ export default async function ProgressPage() {
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Lessons completed" value={`${done} / ${course.lessonCount}`} hint={`${course.progress}% of the course`} icon={CheckCircle2} tone="success" />
         <StatCard label="Quick-check accuracy" value={accuracy == null ? "–" : `${accuracy}%`} hint={answered ? `${correct} of ${answered} correct` : "Answer one in a lesson"} icon={Target} />
-        <StatCard label="XP" value={stats?.xp ?? 0} hint="Quick checks, quizzes and assignments" icon={Zap} tone="warning" />
+        <StatCard label="XP" value={stats?.xp ?? 0} hint="Quizzes, modules, assignments, quick checks" icon={Zap} tone="warning" />
         <StatCard label="Quizzes passed" value={stats?.quizzes_passed ?? 0} hint="One quiz in every module" icon={Sparkles} tone="primary" />
       </div>
 
