@@ -18,6 +18,8 @@ const questions = [
   {
     question: "How do I unlock the full course?",
     answer: "Pay on the Beyond Tatva website, or use a school key if your school gave you one. If a parent paid with their phone number, we check the match before access is opened.",
+    // Inside the Play Store app we may not say where to pay (src/lib/android-app.js).
+    appAnswer: "You can't buy the course in this app. If you already have the course, sign in with the same login you bought it with. If your school gave you a key, enter it on the Unlock page.",
   },
   {
     question: "A video is not playing. What can I try?",
@@ -33,6 +35,7 @@ const questions = [
   },
   {
     question: "How do I add the course to my phone?",
+    webOnly: true,
     answer: "On Android, open the browser menu and tap “Add to Home screen” or “Install app”. On iPhone, open the page in Safari, tap Share, choose “Add to Home Screen”, then tap Add.",
   },
 ];
@@ -46,11 +49,12 @@ export default function HelpPage() {
       <PageTitle title="Help and support" subtitle="Quick answers for students, families and teachers." />
       <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
         <Card title="Common questions" className="divide-y divide-border">
-          {questions.map(({ question, answer }) => <details key={question} className="group py-1 first:pt-0 last:pb-0">
+          {questions.map(({ question, answer, appAnswer, webOnly }) => <details key={question} className={`group py-1 first:pt-0 last:pb-0 ${webOnly ? "web-only" : ""}`}>
             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 py-3 text-sm font-medium marker:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
               {question}<span aria-hidden="true" className="text-xl text-muted transition group-open:rotate-45">+</span>
             </summary>
-            <p className="pb-4 pr-8 text-sm leading-relaxed text-muted">{answer}</p>
+            <p className={`pb-4 pr-8 text-sm leading-relaxed text-muted ${appAnswer ? "web-only" : ""}`}>{answer}</p>
+            {appAnswer && <p className="app-only pb-4 pr-8 text-sm leading-relaxed text-muted">{appAnswer}</p>}
           </details>)}
         </Card>
 
@@ -69,7 +73,7 @@ export default function HelpPage() {
 
           <Card title="Your privacy">
             <p className="text-sm leading-relaxed text-muted">We store your name, grade, school and parent or guardian&apos;s WhatsApp number so the course can work and your family can receive important updates. We never sell this information.</p>
-            <p className="mt-3 text-sm leading-relaxed text-muted">Want a copy of your data, or want it deleted? Ask a parent or guardian to message us and we will do it for you.</p>
+            <p className="mt-3 text-sm leading-relaxed text-muted">Want a copy of your data, or want it deleted? Ask a parent or guardian to message us and we will do it for you. <Link href="/delete-account" className="font-medium text-primary">How to delete your account</Link></p>
           </Card>
         </div>
       </div>

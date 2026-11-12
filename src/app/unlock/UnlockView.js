@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { CircleCheck, CreditCard, KeyRound, School } from "lucide-react";
 import { IconTile } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
+import { isInApp } from "@/lib/android-app";
 import RazorpayPay from "./RazorpayPay";
+import AppNoPurchase from "@/components/AppNoPurchase";
 
 export default function UnlockView({ price, hasAccess, preview, pay }) {
   const router = useRouter();
@@ -18,7 +20,8 @@ export default function UnlockView({ price, hasAccess, preview, pay }) {
 
   useEffect(() => {
     const syncKeyDisclosure = () => {
-      if (keyDetails.current) keyDetails.current.open = window.location.hash === "#key";
+      // Inside the Play Store app the key is the only thing on this page, so keep it open.
+      if (keyDetails.current) keyDetails.current.open = window.location.hash === "#key" || isInApp();
     };
     syncKeyDisclosure();
     window.addEventListener("hashchange", syncKeyDisclosure);
@@ -55,7 +58,8 @@ export default function UnlockView({ price, hasAccess, preview, pay }) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <section className="card p-6">
+      <AppNoPurchase className="self-start" />
+      <section className="web-only card p-6">
         <IconTile icon={CreditCard} tone="success" />
         <h2 className="mt-4 text-lg font-semibold">Pay online</h2>
         <p className="mt-1 text-sm text-muted">One payment unlocks modules 1–5, including the ones still to premiere.</p>
@@ -69,7 +73,7 @@ export default function UnlockView({ price, hasAccess, preview, pay }) {
           <span className="text-sm font-medium text-primary">Enter key</span>
         </summary>
         <div className="mt-3 border-t border-border pt-4">
-          <p className="text-sm text-muted">Enter the key from your school, or the one we sent you on WhatsApp after paying. It looks like BT-XXXX-XXXX.</p>
+          <p className="text-sm text-muted">Enter the key from your school<span className="web-only">, or the one we sent you on WhatsApp after paying</span>. It looks like BT-XXXX-XXXX.</p>
           <form onSubmit={redeem} className="mt-4 space-y-3">
             <input className="input font-mono uppercase tracking-widest" value={code} onChange={(e) => setCode(e.target.value)} placeholder="BT-XXXX-XXXX" required={!preview} autoComplete="off" />
             {error && <p role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}

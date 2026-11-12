@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="theme">#4F46E5</color>
+    <color name="background">#F6F7FB</color>
+    <!-- The dark colour of the logo picture: splash screen and icon background. -->
+    <color name="splash">#000314</color>
+    <color name="icon_background">#000314</color>
+</resources>

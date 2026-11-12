@@ -3,9 +3,13 @@
 import { useEffect, useState } from "react";
 import { Check, Download, Share } from "lucide-react";
 import { useIsClient } from "@/lib/hooks";
+import { isInApp, PLAY_STORE_URL } from "@/lib/android-app";
 
 const DISMISSED_KEY = "bt-install-prompt-dismissed";
 const INSTALLED_KEY = "bt-install-prompt-installed";
+// Once the Play Store app is live (NEXT_PUBLIC_PLAY_STORE_URL), Android phones are offered that instead of
+// "Add to home screen". Its own key, so someone who said "Not now" to the old prompt still hears about the app.
+const PLAY_DISMISSED_KEY = "bt-play-prompt-dismissed";
 
 function isPhone() {
   const ua = navigator.userAgent;
@@ -22,8 +26,16 @@ export default function InstallPrompt() {
   const [installEvent, setInstallEvent] = useState(null);
   const isIOS = isClient && /iPhone|iPod/i.test(navigator.userAgent);
 
+  const play = isClient && !isIOS && PLAY_STORE_URL ? PLAY_STORE_URL : null;
+
   useEffect(() => {
-    if (!isPhone()) return;
+    if (!isPhone() || isInApp()) return;
+    if (PLAY_STORE_URL && !isIOS) {
+      if (isInstalled()) return;
+      try { if (localStorage.getItem(PLAY_DISMISSED_KEY)) return; } catch {}
+      const timer = window.setTimeout(() => setVisible(true), 0);
+      return () => window.clearTimeout(timer);
+    }
     if (isInstalled()) {
       try { localStorage.setItem(INSTALLED_KEY, "1"); } catch {}
       return;
@@ -68,7 +80,7 @@ export default function InstallPrompt() {
   }, [isIOS]);
 
   function dismiss() {
-    try { localStorage.setItem(DISMISSED_KEY, "1"); } catch {}
+    try { localStorage.setItem(play ? PLAY_DISMISSED_KEY : DISMISSED_KEY, "1"); } catch {}
     setVisible(false);
   }
 
@@ -85,6 +97,24 @@ export default function InstallPrompt() {
   }
 
   if (!isClient || !visible) return null;
+
+  if (play) {
+    return (
+      <section className="card mb-5 flex flex-col gap-4 border-primary/20 bg-primary-soft p-4 sm:flex-row sm:items-center sm:justify-between" aria-label="Get the Beyond Tatva app">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-fg"><Download className="h-5 w-5" /></span>
+          <div className="min-w-0">
+            <h2 className="font-semibold">Get the Beyond Tatva app</h2>
+            <p className="mt-1 text-sm text-muted">Free on Google Play. Sign in with this same login and your course is there.</p>
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+          <a href={play} target="_blank" rel="noopener noreferrer" onClick={() => dismiss()} className="btn-primary">Get the app</a>
+          <button type="button" onClick={() => dismiss()} className="btn-secondary">Not now</button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="card mb-5 flex flex-col gap-4 border-primary/20 bg-primary-soft p-4 sm:flex-row sm:items-center sm:justify-between" aria-label="Install Beyond Tatva">

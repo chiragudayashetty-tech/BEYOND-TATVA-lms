@@ -2,6 +2,10 @@ export default function manifest() {
   return {
     name: "Beyond Tatva",
     short_name: "Beyond Tatva",
+    description: "AI course for Grades 8–10: video lessons, quizzes, assignments and a certificate.",
+    lang: "en-IN",
+    categories: ["education"],
+    orientation: "any",
     start_url: "/",
     id: "/",
     display: "standalone",

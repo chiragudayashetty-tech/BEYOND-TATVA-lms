@@ -32,7 +32,7 @@ function LockScreen({ module: m, price, hasAccess }) {
           {hasAccess && upcoming && <p className="rounded-full bg-white/10 px-4 py-2 text-sm">You&apos;re all set. It opens here on its own.</p>}
           {!m.free && !hasAccess && (
             <div className="flex flex-wrap justify-center gap-2">
-              <Link href="/unlock" className="btn bg-white text-[#0f172a] hover:bg-white/90"><KeyRound className="h-4 w-4" /> Unlock for ₹{price}</Link>
+              <Link href="/unlock" className="web-only btn bg-white text-[#0f172a] hover:bg-white/90"><KeyRound className="h-4 w-4" /> Unlock for ₹{price}</Link>
               <Link href="/unlock#key" className="btn border border-white/25 text-white hover:bg-white/10">I have a key</Link>
             </div>
           )}

@@ -182,3 +182,7 @@ h1, h2, h3, h4 {
 /* Keep the compact seven-column planner grid while giving each day a wider hit area. */
 .planner-day-hit { position: relative; }
 .planner-day-hit::before { content: ""; position: absolute; inset: 0 -6px; }
+
+/* Play Store app (src/lib/android-app.js): `web-only` is hidden inside the app, `app-only` everywhere else. */
+html.in-app .web-only { display: none !important; }
+html:not(.in-app) .app-only { display: none !important; }

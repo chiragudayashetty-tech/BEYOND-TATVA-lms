@@ -47,7 +47,7 @@ export default async function Home({ searchParams }) {
               </span>
               <ArrowRight className="h-4 w-4 text-subtle" />
             </Link>
-            <Link href="/login?next=/unlock" className="flex items-center gap-3 rounded-xl border border-border p-4 transition hover:bg-surface-2">
+            <Link href="/login?next=/unlock" className="web-only flex items-center gap-3 rounded-xl border border-border p-4 transition hover:bg-surface-2">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"><CreditCard className="h-5 w-5" /></span>
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold">Get the full course</span>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Beyond Tatva</string>
+    <!-- "?app=android" tells the site it is inside the Play Store app, so it hides prices and payment. -->
+    <string name="start_url">https://learn.beyondtatva.in/?app=android</string>
+    <string name="asset_statements">[{ \"relation\": [\"delegate_permission/common.handle_all_urls\"], \"target\": { \"namespace\": \"web\", \"site\": \"https://learn.beyondtatva.in\" } }]</string>
+</resources>

@@ -82,7 +82,7 @@ export default async function ProfilePage() {
             <div className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-subtle">Account</div>
             <ProfileEditor userId={user.id} fullName={profile.full_name} avatar={profile.avatar} />
             <Row icon={KeyRound} label="Login and security" hint="You sign in with a one-time code" href="/profile#settings" />
-            <Row icon={ShieldCheck} label="Privacy and data" hint="What we collect and why, under the DPDP Act" href="/profile#settings" />
+            <Row icon={ShieldCheck} label="Privacy and data" hint="What we keep, and how to delete your account" href="/delete-account" />
             <Row icon={CircleHelp} label="Help and support" href="/help" />
           </section>
           <section className="card flex flex-wrap items-center justify-between gap-3 px-5 py-4">
