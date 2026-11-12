@@ -20,6 +20,8 @@ const stateLabel = {
   upcoming: ["primary", "Upcoming"],
 };
 
+const COURSE_BANNER = "/media/course-banner.jpg";
+
 export default async function CoursePage({ searchParams }) {
   const { welcome } = await searchParams;
   const [{ hasAccess }, course, activities, resources] = await Promise.all([getSession(), getCourse(), getActivities(), getModuleResources()]);
@@ -59,8 +61,13 @@ export default async function CoursePage({ searchParams }) {
                   ))}
                 </div>
               </div>
-              <div className="relative min-h-56">
-                <video src={course.hero ?? undefined} poster={course.modules[1]?.thumb ?? course.modules[0]?.thumb} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />
+              <div className="relative aspect-[16/10] overflow-hidden bg-surface-2 md:aspect-auto md:min-h-56">
+                {course.hero ? (
+                  <video src={course.hero} poster={COURSE_BANNER} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={COURSE_BANNER} alt="AI Superheroes: the six modules of the course" className="absolute inset-0 h-full w-full object-contain" />
+                )}
               </div>
             </div>
           </div>
