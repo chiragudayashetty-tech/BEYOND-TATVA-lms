@@ -13,6 +13,15 @@ const poppins = Poppins({
 export const metadata = {
   title: "Beyond Tatva",
   description: "AI education for Grades 8–10",
+  metadataBase: new URL("https://learn.beyondtatva.in"),
+  openGraph: {
+    type: "website",
+    siteName: "Beyond Tatva",
+    title: "AI Superheroes · Beyond Tatva",
+    description: "A practical AI course for school students, Grades 8–10. Module 0 is free.",
+    images: [{ url: "/media/og-image.jpg", width: 1200, height: 630, alt: "AI Superheroes: a practical AI course for Grades 8–10" }],
+  },
+  twitter: { card: "summary_large_image", images: ["/media/og-image.jpg"] },
   icons: { icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }], apple: "/icons/apple-touch-icon.png" },
   appleWebApp: { capable: true, title: "Beyond Tatva", statusBarStyle: "default" },
 };
