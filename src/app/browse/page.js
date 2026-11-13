@@ -65,8 +65,8 @@ export default async function Dashboard() {
         </div>}
       </section>
 
-      <div className="mb-4 grid grid-cols-1 gap-3 min-[360px]:grid-cols-3 lg:mb-6">
-        <Tile tone="primary-soft"><Ring value={course.progress} size={64} stroke={7}><span className="text-sm font-semibold">{course.progress}%</span></Ring><TileText title="Course" sub={`${done} of ${course.lessonCount} lessons`} /></Tile>
+      <div className={`mb-4 grid grid-cols-1 gap-3 lg:mb-6 ${stats?.checks_answered > 0 ? "min-[360px]:grid-cols-3" : "min-[360px]:grid-cols-2"}`}>
+        <Tile tone="primary-soft"><Ring value={course.progress} size={64} stroke={7}><span className="text-sm font-semibold">{course.progress}%</span></Ring><TileText title="Progress" sub={`${done} of ${course.lessonCount} lessons done`} /></Tile>
         {stats && <Tile tone="warning-soft"><span className="grid h-16 w-16 place-items-center rounded-full bg-warning text-base font-bold text-[#1e1b3a]">{stats.xp}</span><TileText title="XP" sub={board?.me ? `Rank #${board.me.rank} of ${board.players}` : "Earn XP to rank"} /></Tile>}
         {stats?.checks_answered > 0 && <Tile tone="success-soft"><Ring value={stats.checks_correct / stats.checks_answered * 100} size={64} stroke={7} tone="success"><span className="text-sm font-semibold">{Math.round(stats.checks_correct / stats.checks_answered * 100)}%</span></Ring><TileText title="Quick checks" sub={`${stats.checks_correct} of ${stats.checks_answered} right`} /></Tile>}
       </div>
