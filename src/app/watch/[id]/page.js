@@ -55,7 +55,7 @@ export default async function WatchPage({ params, searchParams }) {
   return (
     <Shell roles={["student", "teacher"]}>
       {allowed
-        ? <LessonView key={lesson.id} course={course} lesson={lesson} hasAccess={hasAccess} video={video} activities={activities} canSave={Boolean(user) && user.id !== "preview"} userId={user?.id} />
+        ? <LessonView key={lesson.id} course={course} lesson={lesson} hasAccess={hasAccess} video={video} canDownloadBunny={Boolean(process.env.BUNNY_CDN_HOST)} activities={activities} canSave={Boolean(user) && user.id !== "preview"} userId={user?.id} />
         : <LockScreen module={m} price={course.price} hasAccess={hasAccess} />}
     </Shell>
   );
