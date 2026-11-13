@@ -230,15 +230,17 @@ export async function localVideoUrl(id) {
   if (!e || e.status !== "done" || !offlineSupported()) return null;
   try {
     const cache = await caches.open(CACHE);
-    const parts = [];
     for (let i = 0; i < e.chunks; i += 1) {
-      const res = await cache.match(piece(id, i));
-      if (!res) { // the browser cleared some of it: start over rather than play a broken file
+      if (!(await cache.match(piece(id, i)))) { // the browser cleared some of it: start over rather than play a broken file
         await remove(id);
         return null;
       }
-      parts.push(await res.blob());
     }
+    // Best: public/sw.js serves the pieces with Range answers, which every browser (Safari too) plays and seeks.
+    if (navigator.serviceWorker?.controller && e.size > 0) return `/__offline-play/${id}?size=${e.size}#.mp4`;
+    // Fallback without the helper: glue the pieces into one Blob (works in Chrome).
+    const parts = [];
+    for (let i = 0; i < e.chunks; i += 1) parts.push(await (await cache.match(piece(id, i))).blob());
     return URL.createObjectURL(new Blob(parts, { type: "video/mp4" }));
   } catch {
     return null;
