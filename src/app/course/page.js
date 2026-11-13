@@ -8,6 +8,7 @@ import Countdown from "@/components/Countdown";
 import { fmtPremiere, isComingSoon, isReleased, nextPremiere, nextStep, quizOpen } from "@/lib/catalog";
 import { getActivities, getCourse, getModuleResources } from "@/lib/data";
 import ModuleResources from "@/components/ModuleResources";
+import OfflineDownload from "@/components/OfflineDownload";
 import { getSession } from "@/lib/supabase/server";
 
 export const metadata = { title: "Course · Beyond Tatva" };
@@ -24,7 +25,7 @@ const COURSE_BANNER = "/media/course-banner.jpg";
 
 export default async function CoursePage({ searchParams }) {
   const { welcome } = await searchParams;
-  const [{ hasAccess }, course, activities, resources] = await Promise.all([getSession(), getCourse(), getActivities(), getModuleResources()]);
+  const [{ user, hasAccess }, course, activities, resources] = await Promise.all([getSession(), getCourse(), getActivities(), getModuleResources()]);
   const quizByChapter = Object.fromEntries(activities.quizzes.map((q) => [q.chapter_id, q]));
   const next = nextPremiere(course);
   const step = nextStep(course, hasAccess, activities);
@@ -186,6 +187,10 @@ export default async function CoursePage({ searchParams }) {
                       })()}
                       {state === "locked" && (
                         <Link href="/unlock" className="btn-secondary mt-3"><KeyRound className="h-4 w-4" /> Unlock module {m.n}</Link>
+                      )}
+                      {playable && m.lessons.length > 0 && (
+                        <OfflineDownload userId={user?.id} label={m.lessons.length > 1 ? `Download module (${m.lessons.length} videos)` : "Download for offline"}
+                          lessons={m.lessons.map((l) => ({ id: l.id, n: l.n, title: l.title, mins: l.mins, courseId: course.id, module: m.n, moduleTitle: m.title }))} />
                       )}
                       {playable && <ModuleResources files={resources[m.id]} />}
                     </div>

@@ -14,6 +14,8 @@ const FILE_EXT = /\.(mp4|m4v|webm|mov|ogv)$/i;
 export function parseVideo(input) {
   const raw = typeof input === "string" ? input.trim() : "";
   if (!raw) return null;
+  // A lesson saved on this device for offline watching (src/lib/offline.js) plays from a blob link.
+  if (raw.startsWith("blob:")) return { kind: "file", src: raw };
   if (raw.startsWith("/") && !raw.startsWith("//")) return FILE_EXT.test(raw.split("?")[0]) ? { kind: "file", src: raw } : null;
 
   let url;
