@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, CalendarClock, CircleCheck, ClipboardList, Lock, PlayCircle, Sparkles, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarClock, CircleCheck, ClipboardList, Download, Lock, PlayCircle, Sparkles, Zap } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
 import { Avatar, Badge, RichText } from "@/components/ui";
 import { quizBadge, submissionBadge } from "@/components/activity";
@@ -124,6 +124,7 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
       <div className="min-w-0">
         <Link href="/course" className="btn-ghost -ml-3 mb-3"><ArrowLeft className="h-4 w-4" /> {course.title}</Link>
         <VideoPlayer src={video} title={lesson.title} onAnswer={saveAnswer} onProgress={onProgress} onPauseProgress={onPauseProgress} startAt={startAt} />
+        {parseVideo(video)?.kind === "file" && <a href={parseVideo(video).src} download={`${lesson.title.replace(/[^\w\- ]+/g, "").trim() || "lesson"}.mp4`} rel="noopener" className="btn-secondary mt-3 min-h-11 w-full justify-center sm:w-auto"><Download className="h-4 w-4" /> Download this lesson</a>}
         {resumeNote && <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted"><span>{resumeNote}</span><button type="button" className="min-h-11 px-2 font-medium text-primary underline" onClick={() => { playerRef.current.position = 0; setStartAt(-1); }}>Start over</button></div>}
 
         {done && <div role="status" className="mt-4 flex flex-col gap-3 rounded-2xl border border-success/40 bg-success-soft p-4 sm:flex-row sm:items-center">
