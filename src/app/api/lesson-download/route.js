@@ -49,8 +49,16 @@ export async function GET(request) {
   const host = process.env.BUNNY_CDN_HOST;
   if (video?.kind !== "bunny" || !host) return json({ error: "not_ready" }, 409);
 
+  // Without a token key the MP4 link is public and permanent, so one shared link would leak a paid module.
+  // Only free modules may be downloaded that way.
+  const key = process.env.BUNNY_CDN_TOKEN_KEY;
+  if (!key) {
+    const { data: lesson } = await supabase.from("lessons").select("chapters(is_free)").eq("id", lessonId).maybeSingle();
+    if (!lesson?.chapters?.is_free) return json({ error: "not_ready" }, 409);
+  }
+
   for (const quality of offlineQualities(process.env.OFFLINE_VIDEO_QUALITY)) {
-    const url = bunnyMp4Url({ host, videoId: video.id, quality, key: process.env.BUNNY_CDN_TOKEN_KEY });
+    const url = bunnyMp4Url({ host, videoId: video.id, quality, key });
     if (!url) break;
     const size = await sizeOf(url);
     if (size !== null) return json({ url, size, quality });
