@@ -6,6 +6,7 @@ export const nav = {
       { href: "/browse", label: "Dashboard", icon: "LayoutDashboard" },
       { href: "/course", label: "Course", icon: "BookOpen" },
       { href: "/activities", label: "Study Kit", icon: "ClipboardList" },
+      { href: "/downloads", label: "Downloads", icon: "Download" },
       { href: "/progress", label: "Progress", icon: "ChartLine" },
       { href: "/certificates", label: "Certificate", icon: "BadgeCheck" },
     ],

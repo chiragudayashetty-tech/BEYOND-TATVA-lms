@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, CalendarClock, CircleCheck, ClipboardList, Lock, PlayCircle, Sparkles, Zap } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
+import OfflineDownload from "@/components/OfflineDownload";
 import { Avatar, Badge, RichText } from "@/components/ui";
 import { quizBadge, submissionBadge } from "@/components/activity";
 import { canWatch, isComingSoon, isReleased, quizOpen } from "@/lib/catalog";
 import { parseVideo, tracksProgress } from "@/lib/video";
 import { createClient } from "@/lib/supabase/client";
+import { localVideoUrl, useOffline } from "@/lib/offline";
 
 const tabs = ["Overview", "Notes"];
 export default function LessonView({ course, lesson, hasAccess, video, activities, canSave, userId }) {
@@ -82,7 +84,18 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
     onProgress(seconds, duration);
     void saveLatest();
   }, [onProgress, saveLatest]);
-  const autoTracked = tracksProgress(parseVideo(video));
+  // A lesson already saved on this device plays from the saved copy: no data used, no buffering.
+  const offlineCopy = useOffline()[lesson.id];
+  const savedHere = offlineCopy?.status === "done" && offlineCopy.userId === userId;
+  const [localSrc, setLocalSrc] = useState(null);
+  useEffect(() => {
+    if (!savedHere) return;
+    let url = null; let gone = false;
+    localVideoUrl(lesson.id).then((u) => { if (gone) { if (u) URL.revokeObjectURL(u); return; } url = u; setLocalSrc(u); });
+    return () => { gone = true; if (url) URL.revokeObjectURL(url); setLocalSrc(null); };
+  }, [savedHere, lesson.id]);
+  const playSrc = (savedHere && localSrc) || video;
+  const autoTracked = tracksProgress(parseVideo(playSrc));
 
   async function saveAnswer(question, correct) {
     if (correct) setXp((x) => x + 10);
@@ -123,8 +136,12 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
     <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
       <div className="min-w-0">
         <Link href="/course" className="btn-ghost -ml-3 mb-3"><ArrowLeft className="h-4 w-4" /> {course.title}</Link>
-        <VideoPlayer src={video} title={lesson.title} onAnswer={saveAnswer} onProgress={onProgress} onPauseProgress={onPauseProgress} startAt={startAt} />
+        <VideoPlayer src={playSrc} title={lesson.title} onAnswer={saveAnswer} onProgress={onProgress} onPauseProgress={onPauseProgress} startAt={startAt} />
         {resumeNote && <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted"><span>{resumeNote}</span><button type="button" className="min-h-11 px-2 font-medium text-primary underline" onClick={() => { playerRef.current.position = 0; setStartAt(-1); }}>Start over</button></div>}
+
+        {video && mod && (savedHere && localSrc
+          ? <p className="mt-2 text-xs text-muted">Playing the copy saved on this device. No internet data is used.</p>
+          : <OfflineDownload userId={userId} lessons={[{ id: lesson.id, n: lesson.n, title: lesson.title, mins: lesson.mins, courseId: course.id, module: mod.n, moduleTitle: mod.title }]} />)}
 
         {done && <div role="status" className="mt-4 flex flex-col gap-3 rounded-2xl border border-success/40 bg-success-soft p-4 sm:flex-row sm:items-center">
           <CircleCheck className="h-6 w-6 shrink-0 text-success" />

@@ -3,12 +3,12 @@
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BadgeCheck, BookOpen, CalendarCheck, CalendarDays, ChartLine, Circle, Clapperboard, ClipboardCheck, ClipboardList, Contact, GraduationCap,
+  BadgeCheck, BookOpen, CalendarCheck, CalendarDays, ChartLine, Circle, Clapperboard, ClipboardCheck, ClipboardList, Contact, Download, GraduationCap,
   House, KeyRound, LayoutDashboard, ListChecks, ReceiptText, School, User, UserCheck, Users, Workflow,
 } from "lucide-react";
 
 const Icons = {
-  BadgeCheck, BookOpen, CalendarCheck, CalendarDays, ChartLine, Circle, Clapperboard, ClipboardCheck, ClipboardList, Contact, GraduationCap,
+  BadgeCheck, BookOpen, CalendarCheck, CalendarDays, ChartLine, Circle, Clapperboard, ClipboardCheck, ClipboardList, Contact, Download, GraduationCap,
   House, KeyRound, LayoutDashboard, ListChecks, ReceiptText, School, User, UserCheck, Users, Workflow,
 };
 
