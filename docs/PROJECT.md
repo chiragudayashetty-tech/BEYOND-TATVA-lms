@@ -20,6 +20,8 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Weekly batches | (2026-11-09) A student's batch = first Sunday 10:00 IST after they got course access; everyone before 15 Nov 2026 is Batch 1. Each paid module has a week (1–5) and opens on that batch Sunday. Batch 1 order: modules 1, 3, 2, 4, 5. Studio → Content shows each module's week and Batch 1 unlock date. |
 | Video | YouTube (tracked, with fallback), Drive/Vimeo/Bunny embeds, MP4. 90% watched = complete. Bunny progress is tracked for real (saved every 15 s) and lessons resume where the student stopped (2026-11-08). Full screen turns the phone to landscape; iPhone falls back to native video full screen (2026-11-09). |
 | Analytics v2 | Student scorecards, school roll-up (real school from linked workshop leads, Module 0 starts = Module 0 lessons only), PDF view tracking, honest scores from real progress (2026-11-08). |
+| Weekly batches | The course runs 5 weeks, one module a week, Sunday 10:00 IST. A student's batch starts on the first Sunday after the day they got course access (`course_access.granted_at`); access before Sun 15 Nov 2026 = Batch 1 (`courses.batch1_start`). Each paid module has `batch_week` (1–5); `batch1_week` overrides it for Batch 1 (order 1, 3, 2, 4, 5: Module 3 on 22 Nov, Module 2 on 29 Nov). A module opens at the student's batch start + (week − 1) × 7 days, never before `chapters.release_at` ("content ready from"; 2099 = Coming soon). Module 0 keeps one date. Server-enforced: `chapter_release_for`, `can_open_chapter`, `can_watch_lesson`; the app reads `my_module_releases`; Studio → Content shows week + Batch 1 date and has the two week fields; `admin_student_batches` lists each student's batch. Locked modules show their thumbnail and the student's own Sunday date. |
+| Images and icons | Module thumbnails are 1280×720 JPG in `public/media/modules/` (all six, 2026-11-12). Course page banner `public/media/course-banner.jpg` (1600×1000; becomes the poster if a hero video is set). Link preview `public/media/og-image.jpg` (1200×630, OG + Twitter tags in `layout.js`). App icons and favicon are the dark Beyond Tatva icon (LMS and website). |
 | Duplicate accounts | Duplicate student logins are marked so analytics count each child once; Studio duplicate review merges into a main account, with undo (2026-11-08). |
 | Signup school list | Sign-up offers a list of schools (2026-11-08). |
 | Studio | Content, Quizzes, Assignments (marking queue), Enrollments, Access keys, People. |
@@ -65,7 +67,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
   passing a course id over using the `COURSE_ID` constant in new code. The database (access, keys,
   enrollments, quizzes, assignments) is already per course; the screens assume one course today.
 
-**Live database (checked 2026-11-09):** applied through `20261109000001_weekly_batches`, plus `20261109000002_otp_send_limits` (live as version 20261109141955; don't apply again).
+**Live database (checked 2026-11-09), plus `20261109000001_weekly_batches` (applied 2026-11-09 after "apply 1"):** applied through `20261109000001_weekly_batches`, plus `20261109000002_otp_send_limits` (live as version 20261109141955; don't apply again).
 Plus `20261109000003_upload_limits_close_workshops` (applied 2026-11-09). Waiting for "apply": `20261112000001_quiz_two_tries_xp_rules`.
 
 ## Road to launch (2026-11-02, timed on real pace: ~5–6 PRs/hour, migration PR 10–20 min)
@@ -83,6 +85,7 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - **Backups:** nightly encrypted dump via GitHub Actions, 30 days: `docs/BACKUPS.md`. Needs Chirag's 2 GitHub secrets.
 - **Funnel: see `docs/FUNNEL-PLAN.md`.** Phase 1 approved 2026-11-01 and in progress. Payments now run in the LMS (see table); WhatsApp messaging comes later.
 - No open PRs (2026-11-09). ~35 stale branches from 2026-10-31 to 11-05 remain on GitHub (superseded work); clean up later.
+- **Before Sun 15 Nov 10:00 IST:** Module 1 video is uploaded (one 50 min lesson, title still "Module 1"; consider splitting into 10–15 min lessons). Modules 2–5 need videos by 29 Nov, 22 Nov, 6 Dec, 13 Dec (Batch 1).
 - **Next: Phase D testing** — real phones with 2–3 families on signup → lesson → progress, exercising the 2026-11-08 progress/resume and duplicate features.
 
 ## Done 2026-11-01
