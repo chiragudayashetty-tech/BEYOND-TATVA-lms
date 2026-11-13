@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CircleCheck, Download, Pause, Play, Trash2, TriangleAlert } from "lucide-react";
-import { download, fmtSize, offlineSupported, pause, remove, resume, resumeInterrupted, savedBytes, sizeUp, useOffline } from "@/lib/offline";
+import { download, fmtSize, offlineSupported, pause, remove, resume, resumeInterrupted, saveShell, savedBytes, sizeUp, useOffline } from "@/lib/offline";
 import { useIsClient } from "@/lib/hooks";
 
 export const OFFLINE_ERRORS = {
@@ -20,6 +20,9 @@ export default function OfflineDownload({ lessons, userId, label = "Download for
   const ready = useIsClient();
   const [ask, setAsk] = useState(null); // null | "sizing" | { bytes } | { error }
   useEffect(() => { resumeInterrupted(); }, []);
+  // Get the app ready to open without internet as soon as anything is saved, not only after visiting Downloads.
+  const hasSaved = Object.values(all).some((e) => e.userId === userId);
+  useEffect(() => { if (hasSaved && navigator.onLine) void saveShell(); }, [hasSaved]);
 
   if (!ready || !offlineSupported() || !userId || !lessons?.length) return null;
   const mine = lessons.map((l) => all[l.id]).filter((e) => e && e.userId === userId);

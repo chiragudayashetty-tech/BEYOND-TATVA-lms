@@ -299,6 +299,9 @@ export async function saveShell() {
     if (!page.ok || page.redirected) return;
     const assets = new Set();
     const own = (u) => { try { const x = new URL(u, location.href); return x.origin === location.origin && x.pathname.startsWith("/_next/static/") ? x.pathname + x.search : null; } catch { return null; } };
+    // The Downloads page's own code, even if this device has never opened it, plus whatever is loaded now.
+    const html = await page.clone().text();
+    for (const m of html.matchAll(/["'(](\/_next\/static\/[^"'()\s\\]+)/g)) { const u = own(m[1]); if (u) assets.add(u); }
     for (const el of document.querySelectorAll("script[src], link[href]")) { const u = own(el.src || el.href); if (u) assets.add(u); }
     for (const r of performance.getEntriesByType("resource")) { const u = own(r.name); if (u) assets.add(u); }
     const cache = await caches.open(SHELL);
