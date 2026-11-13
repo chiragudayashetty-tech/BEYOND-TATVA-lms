@@ -26,7 +26,15 @@ const piece = (id, i) => `/__offline/${id}/${i}`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const fatal = (code) => Object.assign(new Error(code), { fatal: code });
 
-export const offlineSupported = () => typeof window !== "undefined" && "caches" in window && typeof localStorage !== "undefined";
+// Apple's browser engine (every browser on iPhone/iPad, and Safari on Mac) shows a saved lesson's first frame
+// but won't play it (tested on iOS 26, 2026-11-13). Hidden there until that's solved; Android Chrome works.
+export const appleWebKit = () => {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  const ios = /iP(hone|od|ad)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  return ios || (/AppleWebKit/.test(ua) && !/Chrome|Chromium|Edg|OPR|Android/.test(ua));
+};
+export const offlineSupported = () => typeof window !== "undefined" && "caches" in window && typeof localStorage !== "undefined" && !appleWebKit();
 export const fmtSize = (b) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1)} GB` : `${Math.max(1, Math.round(b / 1024 ** 2))} MB`);
 
 // ── Store ────────────────────────────────────────────────────────────────────

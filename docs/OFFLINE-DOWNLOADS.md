@@ -52,3 +52,9 @@ The app shows the real size before the student starts. Ways to shrink, cheapest 
 - Downloads are per device and per browser. Clearing browser data removes them.
 - A determined person can still pull a video out of browser storage with developer tools. This stops casual
   forwarding on WhatsApp, not piracy. Only DRM (Bunny MediaCage) does more, and DRM video cannot be saved offline in a web app.
+
+## iPhone / Safari (2026-11-13)
+On iOS 26 Safari a saved lesson shows its first frame and seeks, but won't play (online or offline), both as one
+Blob and served in pieces by `public/sw.js`. Chromium plays the same path fine. So downloads are hidden on Apple's
+engine (`appleWebKit()` in `src/lib/offline.js`) and the Downloads page says "coming soon". Next idea to try:
+the raw Bunny MP4 link opened directly in Safari, to rule out the file itself.

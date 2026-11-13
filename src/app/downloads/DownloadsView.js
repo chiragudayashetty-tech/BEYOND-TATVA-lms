@@ -7,7 +7,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import { OFFLINE_ERRORS } from "@/components/OfflineDownload";
 import { Empty } from "@/components/ui";
 import { useIsClient } from "@/lib/hooks";
-import { fmtSize, keepProgress, localVideoUrl, needsInternet, offlineSupported, pause, recheck, remove, resume, resumeInterrupted, saveShell, savedBytes, sendProgress, useOffline } from "@/lib/offline";
+import { appleWebKit, fmtSize, keepProgress, localVideoUrl, needsInternet, offlineSupported, pause, recheck, remove, resume, resumeInterrupted, saveShell, savedBytes, sendProgress, useOffline } from "@/lib/offline";
 import { createClient } from "@/lib/supabase/client";
 
 const watchNet = (cb) => {
@@ -63,7 +63,7 @@ export default function DownloadsView({ userId }) {
   }
 
   if (!ready) return null;
-  if (!offlineSupported()) return <Empty icon={Download} title="Downloads don't work in this browser" body="Open Beyond Tatva in Chrome, or install the app, to save lessons for offline." />;
+  if (!offlineSupported()) return <Empty icon={Download} title="Offline downloads: coming soon here" body={appleWebKit() ? "Saving lessons for offline isn't ready on iPhone, iPad or Safari yet. You can still watch every lesson online." : "Open Beyond Tatva in Chrome, or install the app, to save lessons for offline."} />;
 
   const mine = Object.values(all).filter((e) => e.userId === userId).sort((a, b) => a.n - b.n);
   const others = Object.values(all).filter((e) => e.userId !== userId);
