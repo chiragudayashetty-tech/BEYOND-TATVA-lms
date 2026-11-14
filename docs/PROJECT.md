@@ -49,14 +49,17 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Tests | `npm test`, `npm run test:db`, `npm run test:e2e` (Playwright smoke; 2 checks parked as TODO). |
 | Pipeline | Studio → Pipeline: one row per person, stages 1–5 (lead → bought), "stopped >24h" filter, CSV export, Parents / School enquiries tabs. Leads matched to students by parent phone; `?src=`/UTM saved at sign-up. |
 
-## Security hardening (2026-11-14, branch claude/optimistic-keller-or7qxv, migration 20261114000001 NOT applied)
-- Admin MFA: `is_admin()` needs an `aal2` login; Studio pages send admins to `/mfa` (authenticator app).
-- Workshop signup limits: 3 per parent phone per day, 8 per IP per hour (trigger on workshop_registrations).
-- Consent: `consent_texts` (versioned wording + hash, never edited in place), `consent_records` (who, method, version).
-- Parent confirmation: `/api/parent-consent` sends a WhatsApp code to the guardian number on file; Profile card.
-- Leaderboard off by default; joining needs parent confirmation.
-- Signed Bunny streaming links per view (`BUNNY_EMBED_TOKEN_KEY`).
-- Order: Chirag enrols MFA at /mfa right after deploy, then "apply", then Bunny key + switch on.
+## Security hardening (2026-11-14, migration 20261114000001 not applied yet)
+Live once applied: consent wording versions + consent records, workshop signup limits, leaderboard off by default,
+cross-student tests for guardians / sessions / purchases / lesson_media.
+
+**Postponed by Chirag, built but switched off (turn on when needed):**
+- Admin MFA: `/mfa` screen is built. To turn on: enable TOTP in Supabase, every admin enrols at `/mfa`, set
+  `REQUIRE_ADMIN_MFA=1` in Vercel, then Claude adds the `aal2` check to `is_admin()` (new migration).
+- Video lock: set `BUNNY_EMBED_TOKEN_KEY` in Vercel, redeploy, then turn on Bunny embed token auth + allowed domain.
+  Until then paid video links can be copied and shared.
+- Parent WhatsApp confirmation: built (`/api/parent-consent`, Profile card hidden until `WHATSAPP_TOKEN` is set).
+  When WhatsApp is connected, Claude adds "parent confirmed" as a requirement to join the leaderboard.
 
 ## Decisions (don't reopen without Chirag)
 - **Website and LMS are completely separate.** The website (www.beyondtatva.in) is the front door for

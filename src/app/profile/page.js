@@ -71,7 +71,7 @@ export default async function ProfilePage() {
                   ? <><ShieldCheck className="h-3.5 w-3.5 text-success" /><span className="text-success">Parent consent given</span></>
                   : <span className="text-warning">Parent consent not recorded yet.</span>}
               </div>
-              {parent && <ParentConfirm verified={parent.verified} wording={parent.wording} />}
+              {parent && process.env.WHATSAPP_TOKEN && <ParentConfirm verified={parent.verified} wording={parent.wording} />}
               <p className="mt-2 text-xs text-muted">This account opens only with {user.email ?? user.phone}. Course updates go to the parent&apos;s WhatsApp (coming soon).</p>
             </div>
           )}

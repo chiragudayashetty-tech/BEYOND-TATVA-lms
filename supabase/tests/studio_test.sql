@@ -481,10 +481,6 @@ do $$ begin perform public.student_xp(auth.uid()); raise exception 'K2 FAIL';
 exception when others then if sqlerrm like 'K2%' then raise; end if; raise notice 'K2 pass: XP helper is internal'; end $$;
 select 'K3 dashboard XP matches the shared XP' t, (public.my_learning_stats() ->> 'xp')::int >= 10 as pass;
 select 'K3b new students start off the leaderboard' t, (public.xp_leaderboard() -> 'me' ->> 'hidden')::boolean as pass;
-do $$ begin perform public.set_leaderboard_hidden(false); raise exception 'K3c FAIL';
-exception when others then if sqlerrm like 'K3c%' then raise; end if; raise notice 'K3c pass: joining needs a parent: %', sqlerrm; end $$;
-reset role; update public.profiles set parent_verified_at = now() where id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
-set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
 select public.set_leaderboard_hidden(false);
 select 'K4 leaderboard: top list, my rank, short names only' t,
   jsonb_array_length(b -> 'top') between 1 and 10 and (b -> 'me' ->> 'rank')::int >= 1
@@ -957,14 +953,8 @@ select 'X1 signup tick is recorded with wording version and hash' t,
 do $$ begin update public.consent_texts set body = 'changed' where version = 'student-signup-v1'; raise exception 'X2 FAIL';
 exception when others then if sqlerrm like 'X2%' then raise; end if; raise notice 'X2 pass: consent wording cannot be edited in place'; end $$;
 
--- Admin needs a two-step login.
 set role authenticated;
 select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
-select set_config('request.jwt.claim.aal', 'aal1', false);
-select 'X3 admin with password only is not admin' t, not public.is_admin() as pass;
-select 'X4 and sees no student data' t, count(*) = 0 as pass from public.consent_records;
-select set_config('request.jwt.claim.aal', 'aal2', false);
-select 'X5 admin after two-step login is admin' t, public.is_admin() as pass;
 select 'X6 admin reads consent records' t, count(*) >= 1 as pass from public.consent_records;
 
 -- One student can't see another student's rows in the tables that had no cross-student test.
@@ -993,7 +983,7 @@ select 'X16 wrong code' t, public.parent_consent_verify('000000') = 'wrong' as p
 select 'X17 right code confirms the parent' t, public.parent_consent_verify('482913') = 'verified' as pass;
 select 'X18 parent confirmation recorded' t, count(*) = 1 as pass from public.consent_records where method = 'parent_whatsapp_otp' and version = 'parent-confirm-v1';
 select public.set_leaderboard_hidden(false);
-select 'X19 confirmed student may join the leaderboard' t, not leaderboard_hidden as pass from public.profiles where id = auth.uid();
+select 'X19 student may join the leaderboard' t, not leaderboard_hidden as pass from public.profiles where id = auth.uid();
 reset role;
 insert into public.parent_consent_codes (student_id, phone, code_sha256, expires_at, attempts)
 values ('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', '919845077777', repeat('c', 64), now() + interval '5 minutes', 5)

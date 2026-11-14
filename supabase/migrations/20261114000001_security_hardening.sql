@@ -1,20 +1,12 @@
 -- Security hardening (audit 2026-11-14):
---  1. Studio admins need a two-step login (MFA, Supabase "aal2") before is_admin() is true.
+--  1. (Admin MFA postponed: see section 1.)
 --  2. Public workshop signup: per-IP and per-phone limits (bots can't fill seats or flood leads).
 --  3. Consent records: which wording (version + hash), who gave it, how it was checked.
 --  4. Parent consent by WhatsApp code to the parent's number on file.
---  5. Leaderboard is off by default; a student can join it only after a parent has confirmed.
+--  5. Leaderboard is off by default; students switch it on themselves.
 
--- ── 1. Admin MFA ─────────────────────────────────────────────────────────────
--- auth.jwt() ->> 'aal' is 'aal2' only when this login passed a second factor (authenticator app).
-create or replace function public.is_admin() returns boolean
-language sql stable security definer set search_path = '' as $$
-  select coalesce((select auth.jwt()) ->> 'aal', '') = 'aal2' and exists (
-    select 1 from public.profiles p join auth.users u on u.id = p.id
-    where p.id = (select auth.uid()) and p.role = 'admin'
-      and u.email_confirmed_at is not null and public.on_studio_list(u.email)
-  );
-$$;
+-- ── 1. Admin MFA: postponed (Chirag, 2026-11-14). To switch on later, add to is_admin():
+--    coalesce((select auth.jwt()) ->> 'aal', '') = 'aal2' and ...   (and set REQUIRE_ADMIN_MFA=1 in Vercel)
 
 -- ── 2. Workshop signup limits ────────────────────────────────────────────────
 alter table public.workshop_registrations add column registered_ip text;
@@ -217,7 +209,7 @@ create trigger parent_link_verifies after insert on public.guardians
 update public.profiles p set parent_verified_at = coalesce(p.guardian_consent_at, now())
 where exists (select 1 from public.guardians g where g.student_id = p.id);
 
--- ── 5. Leaderboard: off by default, parent confirmation to join ──────────────
+-- ── 5. Leaderboard: off by default ──────────────
 alter table public.profiles alter column leaderboard_hidden set default true;
 update public.profiles set leaderboard_hidden = true where role = 'student' and parent_verified_at is null;
 
@@ -225,11 +217,7 @@ create or replace function public.set_leaderboard_hidden(p_hidden boolean) retur
 language plpgsql security definer set search_path = '' as $$
 begin
   if (select auth.uid()) is null then raise exception 'Not signed in'; end if;
-  if not coalesce(p_hidden, true) and not exists (
-    select 1 from public.profiles where id = (select auth.uid()) and parent_verified_at is not null
-  ) then
-    raise exception 'Ask a parent to confirm on WhatsApp first (Profile → Parent confirmation).';
-  end if;
+  -- Parent confirmation will be required here once WhatsApp is connected (see docs/PROJECT.md).
   update public.profiles set leaderboard_hidden = coalesce(p_hidden, true) where id = (select auth.uid()) and role = 'student';
 end;
 $$;
