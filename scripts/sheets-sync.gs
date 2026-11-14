@@ -14,6 +14,8 @@
  *   • A contact logged in Studio → Today comes back on the next pull (every 5 min): Status / Next step /
  *     Next date / Do not contact. Only cells that differ are written. An edit typed here wins again.
  * SCHOOL OUTREACH spreadsheet (header has "School" and "Calls"): one row per school, one tab.
+ *   • "Workshop Status" and "After-workshop Status" (or an older single "Status") use the same words as Studio.
+ *   • Cell A1 shows the sync state: ✅ last good sync, or ❌ red with the reason when it is broken.
  *   • The LMS (Studio → School outreach) is the main record. Every 5 minutes this tab is rewritten from
  *     the LMS: new schools are added, changed ones updated, schools deleted in Studio are removed.
  *   • Edits typed here still save, unless the school changed in the LMS since the last pull; then the
@@ -26,10 +28,10 @@ var SKIP_TABS = ['All leads', 'Sync settings'];
 var LEAD_SYSTEM = ['Signed up', 'Module 0', 'Paid?', 'Source'];
 var LEAD_ADD = ['School', 'Next step', 'Next date', 'Do not contact', 'LMS email', 'Source', 'Signed up', 'Module 0', 'Paid?', 'Last synced', 'ID'];
 var LEAD_FIELDS = { 'Student': 'student', 'Class': 'grade', 'Parent WhatsApp': 'phone', 'School': 'school', 'Status': 'status', 'Next step': 'next_step', 'Next date': 'next_date', 'LMS email': 'lms_email' };
-var SCHOOL_FIELDS = { 'School': 'name', 'Area': 'area', 'Contact': 'contact', 'Phone': 'phone', 'Status': 'status', 'Next step': 'next_step', 'Next date': 'next_date', 'Notes': 'notes' };
+var SCHOOL_FIELDS = { 'School': 'name', 'Area': 'area', 'Contact': 'contact', 'Phone': 'phone', 'Status': 'status', 'Workshop Status': 'status', 'After-workshop Status': 'after_status', 'Next step': 'next_step', 'Next date': 'next_date', 'Notes': 'notes' };
 var LEAD_BACK = { 'Status': 'status', 'Next step': 'next_step', 'Next date': 'next_date', 'Do not contact': 'do_not_contact' };
 var SCHOOL_SYSTEM = ['Calls', 'Visits', 'History (short)'];
-var SCHOOL_PULL = { 'School': 'name', 'Area': 'area', 'Contact': 'contact', 'Phone': 'phone', 'Status': 'status', 'Calls': 'calls', 'Visits': 'visits', 'History (short)': 'history', 'Next step': 'next_step', 'Next date': 'next_date', 'Notes': 'notes', 'Version': 'updated_at', 'ID': 'id' };
+var SCHOOL_PULL = { 'School': 'name', 'Area': 'area', 'Contact': 'contact', 'Phone': 'phone', 'Status': 'status', 'Workshop Status': 'status', 'After-workshop Status': 'after_status', 'Calls': 'calls', 'Visits': 'visits', 'History (short)': 'history', 'Next step': 'next_step', 'Next date': 'next_date', 'Notes': 'notes', 'Version': 'updated_at', 'ID': 'id' };
 var HIDDEN = ['ID', 'Version', 'Last synced'];
 
 function onOpen() {
@@ -182,10 +184,34 @@ function push_(t, rowNums, touched) {
     var now = Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM HH:mm');
     rowNums.forEach(function (r) { t.sheet.getRange(r, t.col['Last synced'] + 1).setValue(now); });
   }
-  if (refresh) pull();
+  if (refresh) pull_();
+}
+
+// One sync at a time: an edit push and the 5-minute pull used to run together and write IDs into rows
+// the other had just moved. Waits up to 30 s for the other run to finish.
+function locked_(fn) {
+  var lock = LockService.getDocumentLock();
+  if (!lock.tryLock(30000)) return;
+  try { return fn(); } finally { lock.releaseLock(); }
+}
+
+// Cell A1 of every synced tab says whether sync works. Red with the reason when it doesn't.
+function syncState_(err) {
+  var now = Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM HH:mm');
+  tables_().forEach(function (t) {
+    var c = t.sheet.getRange(1, 1);
+    if (err) c.setBackground('#f4cccc').setNote('❌ SYNC BROKEN (' + now + '): ' + String(err.message || err).slice(0, 300) + '\nFix: Beyond Tatva sync → Check sync. Still broken? Tell Claude.');
+    else c.setBackground(null).setNote('✅ Synced with the LMS ' + now);
+  });
 }
 
 function onEditSync(e) {
+  locked_(function () {
+    try { onEditSync_(e); syncState_(null); } catch (err) { syncState_(err); throw err; }
+  });
+}
+
+function onEditSync_(e) {
   if (!e || !e.range) return;
   var t = table_(e.range.getSheet());
   if (!t) return;
@@ -194,7 +220,7 @@ function onEditSync(e) {
   var touched = t.head.slice(e.range.getColumn() - 1, e.range.getLastColumn());
   if (touched.every(function (h) { return HIDDEN.indexOf(h) >= 0; })) return;
   var owned = t.kind === 'leads' ? LEAD_SYSTEM : SCHOOL_SYSTEM;
-  if (touched.every(function (h) { return owned.indexOf(h) >= 0; })) return pull();   // LMS-owned: put the value back
+  if (touched.every(function (h) { return owned.indexOf(h) >= 0; })) return pull_();  // LMS-owned: put the value back
   var rows = [], props = PropertiesService.getDocumentProperties(), now = String(Date.now());
   for (var r = r0; r <= r1; r++) { rows.push(r); props.setProperty('edit_' + t.name + '_' + r, now); }
   push_(t, rows, fieldsOf_(t, touched));
@@ -202,6 +228,12 @@ function onEditSync(e) {
 
 // ── Pull: LMS → sheet ───────────────────────────────────────────────────────
 function pull() {
+  locked_(function () {
+    try { pull_(); syncState_(null); } catch (err) { syncState_(err); throw err; }
+  });
+}
+
+function pull_() {
   var key = PropertiesService.getScriptProperties().getProperty('KEY');
   var ts = tables_();
   if (!key || !ts.length) return;
@@ -286,7 +318,15 @@ function pull() {
 
 // School Outreach tab ← LMS. The LMS is the main record: rows are rewritten, added and removed to match it.
 function pullSchools_(t, schools) {
-  if (t.col['ID'] === undefined || t.col['Version'] === undefined) return;   // run "Set up sync" first
+  // Missing link columns used to stop this sync silently (8–14 Nov 2026). Add them instead.
+  ['ID', 'Version'].forEach(function (h) {
+    if (t.col[h] !== undefined) return;
+    var c = t.sheet.getLastColumn() + 1;
+    t.sheet.getRange(1, c).setValue(h).setFontWeight('bold').setNote('Link to the LMS record. Do not edit or delete.');
+    t.sheet.getRange(1, c, t.sheet.getMaxRows(), 1).setNumberFormat('@');
+    t.sheet.hideColumns(c);
+    t = table_(t.sheet);
+  });
   var norm = function (v) { return v instanceof Date ? Utilities.formatDate(v, 'Asia/Kolkata', 'yyyy-MM-dd') : String(v == null ? '' : v); };
   var width = t.head.length, values = t.last > 1 ? t.sheet.getRange(2, 1, t.last - 1, width).getValues() : [];
   var at = {}, live = {}, adds = [], dirty = false;

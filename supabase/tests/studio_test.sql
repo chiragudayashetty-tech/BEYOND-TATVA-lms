@@ -965,3 +965,9 @@ set role authenticated; select pg_temp.as_user('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0
 do $$ begin perform public.email_for_phone('9845066666'); raise exception 'W8 FAIL';
 exception when insufficient_privilege then raise notice 'W8 pass: students cannot look up emails'; end $$;
 reset role;
+
+-- After-workshop status (20261114000004).
+select 'W9 sheet sets both statuses' t, r -> 0 ->> 'result' = 'created' as pass
+  from (select public.sheet_upsert_schools('[{"row":2,"name":"After Test School","status":"Workshop done","after_status":"Closed"}]') r) x;
+select 'W10 after-workshop status saved' t, after_status = 'Closed' and status = 'Workshop done' as pass from public.outreach_schools where name = 'After Test School';
+select 'W11 snapshot carries after_status' t, exists (select 1 from jsonb_array_elements(public.sheet_snapshot() -> 'schools') e where e ->> 'after_status' = 'Closed') as pass;
