@@ -78,7 +78,7 @@ export default async function PeoplePage() {
               <tbody>
                 {students.map((s) => (
                   <tr key={s.id} className="border-b border-border last:border-0">
-                    <td className="px-5 py-3"><div className="flex items-center gap-3"><Avatar name={s.full_name} size="h-8 w-8 text-xs" /><div><div className="font-medium">{s.full_name}</div><div className="text-xs text-muted">Grade {s.grade}</div></div></div></td>
+                    <td className="px-5 py-3"><div className="flex items-center gap-3"><Avatar name={s.full_name} size="h-8 w-8 text-xs" /><div><Link href={`/admin/analytics/students/${s.id}`} className="font-medium hover:text-primary hover:underline">{s.full_name}</Link><div className="text-xs text-muted">Grade {s.grade}</div></div></div></td>
                     <td className="px-5 py-3 text-muted">{schoolName[s.school_id] ?? s.school_name ?? "–"}{!s.school_id && <div className="text-xs">Individual</div>}</td>
                     <td className="px-5 py-3"><div className="text-xs text-muted">{s.guardian_phone ?? "–"}</div>{s.guardian_consent_at ? <Badge tone="success">Consent ({s.consent_by ?? "parent"})</Badge> : <Badge tone="warning">No consent</Badge>}{s.signed_up_by === "parent" && <div className="text-[11px] text-subtle">Set up by parent</div>}</td>
                     <td className="px-5 py-3">{accessBy[s.id] ? <Badge tone="success">Full · {accessBy[s.id]}</Badge> : <GrantButton studentId={s.id} />}</td>

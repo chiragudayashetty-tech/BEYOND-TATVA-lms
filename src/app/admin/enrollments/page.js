@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { UserCheck } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle } from "@/components/ui";
@@ -48,7 +49,7 @@ export default async function EnrollmentsPage({ searchParams }) {
                       {[r.email, r.phone].filter(Boolean).join(" · ")} · {date(r.created_at)} · {r.source === "manual" ? "added by you" : "website"}
                       {r.amount_paise != null && ` · ₹${(r.amount_paise / 100).toLocaleString("en-IN")}`}
                     </div>
-                    {r.status === "claimed" && <div className="text-xs text-muted">→ {name[r.claimed_by] ?? "deleted account"} (matched by {how[r.matched_by] ?? "?"})</div>}
+                    {r.status === "claimed" && <div className="text-xs text-muted">→ {name[r.claimed_by] ? <Link href={`/admin/analytics/students/${r.claimed_by}`} className="underline">{name[r.claimed_by]}</Link> : "deleted account"} (matched by {how[r.matched_by] ?? "?"})</div>}
                     {r.status === "pending" && r.suggested_student && <div className="text-xs text-warning">Parent phone matches {name[r.suggested_student] ?? "a student"}: needs your approval</div>}
                     <div className="font-mono text-[11px] text-subtle">{r.reference}</div>
                   </div>
