@@ -1,7 +1,7 @@
 # Sheets ↔ LMS: how the system works (Chirag's manual)
 
-_Agreed design, 2026-11-14. Status: School Outreach part is live; the School Leads Tracker part is being built
-(step 3 of the CRM plan). If this file and the code disagree, tell Claude._
+_Agreed design, 2026-11-14. School Outreach sync: `scripts/sheets-sync.gs` (`/api/sheets`). School Leads Tracker sync:
+`scripts/leads-tracker-sync.gs` (`/api/sheets/leads`, migration `20261114000006`). If this file and the code disagree, tell Claude._
 
 ## The three places and who owns what
 | Place | What it is | Main record for |
@@ -60,6 +60,7 @@ Old sheet **"Workshop Leads v2 … Srvk closed"** is an archive. Its sync is swi
 
 ### 7. Columns the LMS fills (don't type there)
 - **Paid?**: becomes **Yes** when the student pays on the LMS. Your "Pending" stays until then.
+- **Short note** is the lead's note in Studio (Studio's "next step" text); **Next step** is its status.
 - **Signed up** / **Module 0**: added by the script at the right end; filled by the LMS.
 - **ID** (hidden): the link. Never edit or delete.
 
@@ -73,6 +74,7 @@ Old sheet **"Workshop Leads v2 … Srvk closed"** is an archive. Its sync is swi
   Type a School if you learn it.
 
 ### 10. Is it working?
+- **Studio → Today** shows a red banner when a sheet hasn't synced for 30 minutes (table `sheet_sync_health`).
 - **Cell A1** of each synced tab: note "✅ Synced with the LMS <time>". **Red** = broken, the note says why.
 - Menu **Beyond Tatva sync → Check sync**: tests the key, repairs the timers, syncs now.
 - Timers (Extensions → Apps Script → ⏰): exactly one `pull` (every 5 minutes) and one `onEditSync` (on edit).
