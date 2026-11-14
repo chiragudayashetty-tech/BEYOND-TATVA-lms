@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { aisensyCampaign, sendAisensy } from "@/lib/aisensy";
 import { otpTemplateMessage, verifyHookSignature, whatsappNumber } from "@/lib/whatsapp-otp";
 
 // Supabase Auth "Send SMS" hook: Supabase makes the code, we deliver it on WhatsApp (Meta Cloud API).
@@ -31,6 +32,11 @@ export async function POST(request) {
   else if (allowed === "cooldown") return fail(429, "Please wait a minute before asking for another code.");
   else if (allowed === "hourly_limit") return fail(429, "Too many codes for this number. Try again in an hour, or use Google or email.");
 
+  // AiSensy first when it's set up (AISENSY_API_KEY + AISENSY_OTP_CAMPAIGN), else Meta Cloud API directly.
+  if (aisensyCampaign("OTP")) {
+    const sent = await sendAisensy("OTP", { to, name: "Student", params: [otp], buttonCode: otp });
+    return sent.ok ? NextResponse.json({}) : fail(502, "Couldn't send the code on WhatsApp. Check the number, or use Google or email.");
+  }
   const token = process.env.WHATSAPP_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!token || !phoneId) return fail(500, "WhatsApp login isn't set up yet. Use Google or email.");

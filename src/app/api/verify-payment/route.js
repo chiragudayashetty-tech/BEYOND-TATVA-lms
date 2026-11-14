@@ -3,6 +3,8 @@ import { readJson } from "@/lib/body";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getSession } from "@/lib/supabase/server";
 import { COURSE_ID } from "@/lib/catalog";
+import { sendAisensy } from "@/lib/aisensy";
+import { whatsappNumber } from "@/lib/whatsapp-otp";
 import { fetchOrder, paymentSignatureValid, razorpayKeys } from "@/lib/razorpay";
 
 // POST /api/verify-payment { razorpay_order_id, razorpay_payment_id, razorpay_signature }
@@ -57,6 +59,11 @@ export async function POST(request) {
   if (!access) {
     console.error("paid but not unlocked", paymentId, status);
     return NextResponse.json({ verified: true, unlocked: false, error: "Payment received. Unlocking needs a quick check from us." }, { status: 202 });
+  }
+  // Payment confirmation to the parent on WhatsApp (only when AiSensy is set up; never blocks the unlock).
+  const parent = whatsappNumber(profile.guardian_phone);
+  if (parent && status !== "already_claimed") {
+    await sendAisensy("PAYMENT", { to: parent, name: "Parent", params: [(profile.full_name || "your child").trim().split(/\s+/)[0], `₹${Math.round((order.amount ?? 0) / 100)}`] });
   }
   return NextResponse.json({ verified: true, unlocked: true, payment_id: paymentId });
 }
