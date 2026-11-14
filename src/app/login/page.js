@@ -8,14 +8,17 @@ import { safeNext } from "@/lib/safe-next";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
 
-// Phone login sends the code on WhatsApp (api/auth/send-otp). The tab appears once NEXT_PUBLIC_PHONE_LOGIN=1 is set.
-const PHONE_LOGIN = process.env.NEXT_PUBLIC_PHONE_LOGIN === "1";
+import { cleanEmail, indianMobile, parseLoginId, passwordProblem, showPhone } from "@/lib/login-id";
+import { supportWhatsApp } from "@/lib/social";
 
+// Sign in: Google, phone or email + password (no code, Chirag 2026-11-14), or an email code.
+// WhatsApp codes (api/auth/send-otp) come back once Meta verification is done.
 const friendly = (msg = "") => {
-  if (/phone|sms/i.test(msg)) return "WhatsApp login isn't switched on yet. Use Google or email for now.";
-  if (/provider is not enabled|Unsupported provider/i.test(msg)) return "Google sign-in isn't switched on yet. Use email for now.";
+  if (/phone.*(disabled|not enabled)|Phone logins/i.test(msg)) return "Sign-in with mobile number isn't switched on yet. Use your email and the same password.";
+  if (/Invalid login credentials/i.test(msg)) return "Wrong number/email or password. Try again, or tap Forgot password.";
+  if (/provider is not enabled|Unsupported provider/i.test(msg)) return "Google sign-in isn't switched on yet. Use your phone or email.";
   if (/expired|invalid/i.test(msg)) return "That code didn't work. Check it, or send a new one.";
-  if (/rate|seconds/i.test(msg)) return "Too many tries. Wait a minute and try again.";
+  if (/rate|seconds|too many/i.test(msg)) return "Too many tries. Wait a minute and try again.";
   return msg || "Something went wrong. Try again.";
 };
 
@@ -23,10 +26,16 @@ function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNext(params.get("next"));
-  const [method, setMethod] = useState("email");
+  // "login" | "signup" | "forgot" | "code" (email code) | "codeSent"
+  const [mode, setMode] = useState("login");
   const [contact, setContact] = useState("");
+  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [password2, setPassword2] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [notice, setNotice] = useState("");
   const [code, setCode] = useState("");
-  const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState(params.get("error") ? "That sign-in link has expired. Send a new code." : "");
@@ -80,7 +89,6 @@ function LoginForm() {
 
   const supabase = createClient();
   const callback = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback?next=${encodeURIComponent(next)}`;
-  const phone = () => `+91${contact.replace(/\D/g, "").slice(-10)}`;
 
   // Backup of where to go after sign-in. If Supabase drops the ?next= from the return address
   // (not on its Redirect URLs allowlist), the callback and the front page still find it here.
@@ -103,22 +111,76 @@ function LoginForm() {
     }
   }
 
+  const go = (m) => { setMode(m); setError(""); setNotice(""); setCode(""); };
+
+  // Signed in on this device: claim website purchases, then continue (as auth/callback does).
+  async function finish() {
+    await supabase.rpc("claim_purchases");
+    router.replace(next);
+    router.refresh();
+  }
+
+  async function passwordSubmit(e) {
+    e.preventDefault();
+    rememberNext();
+    setError("");
+    // Sign-up: email AND mobile (both go on the account). Sign-in: either one.
+    const id = mode === "signup" ? { kind: "email", email: cleanEmail(email) } : parseLoginId(contact);
+    if (mode === "signup") {
+      if (!id.email) return setError("Type a real email address (e.g. name@gmail.com).");
+      if (!indianMobile(mobile)) return setError("Type a 10-digit Indian mobile number.");
+      const problem = passwordProblem(password);
+      if (problem) return setError(problem);
+      if (password !== password2) return setError("The two passwords don't match.");
+    } else if (!id) return setError("Type your mobile number or email.");
+    setBusy(true);
+    try {
+      if (mode === "signup") {
+        const r = await fetch("/api/auth/signup", { method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email, phone: mobile, password, website: e.target.website?.value || "" }) });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) return setError(data.error || "Couldn't create the account. Try again.");
+      }
+      const { error } = await supabase.auth.signInWithPassword(id.kind === "phone" ? { phone: `+${id.phone}`, password } : { email: id.email, password });
+      if (error) return setError(friendly(error.message));
+      await finish();
+    } catch {
+      setError("No connection. Check your internet and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function forgot(e) {
+    e.preventDefault();
+    setError("");
+    if (!parseLoginId(contact)) return setError("Type the email or mobile number you signed up with.");
+    setBusy(true);
+    try {
+      const r = await fetch("/api/auth/forgot", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: contact }) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) setError(data.error || "Couldn't send. Try again.");
+      else setNotice("sent");
+    } catch {
+      setError("No connection. Check your internet and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function sendCode(e) {
     rememberNext();
     e.preventDefault();
     setBusy(true);
     setError("");
-    const { error } =
-      method === "email"
-        ? await supabase.auth.signInWithOtp({ email: contact.trim(), options: { emailRedirectTo: callback } })
-        : await supabase.auth.signInWithOtp({ phone: phone() });
+    const { error } = await supabase.auth.signInWithOtp({ email: contact.trim(), options: { emailRedirectTo: callback } });
     setBusy(false);
     if (error) setError(friendly(error.message));
-    else setSent(true);
+    else setMode("codeSent");
   }
 
-  // Email codes are 8 digits (Supabase setting), SMS codes 6. Full code typed, pasted or autofilled → verify.
-  const codeLength = method === "email" ? 8 : 6;
+  // Email codes are 8 digits (Supabase setting). Full code typed, pasted or autofilled → verify.
+  const codeLength = 8;
   function onCode(value) {
     const digits = value.replace(/\D/g, "").slice(0, codeLength);
     setCode(digits);
@@ -130,15 +192,18 @@ function LoginForm() {
     const token = (typed ?? code).trim();
     setBusy(true);
     setError("");
-    const { error } =
-      method === "email"
-        ? await supabase.auth.verifyOtp({ email: contact.trim(), token, type: "email" })
-        : await supabase.auth.verifyOtp({ phone: phone(), token, type: "sms" });
+    const { error } = await supabase.auth.verifyOtp({ email: contact.trim(), token, type: "email" });
+    if (error) {
+      setBusy(false);
+      return setError(friendly(error.message));
+    }
+    await fetch("/api/auth/settle", { method: "POST" }).catch(() => {});
     setBusy(false);
-    if (error) return setError(friendly(error.message));
-    router.replace(next);
-    router.refresh();
+    await finish();
   }
+
+  const id = parseLoginId(contact);
+  const helpLink = supportWhatsApp(`Hi Beyond Tatva! I forgot my password. My login is ${id?.kind === "phone" ? showPhone(id.phone) : contact}. Student name: `);
 
   return (
     <>
@@ -154,50 +219,98 @@ function LoginForm() {
       </button>
     </div>}
     <div className="card p-6 shadow-xl shadow-black/5 sm:p-8">
-      <h1 className="text-2xl font-semibold">Sign in or sign up</h1>
-      <p className="mt-1 text-sm text-muted">New here? This same step creates your account. Use the student&apos;s own Google account or email.</p>
+      <h1 className="text-2xl font-semibold">{mode === "signup" ? "Create your account" : mode === "forgot" ? "Forgot password" : "Sign in"}</h1>
+      <p className="mt-1 text-sm text-muted">
+        {mode === "signup" ? "Use the student's own email and mobile number. You can sign in with either."
+          : mode === "forgot" ? "Type the number or email you signed up with."
+          : "Use Google, or your phone number / email and password."}
+      </p>
 
-      <button onClick={google} disabled={googleBusy} aria-live="polite" className="btn-secondary mt-6 min-h-12 w-full py-3">
-        {googleBusy ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>}
-        {googleBusy ? "Opening Google sign-in…" : "Continue with Google"}
-      </button>
-
-      <div className="my-6 flex items-center gap-3 text-xs text-muted">
-        <div className="h-px flex-1 bg-border" /> or get a code by email <div className="h-px flex-1 bg-border" />
-      </div>
-
-      {PHONE_LOGIN && <div className="mb-4 grid grid-cols-2 rounded-xl bg-surface-2 p-1 text-sm font-medium">
-        {["email", "phone"].map((m) => (
-          <button key={m} onClick={() => { setMethod(m); setSent(false); setError(""); setContact(""); }}
-            className={`rounded-lg py-2 capitalize transition ${method === m ? "bg-surface text-fg shadow-sm" : "text-muted"}`}>
-            {m === "phone" ? "WhatsApp" : "Email"}
-          </button>
-        ))}
-      </div>}
-
-      {!sent ? (
-        <form onSubmit={sendCode} className="space-y-3">
-          {method === "phone" ? (
-            <div className="flex gap-2">
-              <span className="input grid w-20 place-items-center">+91</span>
-              <input className="input" type="tel" inputMode="numeric" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="98765 43210" required />
+      {(mode === "login" || mode === "signup") && <>
+        <button onClick={google} disabled={googleBusy} aria-live="polite" className="btn-secondary mt-6 min-h-12 w-full py-3">
+          {googleBusy ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>}
+          {googleBusy ? "Opening Google sign-in…" : "Continue with Google"}
+        </button>
+        <div className="my-6 flex items-center gap-3 text-xs text-muted">
+          <div className="h-px flex-1 bg-border" /> or with phone / email <div className="h-px flex-1 bg-border" />
+        </div>
+        <form onSubmit={passwordSubmit} className="space-y-3">
+          {mode === "signup" ? <>
+            <div>
+              <label className="label" htmlFor="su-email">Email</label>
+              <input id="su-email" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
+                autoComplete="email" autoCapitalize="none" spellCheck={false} required />
             </div>
-          ) : (
-            <input className="input" type="email" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="you@example.com" autoComplete="email" required />
+            <div>
+              <label className="label" htmlFor="su-phone">Mobile number (WhatsApp)</label>
+              <div className="flex gap-2">
+                <span className="input grid w-16 shrink-0 place-items-center">+91</span>
+                <input id="su-phone" className="input" type="tel" inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="98765 43210" autoComplete="tel-national" required />
+              </div>
+              <p className="mt-1 text-xs text-muted">Forgot your password later? Type the email or this number and we email you a reset link.</p>
+            </div>
+          </> : (
+            <div>
+              <label className="label" htmlFor="login-id">Mobile number or email</label>
+              <input id="login-id" className="input" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="98765 43210 or you@example.com"
+                autoComplete="username" autoCapitalize="none" spellCheck={false} required />
+            </div>
           )}
-          <button disabled={busy} className="btn-primary w-full py-3">{busy ? "Sending…" : "Send code"}</button>
-        </form>
-      ) : (
-        <form onSubmit={verify} className="space-y-3">
-          <p className="text-sm text-muted">
-            We sent a {codeLength}-digit code {method === "email" ? "to" : "on WhatsApp to"} <b className="text-fg">{method === "email" ? contact : phone()}</b>.
-            {method === "email" && " You can also just tap the link in the email."}
-          </p>
-          <input className="input text-center text-2xl tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={codeLength} value={code} onChange={(e) => onCode(e.target.value)} onPaste={(e) => { e.preventDefault(); onCode(e.clipboardData.getData("text")); }} placeholder={"•".repeat(codeLength)} aria-label={`${codeLength}-digit code`} autoFocus required />
-          <button disabled={busy} className="btn-primary w-full py-3">{busy ? "Checking…" : "Verify and continue"}</button>
-          <button type="button" onClick={() => { setSent(false); setCode(""); }} className="w-full text-sm text-muted hover:text-fg">
-            Use a different {method}
+          <div>
+            <label className="label" htmlFor="login-pw">{mode === "signup" ? "Make a password (8+ characters)" : "Password"}</label>
+            <div className="relative">
+              <input id="login-pw" className="input pr-16" type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
+                autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={mode === "signup" ? 8 : undefined} required />
+              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute inset-y-0 right-0 min-w-14 px-3 text-xs font-medium text-muted hover:text-fg">{showPw ? "Hide" : "Show"}</button>
+            </div>
+          </div>
+          {mode === "signup" && <div>
+            <label className="label" htmlFor="login-pw2">Type the password again</label>
+            <input id="login-pw2" className="input" type={showPw ? "text" : "password"} value={password2} onChange={(e) => setPassword2(e.target.value)} autoComplete="new-password" required />
+          </div>}
+          {/* Bots fill every field; people never see this one. */}
+          <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
+          <button disabled={busy} className="btn-primary min-h-12 w-full py-3">
+            {busy ? (mode === "signup" ? "Creating account…" : "Signing in…") : mode === "signup" ? "Create account" : "Sign in"}
           </button>
+        </form>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm">
+          {mode === "login"
+            ? <button type="button" onClick={() => go("signup")} className="min-h-11 font-medium text-primary">New here? Create account</button>
+            : <button type="button" onClick={() => go("login")} className="min-h-11 font-medium text-primary">Have an account? Sign in</button>}
+          <button type="button" onClick={() => go("forgot")} className="min-h-11 text-muted hover:text-fg">Forgot password?</button>
+        </div>
+        <button type="button" onClick={() => go("code")} className="mt-1 min-h-11 w-full text-sm text-muted hover:text-fg">Email me a login code instead</button>
+      </>}
+
+      {mode === "forgot" && (notice === "sent" ? (
+        <div className="mt-6 space-y-3 text-sm">
+          <p className="rounded-xl bg-success-soft p-3 text-success">If <b>{contact}</b> has an account, we&apos;ve emailed a reset link to the email on that account. Open it, then set a new password. Check Spam too.</p>
+          {helpLink && <a href={helpLink} target="_blank" rel="noopener noreferrer" className="block min-h-11 text-center text-muted hover:text-fg">No email after 10 minutes? Message us on WhatsApp</a>}
+          <button type="button" onClick={() => go("login")} className="btn-secondary w-full py-3">Back to sign in</button>
+        </div>
+      ) : (
+        <form onSubmit={forgot} className="mt-6 space-y-3">
+          <input className="input" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="98765 43210 or you@example.com" autoComplete="username" autoCapitalize="none" required />
+          <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : "Reset my password"}</button>
+          <button type="button" onClick={() => go("login")} className="min-h-11 w-full text-sm text-muted hover:text-fg">Back to sign in</button>
+        </form>
+      ))}
+
+      {mode === "code" && (
+        <form onSubmit={sendCode} className="mt-6 space-y-3">
+          <input className="input" type="email" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="you@example.com" autoComplete="email" required />
+          <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : "Send code"}</button>
+          <button type="button" onClick={() => go("login")} className="min-h-11 w-full text-sm text-muted hover:text-fg">Use a password instead</button>
+        </form>
+      )}
+
+      {mode === "codeSent" && (
+        <form onSubmit={verify} className="mt-6 space-y-3">
+          <p className="text-sm text-muted">We sent an {codeLength}-digit code to <b className="text-fg">{contact}</b>. You can also just tap the link in the email.</p>
+          <input className="input text-center text-2xl tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={codeLength} value={code} onChange={(e) => onCode(e.target.value)} onPaste={(e) => { e.preventDefault(); onCode(e.clipboardData.getData("text")); }} placeholder={"•".repeat(codeLength)} aria-label={`${codeLength}-digit code`} autoFocus required />
+          <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? "Checking…" : "Verify and continue"}</button>
+          <button type="button" onClick={() => go("code")} className="min-h-11 w-full text-sm text-muted hover:text-fg">Use a different email</button>
         </form>
       )}
 

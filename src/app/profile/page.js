@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, ChevronRight, CircleHelp, Headset, KeyRound, LogOut, MessageCircleQuestion, Moon, ShieldCheck } from "lucide-react";
+import { Bell, ChevronRight, CircleHelp, Headset, LogOut, MessageCircleQuestion, Moon, ShieldCheck } from "lucide-react";
 import SocialLinks from "@/components/SocialLinks";
 import { supportWhatsApp } from "@/lib/social";
 import Shell from "@/components/shell/Shell";
@@ -9,6 +9,8 @@ import { getSession } from "@/lib/supabase/server";
 import ProfileEditor from "./ProfileEditor";
 import LeaderboardSwitch from "./LeaderboardSwitch";
 import ParentConfirm from "./ParentConfirm";
+import PasswordCard from "./PasswordCard";
+import { loginLabel } from "@/lib/login-id";
 import { createClient } from "@/lib/supabase/server";
 import { getLeaderboard } from "@/lib/data";
 
@@ -31,8 +33,10 @@ function Row({ icon: Icon, label, hint, children, href, external }) {
     : <div className="flex items-center gap-4 px-5 py-4">{inner}</div>;
 }
 
-export default async function ProfilePage() {
+export default async function ProfilePage({ searchParams }) {
   const { user, profile } = await getSession();
+  const loginWith = loginLabel(user) || "your account";
+  const setNew = (await searchParams)?.password === "new";
   const student = profile?.role === "student";
   const board = student ? await getLeaderboard() : null;
   // Parent confirmation (migration 20261114000001). Read separately so the page still works before it is applied.
@@ -56,7 +60,7 @@ export default async function ProfilePage() {
           <div className="flex flex-col items-center">
             <Avatar name={profile.full_name} size="h-20 w-20 text-2xl" />
             <h2 className="mt-4 text-xl font-semibold">{profile.full_name}</h2>
-            <p className="text-sm text-muted">{user.email ?? user.phone}</p>
+            <p className="text-sm text-muted">{loginWith}</p>
             <div className="mt-3 flex gap-2">
               <Badge tone="primary"><span className="capitalize">{profile.role}</span></Badge>
               {profile.grade && <Badge>Grade {profile.grade}</Badge>}
@@ -72,7 +76,7 @@ export default async function ProfilePage() {
                   : <span className="text-warning">Parent consent not recorded yet.</span>}
               </div>
               {parent && process.env.WHATSAPP_TOKEN && <ParentConfirm verified={parent.verified} wording={parent.wording} />}
-              <p className="mt-2 text-xs text-muted">This account opens only with {user.email ?? user.phone}. Course updates go to the parent&apos;s WhatsApp (coming soon).</p>
+              <p className="mt-2 text-xs text-muted">This account opens only with {loginWith}. Course updates go to the parent&apos;s WhatsApp (coming soon).</p>
             </div>
           )}
         </Card>
@@ -94,7 +98,7 @@ export default async function ProfilePage() {
           <section className="card divide-y divide-border overflow-hidden">
             <div className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-subtle">Account</div>
             <ProfileEditor userId={user.id} fullName={profile.full_name} avatar={profile.avatar} />
-            <Row icon={KeyRound} label="Login and security" hint="You sign in with a one-time code" href="/profile#settings" />
+            <PasswordCard loginWith={loginWith} open={setNew} />
             <Row icon={ShieldCheck} label="Privacy and data" hint="What we keep, and how to delete your account" href="/delete-account" />
             <Row icon={CircleHelp} label="Help and support" href="/help" />
           </section>

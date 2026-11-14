@@ -14,7 +14,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 ## Built and live
 | Area | Notes |
 |---|---|
-| Login | Email link (built-in sender: testing only), Google. Phone hidden until DLT. |
+| Login | (2026-11-14, branch `claude/festive-wright-wtxgmd`) Google; **email + mobile + password, no code**: sign-up asks for both (both stored on the Supabase user), sign-in with **either** + password (`signInWithPassword` with `email` or `phone`); email code as a fallback. `/api/auth/signup` creates the account (service role), refuses Studio/`@beyondtatva.in` addresses, 5 per IP per hour / 20 per day (`20261114000003`, applied 2026-11-14). Accounts are flagged `password_unverified`: the first Google / email-code / reset-link sign-in replaces that password (anti-squatting, `src/lib/password-accounts.js`). Forgot password is **automatic by email**: type the email or the mobile → `/api/auth/forgot` (mobile → account email via `email_for_phone`, 1/min 5/hour per number) emails a reset link → Profile → Password. **Needs Chirag: Resend SMTP + "Reset password" template (docs/login-setup.md step 5).** Backup: Studio → People → **New password** (temporary). Profile → Password sets/changes it. **Sign-in by mobile needs Supabase → Auth → Providers → Phone switched on** (Chirag; see docs/login-setup.md). WhatsApp codes come once Meta verification is done (DLT is SMS only). |
 | Onboarding | One login per child: the student or a parent sets up the student account (parent WhatsApp required, child phone optional, consent tick). Teachers: teacher code. No parent accounts or codes. |
 | Course | 1 course, Module 0 free (one fixed date) + paid modules, access via key/payment/admin. |
 | Weekly batches | (2026-11-09) A student's batch = first Sunday 10:00 IST after they got course access; everyone before 15 Nov 2026 is Batch 1. Each paid module has a week (1–5) and opens on that batch Sunday. Batch 1 order: modules 1, 3, 2, 4, 5. Studio → Content shows each module's week and Batch 1 unlock date. |
@@ -91,7 +91,7 @@ cross-student tests for guardians / sessions / purchases / lesson_media.
   enrollments, quizzes, assignments) is already per course; the screens assume one course today.
 
 **Live database (checked 2026-11-09), plus `20261109000001_weekly_batches` (applied 2026-11-09 after "apply 1"):** applied through `20261109000001_weekly_batches`, plus `20261109000002_otp_send_limits` (live as version 20261109141955; don't apply again).
-Plus `20261109000003_upload_limits_close_workshops` (applied 2026-11-09). `20261112000001_quiz_two_tries_xp_rules` applied 2026-11-13 (live under its own version number; do not apply again). Nothing waiting for "apply".
+Plus `20261109000003_upload_limits_close_workshops` (applied 2026-11-09). `20261112000001_quiz_two_tries_xp_rules` applied 2026-11-13 (live under its own version number; do not apply again). `20261114000003_password_signup_limits` applied 2026-11-14 after "apply" (sign-up limit + `email_for_phone`).
 
 ## Road to launch (2026-11-02, timed on real pace: ~5–6 PRs/hour, migration PR 10–20 min)
 | Phase | What | Who | Time |
