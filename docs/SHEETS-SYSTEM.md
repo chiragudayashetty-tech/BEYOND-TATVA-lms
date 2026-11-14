@@ -45,7 +45,7 @@ Old sheet **"Workshop Leads v2 … Srvk closed"** is an archive. Its sync is swi
 
 ### 6. Adding or renaming columns (Leads tab)
 - **New column** anywhere: fine. It's saved in the LMS with the lead and shown in Studio. No code change.
-- **Don't rename these** (the LMS reads them by name): School · Student name · Class · Parent phone · Parent name ·
+- **Don't rename these** (the LMS reads them by name): School · Student name · Class · Section · Parent phone · Parent name ·
   Student email · Next step · Next date · Paid? · Do not contact · LMS email · Source · ID.
   Renamed by mistake? Cell A1 turns red; rename it back.
 - Column **order** doesn't matter. Moving columns is fine.
@@ -74,8 +74,14 @@ Follow-ups, Summary, Options (except the School list), How to use, and any tab w
 Add your own analysis tabs freely.
 
 ## In Studio (CRM), once built
-- Pipeline: filter by **School, Status (open/won/lost), Class, Source, Due today**, search; **group by school** with
-  forms → paid and conversion %.
+- Pipeline filters (combine any of them):
+  - **School** · **Class** (8/9/10) · **Section** (A, B, …; from the sheet's Section column)
+  - **Status**: open / won (Enrolled or paid) / lost (Closed, Not interested) / do not contact
+  - **Siblings**: only leads that share a parent phone with another lead; siblings are listed next to each other
+    with a "Sibling of …" tag, so one call covers both
+  - **Source** (Workshop, Website, Referral…) · **Due today / overdue** · search by name or phone
+- **Group by school**: one card per school with forms → open → won and conversion %; inside it, group by
+  **Class → Section** with the same counts (e.g. SRVK · Class 10 · B: 12 forms, 0 paid).
 - Today: school filter; won/lost leads never show.
 - School outreach: each school shows its lead numbers.
 - Filters live in the address bar (e.g. `/admin/pipeline?school=SRVK&status=open`), so they can be bookmarked.
