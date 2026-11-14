@@ -139,7 +139,7 @@ export function stepLink(courseId, step) {
     case "quiz": return { href: `/quiz/${step.quiz.id}`, label: "Take the quiz", title: step.quiz.title, hint: `You finished the Module ${step.module.n} videos. Now check what you learned.` };
     case "assignment": return { href: `/assignments/${step.assignment.id}`, label: "Do the assignment", title: step.assignment.title, hint: `Module ${step.module.n} · hand in your work` };
     case "unlock": return { href: "/unlock", label: "Unlock the course", title: `Module ${step.module.n}: ${step.module.title}`, hint: "You finished the free module. Unlock the rest to keep going." };
-    case "wait": return { href: `/course#m${step.module.n}`, label: "See the course", title: `Module ${step.module.n}: ${step.module.title}`, hint: `You're all caught up. This module opens ${fmtPremiere(step.module.release)}.` };
+    case "wait": return { href: `/course/${step.module.n}`, label: "See the course", title: `Module ${step.module.n}: ${step.module.title}`, hint: `You're all caught up. This module opens ${fmtPremiere(step.module.release)}.` };
     case "done": return { href: "/certificates", label: "See your certificate", title: "You finished the course!", hint: "Every lesson is done. Well done!" };
     default: return null;
   }

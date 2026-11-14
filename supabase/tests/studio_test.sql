@@ -484,6 +484,8 @@ select 'K4 leaderboard: top list, my rank, short names only' t,
   jsonb_array_length(b -> 'top') between 1 and 10 and (b -> 'me' ->> 'rank')::int >= 1
   and not exists (select 1 from jsonb_array_elements(b -> 'top') e where e ->> 'name' ~ ' [A-Za-z]{2,}') as pass
   from (select public.xp_leaderboard() b) x;
+select 'K4b full leaderboard: longer list allowed, capped at 200' t,
+  jsonb_array_length(public.xp_leaderboard(500) -> 'top') between 1 and 200 as pass;
 select public.set_leaderboard_hidden(true);
 select 'K5 hidden: not in the list, still sees own rank' t,
   not exists (select 1 from jsonb_array_elements(b -> 'top') e where (e ->> 'me')::boolean) and (b -> 'me' ->> 'hidden')::boolean as pass

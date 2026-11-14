@@ -251,7 +251,7 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
                     <span className="text-xs text-muted">{l.mins}m</span>
                   </Link>
                 )) : (
-                  <Link href={isReleased(m) ? "/unlock" : `/course#m${m.n}`} className="mx-2 flex min-h-11 items-center rounded-xl border border-dashed border-border px-3 py-2 text-xs text-muted hover:bg-surface-2">
+                  <Link href={isReleased(m) ? "/unlock" : `/course/${m.n}`} className="mx-2 flex min-h-11 items-center rounded-xl border border-dashed border-border px-3 py-2 text-xs text-muted hover:bg-surface-2">
                     {isReleased(m) ? "Unlock to watch" : isComingSoon(m) ? "Coming soon" : `Premieres Sun ${new Date(m.release).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}, 10 AM`}
                   </Link>
                 )}

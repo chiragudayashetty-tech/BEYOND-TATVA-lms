@@ -26,7 +26,7 @@ export default async function QuizPage({ params }) {
 
   return (
     <Shell roles={["student", "teacher"]}>
-      <Link href={mod ? `/course#m${mod.n}` : "/course"} className="btn-ghost -ml-3 mb-3"><ArrowLeft className="h-4 w-4" /> {mod ? `Module ${mod.n}: ${mod.title}` : "Course"}</Link>
+      <Link href={mod ? `/course/${mod.n}` : "/course"} className="btn-ghost -ml-3 mb-3"><ArrowLeft className="h-4 w-4" /> {mod ? `Module ${mod.n}: ${mod.title}` : "Course"}</Link>
       <QuizRunner quiz={quiz} questions={questions ?? []} tries={attempts ?? []} limited={profile?.role === "student"} backHref={mod?.lessons[0] ? `/watch/${course.id}?l=${mod.lessons[0].n}` : "/course"} />
     </Shell>
   );

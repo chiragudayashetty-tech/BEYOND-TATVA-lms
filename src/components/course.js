@@ -62,31 +62,30 @@ export function NextStepCard({ step, courseId, className = "" }) {
   );
 }
 
-export function ModuleCard({ module: m, hasAccess, courseId }) {
+export function ModuleCard({ module: m, hasAccess, compact = false }) {
   const state = moduleState(m, hasAccess);
   const playable = (state !== "upcoming" && state !== "locked") && m.lessons.length > 0;
-  const next = firstLesson(m);
-  const href = playable ? `/watch/${courseId}?l=${next.n}` : state === "locked" ? "/unlock" : `/course#m${m.n}`;
+  // Every card opens the module page (lessons, quiz, assignment, files). Same size everywhere.
   return (
-    <Link href={href} className="card group flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5">
-      <Thumb module={m} className="aspect-video" dim={!playable}>
-        <span className="absolute left-3 top-3 rounded-lg bg-black/60 px-2 py-1 text-xs font-semibold text-white backdrop-blur">Module {m.n}</span>
-        {playable && <span className="absolute inset-0 m-auto grid h-11 w-11 place-items-center rounded-full bg-white/95 text-[#0f172a] opacity-0 shadow-lg transition group-hover:opacity-100"><PlayCircle className="h-6 w-6" strokeWidth={1.75} /></span>}
-        {!playable && <span className="absolute inset-0 m-auto grid h-11 w-11 place-items-center rounded-full bg-black/50 text-white backdrop-blur">{state === "locked" ? <Lock className="h-5 w-5" /> : <CalendarClock className="h-5 w-5" />}</span>}
+    <Link href={`/course/${m.n}`} className="card group flex h-full w-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5">
+      <Thumb module={m} className="aspect-video shrink-0" dim={!playable}>
+        <span className="absolute left-2 top-2 rounded-lg bg-black/60 px-2 py-0.5 text-xs font-semibold text-white backdrop-blur">Module {m.n}</span>
+        {playable && <span className="absolute inset-0 m-auto grid h-10 w-10 place-items-center rounded-full bg-white/95 text-[#0f172a] opacity-0 shadow-lg transition group-hover:opacity-100"><PlayCircle className="h-6 w-6" strokeWidth={1.75} /></span>}
+        {!playable && <span className="absolute inset-0 m-auto grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur">{state === "locked" ? <Lock className="h-5 w-5" /> : <CalendarClock className="h-5 w-5" />}</span>}
       </Thumb>
-      <div className="flex flex-1 flex-col p-4">
+      <div className={`flex flex-1 flex-col ${compact ? "p-3" : "p-4"}`}>
         <StateBadge m={m} state={state} />
-        <h3 className="mt-2 font-semibold leading-snug">{m.title}</h3>
-        <p className="mt-1 line-clamp-2 text-sm text-muted">{m.blurb}</p>
-        <div className="mt-auto pt-4 text-xs text-muted">
+        <h3 className={`mt-1.5 line-clamp-2 font-semibold leading-snug ${compact ? "min-h-[2.5rem] text-sm" : "min-h-[2.75rem]"}`}>{m.title}</h3>
+        {!compact && <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm text-muted">{m.blurb}</p>}
+        <div className="mt-auto pt-3 text-xs text-muted">
           {state === "progress" || state === "done" ? (
-            <div className="flex items-center gap-3"><Progress value={m.progress} tone={state === "done" ? "success" : "primary"} className="h-1.5" /><span className="font-medium text-fg">{m.progress}%</span></div>
+            <div className="flex items-center gap-2"><Progress value={m.progress} tone={state === "done" ? "success" : "primary"} className="h-1.5" /><span className="font-medium text-fg">{m.progress}%</span></div>
           ) : state === "upcoming" ? (
-            m.release && !isComingSoon(m) ? <span>Premieres in <span className="font-semibold text-fg"><Countdown to={m.release} compact /></span></span> : <span>Coming soon</span>
+            m.release && !isComingSoon(m) ? <span>Opens in <span className="font-semibold text-fg"><Countdown to={m.release} compact /></span></span> : <span>Coming soon</span>
           ) : state === "locked" ? (
-            <span className="font-medium text-primary">Unlock the full course</span>
+            <span className="font-medium text-primary">Unlock to watch</span>
           ) : (
-            <span>{m.lessons.length} lessons · {m.mins} min</span>
+            <span>{m.lessons.length} {m.lessons.length === 1 ? "lesson" : "lessons"} · {m.mins} min</span>
           )}
         </div>
       </div>

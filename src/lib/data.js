@@ -82,11 +82,14 @@ export const getLearningStats = cache(async () => {
 });
 
 // XP leaderboard (migration 10): { top: [{ rank, name: "Asha R.", xp, me }], me: { rank, xp, hidden } | null, players }.
-export const getLeaderboard = cache(async () => {
+export const getLeaderboard = cache(async (limit = 10) => {
   const { user } = await getSession();
   if (!user) return null;
   if (user.id === "preview") return PREVIEW_BOARD;
-  const { data, error } = await (await createClient()).rpc("xp_leaderboard");
+  const supabase = await createClient();
+  let { data, error } = await supabase.rpc("xp_leaderboard", { p_limit: limit });
+  // Until migration 20261114000001 is live the function takes no argument: fall back to the top 10.
+  if (error) ({ data, error } = await supabase.rpc("xp_leaderboard"));
   return error ? null : data;
 });
 
