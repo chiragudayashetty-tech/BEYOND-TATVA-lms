@@ -1,3 +1,4 @@
+import { isHot, isOpen } from "./outreach.js";
 // Studio → Today: who to contact, in what order. Pure helpers (tested in tests/today.test.mjs).
 
 const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" });
@@ -16,12 +17,10 @@ export function due(nextDate, today) {
 const rank = { overdue: 0, today: 1, soon: 2, later: 3, none: 4 };
 const byDue = (today) => (a, b) => rank[due(a.next_date, today)] - rank[due(b.next_date, today)] || String(a.next_date ?? "").localeCompare(String(b.next_date ?? ""));
 
-// Statuses from src/lib/outreach.js (OUTREACH_STATUSES).
-const HOT = /^(meeting set|workshop booked)$/i;
-const PARKED = /^not interested$/i;
+// Statuses from src/lib/outreach.js: open = not Dropped / Closed / Partner; hot = meeting, date asked, workshop confirmed.
 export function schoolsToFollow(schools, today) {
   return (schools ?? [])
-    .filter((s) => !PARKED.test(s.status ?? "") && (["overdue", "today", "soon"].includes(due(s.next_date, today)) || HOT.test(s.status ?? "")))
+    .filter((s) => isOpen(s) && (["overdue", "today", "soon"].includes(due(s.next_date, today)) || isHot(s)))
     .sort(byDue(today));
 }
 

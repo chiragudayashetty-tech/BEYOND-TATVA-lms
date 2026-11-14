@@ -45,3 +45,16 @@ test("phone links", () => {
   assert.match(decodeURIComponent(link), /Asha's AI course/);
   assert.equal(waLink("123"), null);
 });
+
+test("schools: sheet words (2026-11-14) — hot, dropped, closed after the workshop", () => {
+  const rows = schoolsToFollow([
+    { name: "Meeting", status: "Meeting" },
+    { name: "Asked", status: "Date requested" },
+    { name: "Confirmed", status: "Workshop confirmed" },
+    { name: "Dropped", status: "Dropped", next_date: today },
+    { name: "Closed", status: "Workshop done", after_status: "Closed", next_date: today },
+    { name: "Following", status: "Workshop done", after_status: "Following up" },
+    { name: "OnHold", status: "On hold" },
+  ], today);
+  assert.deepEqual(rows.map((r) => r.name).sort(), ["Asked", "Confirmed", "Following", "Meeting"]);
+});

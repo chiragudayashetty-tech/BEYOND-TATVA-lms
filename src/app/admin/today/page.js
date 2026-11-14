@@ -39,7 +39,7 @@ export default async function TodayPage() {
   const weekAgo = `${addDays(today, -7)}T00:00:00+05:30`; // the last 7 days, IST
   const supabase = await createClient();
   const [{ data: schoolRows }, { count: paidWeek }, { leads: leadRows, error: leadError }] = await Promise.all([
-    supabase.from("outreach_schools").select("id, name, area, contact, phone, status, next_step, next_date, history, calls, visits"),
+    supabase.from("outreach_schools").select("id, name, area, contact, phone, status, after_status, next_step, next_date, history, calls, visits"),
     supabase.from("purchases").select("id", { count: "exact", head: true }).in("status", ["pending", "claimed"]).gte("created_at", weekAgo),
     loadLeads(),
   ]);
@@ -58,7 +58,7 @@ export default async function TodayPage() {
 
       <Card title={`Schools to follow up (${schools.length})`} className="mb-6">
         {schools.length === 0 ? (
-          <Empty icon={CalendarClock} title="No schools to follow up" body="Schools show here when their next date is within a week, or they are at Meeting set / Workshop booked. Add and edit schools in School outreach." />
+          <Empty icon={CalendarClock} title="No schools to follow up" body="Schools show here when their next date is within a week, or they are at Meeting / Date requested / Workshop confirmed. Add and edit schools in School outreach." />
         ) : (
           <ul className="divide-y divide-border">
             {schools.map((s) => (

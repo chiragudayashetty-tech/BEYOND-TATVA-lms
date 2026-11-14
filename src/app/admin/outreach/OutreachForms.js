@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { CircleCheck, Footprints, Pencil, Phone, Plus, Trash2 } from "lucide-react";
 import { deleteOutreachSchool, logOutreach, saveOutreachSchool } from "../actions";
+import { AFTER_STATUSES } from "@/lib/outreach";
 
 function Status({ state }) {
   if (!state) return null;
@@ -26,8 +27,14 @@ export function OutreachForm({ statuses, school, onDone }) {
       <label><span className="label">Area</span><input name="area" defaultValue={s.area ?? ""} className="input" placeholder="Udupi town" maxLength={160} /></label>
       <label><span className="label">Contact person</span><input name="contact" defaultValue={s.contact ?? ""} className="input" placeholder="Principal / coordinator" maxLength={160} /></label>
       <label><span className="label">Phone</span><input name="phone" type="tel" defaultValue={s.phone ?? ""} className="input" placeholder="98450 12345" maxLength={40} /></label>
-      <label><span className="label">Status</span>
+      <label><span className="label">Workshop status</span>
         <select name="status" defaultValue={s.status || "Not contacted"} className="input">{status.map((x) => <option key={x}>{x}</option>)}</select>
+      </label>
+      <label><span className="label">After-workshop status</span>
+        <select name="after_status" defaultValue={s.after_status ?? ""} className="input">
+          <option value="">–</option>
+          {[...(s.after_status && !AFTER_STATUSES.includes(s.after_status) ? [s.after_status] : []), ...AFTER_STATUSES].map((x) => <option key={x}>{x}</option>)}
+        </select>
       </label>
       <label><span className="label">Next follow-up date</span><input name="next_date" type="date" defaultValue={s.next_date ?? ""} className="input" /></label>
       <label className="sm:col-span-2"><span className="label">Next step</span><input name="next_step" defaultValue={s.next_step ?? ""} className="input" placeholder="Call principal to fix a demo date" maxLength={300} /></label>

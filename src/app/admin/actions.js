@@ -339,6 +339,7 @@ const outreachFields = (fd) => ({
   contact: str(fd, "contact"),
   phone: str(fd, "phone"),
   status: str(fd, "status"),
+  after_status: str(fd, "after_status"),
   next_step: str(fd, "next_step"),
   next_date: str(fd, "next_date"),
   notes: str(fd, "notes"),

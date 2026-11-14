@@ -3,7 +3,7 @@ import { School } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle, StatCard } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { OUTREACH_STATUSES, statusTone, todayIST } from "@/lib/outreach";
+import { OUTREACH_STATUSES, isOpen, normalStatus, statusTone, todayIST } from "@/lib/outreach";
 import { OutreachForm, OutreachRow } from "./OutreachForms";
 
 export const metadata = { title: "School outreach · Admin · Beyond Tatva" };
@@ -14,14 +14,15 @@ export default async function OutreachPage({ searchParams }) {
   const { status: filter } = await searchParams;
   const supabase = await createClient();
   const { data, error } = await supabase.from("outreach_schools")
-    .select("id, name, area, contact, phone, status, calls, visits, history, next_step, next_date, notes, updated_at")
+    .select("id, name, area, contact, phone, status, after_status, calls, visits, history, next_step, next_date, notes, updated_at")
     .order("next_date", { ascending: true, nullsFirst: false }).order("name");
   const all = data ?? [];
   const today = todayIST();
-  const due = all.filter((s) => s.next_date && s.next_date <= today && s.status !== "Not interested");
-  const won = all.filter((s) => ["Workshop booked", "Workshop done", "Partner"].includes(s.status)).length;
-  const counts = Object.fromEntries(OUTREACH_STATUSES.map((st) => [st, all.filter((s) => (s.status || "Not contacted") === st).length]));
-  const rows = filter === "due" ? due : filter ? all.filter((s) => (s.status || "Not contacted") === filter) : all;
+  const due = all.filter((s) => s.next_date && s.next_date <= today && isOpen(s));
+  const won = all.filter((s) => ["Workshop confirmed", "Workshop done"].includes(normalStatus(s.status))).length;
+  const st = (s) => normalStatus(s.status) || "Not contacted";
+  const counts = Object.fromEntries(OUTREACH_STATUSES.map((x) => [x, all.filter((s) => st(s) === x).length]));
+  const rows = filter === "due" ? due : filter ? all.filter((s) => st(s) === filter) : all;
   const chip = (key, label, n) => (
     <Link key={key} href={key ? `?status=${encodeURIComponent(key)}` : "?"} className={`chip min-h-11 px-4 ${filter === key || (!filter && !key) ? "bg-primary text-primary-fg" : "bg-surface-2"}`}>{label} · {n}</Link>
   );
@@ -55,7 +56,8 @@ export default async function OutreachPage({ searchParams }) {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold">{s.name}</span>
                     <Badge tone={statusTone(s.status)}>{s.status || "Not contacted"}</Badge>
-                    {s.next_date && s.next_date <= today && s.status !== "Not interested" && <Badge tone="danger">{s.next_date < today ? "Overdue" : "Today"}</Badge>}
+                    {s.after_status && <Badge tone={statusTone(s.after_status)}>After: {s.after_status}</Badge>}
+                    {s.next_date && s.next_date <= today && isOpen(s) && <Badge tone="danger">{s.next_date < today ? "Overdue" : "Today"}</Badge>}
                   </div>
                   <div className="mt-1 text-xs text-muted">
                     {[s.area, s.contact, s.phone && <a key="p" href={`tel:${s.phone}`} className="underline">{s.phone}</a>].filter(Boolean).reduce((acc, x, i) => (i ? [...acc, " · ", x] : [x]), [])}
