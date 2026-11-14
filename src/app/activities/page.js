@@ -55,7 +55,7 @@ export default async function StudyKitPage() {
           {modules.map(({ module, files, quizzes, assignments }) => (
             <section key={module.id} aria-labelledby={`module-${module.n}`}>
               <h2 id={`module-${module.n}`} className="mb-2 text-sm font-semibold uppercase tracking-wider text-subtle">Module {module.n} · {module.title}</h2>
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {files.length > 0 && <Card title="Materials" className="lg:col-span-2">
                   <ModuleResources files={files} />
                 </Card>}
