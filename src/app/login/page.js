@@ -154,19 +154,18 @@ function LoginForm() {
   async function forgot(e) {
     e.preventDefault();
     setError("");
-    const id = parseLoginId(contact);
-    if (!id) return setError("Type the mobile number or email you signed up with.");
-    if (id.kind === "phone") {
-      // WhatsApp reset codes need Meta verification; until then Studio sets a temporary password.
-      return setNotice("phone");
-    }
+    if (!parseLoginId(contact)) return setError("Type the email or mobile number you signed up with.");
     setBusy(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(id.email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/profile?password=new#password")}`,
-    });
-    setBusy(false);
-    if (error) setError(friendly(error.message));
-    else setNotice("email");
+    try {
+      const r = await fetch("/api/auth/forgot", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: contact }) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) setError(data.error || "Couldn't send. Try again.");
+      else setNotice("sent");
+    } catch {
+      setError("No connection. Check your internet and try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function sendCode(e) {
@@ -248,7 +247,7 @@ function LoginForm() {
                 <span className="input grid w-16 shrink-0 place-items-center">+91</span>
                 <input id="su-phone" className="input" type="tel" inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="98765 43210" autoComplete="tel-national" required />
               </div>
-              <p className="mt-1 text-xs text-muted">You can sign in with either. We use the number to help if you forget your password.</p>
+              <p className="mt-1 text-xs text-muted">Forgot your password later? Type the email or this number and we email you a reset link.</p>
             </div>
           </> : (
             <div>
@@ -284,15 +283,10 @@ function LoginForm() {
         <button type="button" onClick={() => go("code")} className="mt-1 min-h-11 w-full text-sm text-muted hover:text-fg">Email me a login code instead</button>
       </>}
 
-      {mode === "forgot" && (notice === "email" ? (
+      {mode === "forgot" && (notice === "sent" ? (
         <div className="mt-6 space-y-3 text-sm">
-          <p className="rounded-xl bg-success-soft p-3 text-success">If <b>{contact}</b> has an account, a reset link is on its way. Open it on this phone, then set a new password.</p>
-          <button type="button" onClick={() => go("login")} className="btn-secondary w-full py-3">Back to sign in</button>
-        </div>
-      ) : notice === "phone" ? (
-        <div className="mt-6 space-y-3 text-sm">
-          <p className="rounded-xl bg-surface-2 p-3">Message us on WhatsApp from this number. We&apos;ll check it&apos;s you and send a new password on WhatsApp, usually the same day. Or type your email above instead to get a reset link.</p>
-          {helpLink && <a href={helpLink} target="_blank" rel="noopener noreferrer" className="btn-primary block w-full py-3 text-center">Message us on WhatsApp</a>}
+          <p className="rounded-xl bg-success-soft p-3 text-success">If <b>{contact}</b> has an account, we&apos;ve emailed a reset link to the email on that account. Open it, then set a new password. Check Spam too.</p>
+          {helpLink && <a href={helpLink} target="_blank" rel="noopener noreferrer" className="block min-h-11 text-center text-muted hover:text-fg">No email after 10 minutes? Message us on WhatsApp</a>}
           <button type="button" onClick={() => go("login")} className="btn-secondary w-full py-3">Back to sign in</button>
         </div>
       ) : (

@@ -25,3 +25,15 @@ end;
 $$;
 revoke execute on function public.password_signup_allowed(text) from public, anon, authenticated;
 grant execute on function public.password_signup_allowed(text) to service_role;
+
+-- Forgot password by mobile number: /api/auth/forgot finds the account's email and sends the reset link
+-- there (automatic, no SMS). Server only; the email is never shown to the person asking.
+create function public.email_for_phone(p_phone text) returns text
+language sql stable security definer set search_path = '' as $$
+  select u.email from auth.users u
+  where public.normalize_phone(p_phone) is not null and public.normalize_phone(u.phone) = public.normalize_phone(p_phone)
+    and u.email is not null
+  order by u.created_at limit 1;
+$$;
+revoke execute on function public.email_for_phone(text) from public, anon, authenticated;
+grant execute on function public.email_for_phone(text) to service_role;

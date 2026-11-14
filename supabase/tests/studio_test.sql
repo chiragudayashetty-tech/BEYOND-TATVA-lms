@@ -958,3 +958,10 @@ do $$ begin perform public.password_signup_allowed('9.9.9.9'); raise exception '
 exception when insufficient_privilege then raise notice 'W4 pass: students cannot call the sign-up limit'; end $$;
 select 'W5 sign-up log is unreadable' t, count(*) = 0 as pass from public.signup_attempts;
 reset role;
+insert into auth.users (id, email, phone) values ('e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1', 'reset@example.com', '919845066666');
+select 'W6 phone finds its account email' t, public.email_for_phone('98450 66666') = 'reset@example.com' as pass;
+select 'W7 unknown phone finds nothing' t, public.email_for_phone('9845000000') is null as pass;
+set role authenticated; select pg_temp.as_user('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0');
+do $$ begin perform public.email_for_phone('9845066666'); raise exception 'W8 FAIL';
+exception when insufficient_privilege then raise notice 'W8 pass: students cannot look up emails'; end $$;
+reset role;
