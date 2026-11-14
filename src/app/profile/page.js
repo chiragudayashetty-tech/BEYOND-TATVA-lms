@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, ChevronRight, CircleHelp, Headset, KeyRound, LogOut, MessageCircleQuestion, Moon, ShieldCheck } from "lucide-react";
+import { Bell, ChevronRight, CircleHelp, Headset, LogOut, MessageCircleQuestion, Moon, ShieldCheck } from "lucide-react";
 import SocialLinks from "@/components/SocialLinks";
 import { supportWhatsApp } from "@/lib/social";
 import Shell from "@/components/shell/Shell";
@@ -8,6 +8,7 @@ import { Avatar, Badge, Card, PageTitle } from "@/components/ui";
 import { getSession } from "@/lib/supabase/server";
 import ProfileEditor from "./ProfileEditor";
 import LeaderboardSwitch from "./LeaderboardSwitch";
+import LoginSettings from "./LoginSettings";
 import { getLeaderboard } from "@/lib/data";
 
 export const metadata = { title: "Profile · Beyond Tatva" };
@@ -29,7 +30,8 @@ function Row({ icon: Icon, label, hint, children, href, external }) {
     : <div className="flex items-center gap-4 px-5 py-4">{inner}</div>;
 }
 
-export default async function ProfilePage() {
+export default async function ProfilePage({ searchParams }) {
+  const { reset } = await searchParams;
   const { user, profile } = await getSession();
   const student = profile?.role === "student";
   const board = student ? await getLeaderboard() : null;
@@ -81,7 +83,7 @@ export default async function ProfilePage() {
           <section className="card divide-y divide-border overflow-hidden">
             <div className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-subtle">Account</div>
             <ProfileEditor userId={user.id} fullName={profile.full_name} avatar={profile.avatar} />
-            <Row icon={KeyRound} label="Login and security" hint="You sign in with a one-time code" href="/profile#settings" />
+            <LoginSettings email={user.email || null} phone={user.phone ? `+${user.phone.replace(/^\+/, "")}` : null} reset={reset === "1"} />
             <Row icon={ShieldCheck} label="Privacy and data" hint="What we keep, and how to delete your account" href="/delete-account" />
             <Row icon={CircleHelp} label="Help and support" href="/help" />
           </section>

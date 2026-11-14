@@ -14,6 +14,7 @@ const PHONE_LOGIN = process.env.NEXT_PUBLIC_PHONE_LOGIN === "1";
 const friendly = (msg = "") => {
   if (/phone|sms/i.test(msg)) return "WhatsApp login isn't switched on yet. Use Google or email for now.";
   if (/provider is not enabled|Unsupported provider/i.test(msg)) return "Google sign-in isn't switched on yet. Use email for now.";
+  if (/invalid login credentials/i.test(msg)) return "Wrong phone number or password. Try again, or use “Forgot password”.";
   if (/expired|invalid/i.test(msg)) return "That code didn't work. Check it, or send a new one.";
   if (/rate|seconds/i.test(msg)) return "Too many tries. Wait a minute and try again.";
   return msg || "Something went wrong. Try again.";
@@ -32,6 +33,11 @@ function LoginForm() {
   const [error, setError] = useState(params.get("error") ? "That sign-in link has expired. Send a new code." : "");
   const [inAppBrowser, setInAppBrowser] = useState(null);
   const [copied, setCopied] = useState(false);
+  // Phone tab: "password" (phone + password), "code" (WhatsApp code; also creates new accounts), "reset" (email link).
+  const [phoneMode, setPhoneMode] = useState("password");
+  const [password, setPassword] = useState("");
+  const [resetEmail, setResetEmail] = useState("");
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     const ua = navigator.userAgent;
@@ -103,6 +109,28 @@ function LoginForm() {
     }
   }
 
+  async function passwordLogin(e) {
+    rememberNext();
+    e.preventDefault();
+    setBusy(true); setError("");
+    const { error } = await supabase.auth.signInWithPassword({ phone: phone(), password });
+    setBusy(false);
+    if (error) return setError(friendly(error.message));
+    router.replace(next);
+    router.refresh();
+  }
+
+  // Recovery by email: works when the account has a confirmed email (added in Profile → Login settings).
+  async function sendReset(e) {
+    e.preventDefault();
+    setBusy(true); setError(""); setNotice("");
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/profile?reset=1#login")}`;
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), { redirectTo });
+    setBusy(false);
+    if (error) return setError(friendly(error.message));
+    setNotice("If this email is on an account, a reset link is on its way. Open it on this phone.");
+  }
+
   async function sendCode(e) {
     rememberNext();
     e.preventDefault();
@@ -163,19 +191,40 @@ function LoginForm() {
       </button>
 
       <div className="my-6 flex items-center gap-3 text-xs text-muted">
-        <div className="h-px flex-1 bg-border" /> or get a code by email <div className="h-px flex-1 bg-border" />
+        <div className="h-px flex-1 bg-border" /> or {PHONE_LOGIN ? "use your phone or email" : "get a code by email"} <div className="h-px flex-1 bg-border" />
       </div>
 
       {PHONE_LOGIN && <div className="mb-4 grid grid-cols-2 rounded-xl bg-surface-2 p-1 text-sm font-medium">
         {["email", "phone"].map((m) => (
-          <button key={m} onClick={() => { setMethod(m); setSent(false); setError(""); setContact(""); }}
+          <button key={m} onClick={() => { setMethod(m); setSent(false); setError(""); setContact(""); setPhoneMode("password"); }}
             className={`rounded-lg py-2 capitalize transition ${method === m ? "bg-surface text-fg shadow-sm" : "text-muted"}`}>
-            {m === "phone" ? "WhatsApp" : "Email"}
+            {m === "phone" ? "Phone" : "Email"}
           </button>
         ))}
       </div>}
 
-      {!sent ? (
+      {method === "phone" && !sent && phoneMode === "password" ? (
+        <form onSubmit={passwordLogin} className="space-y-3">
+          <div className="flex gap-2">
+            <span className="input grid w-20 place-items-center">+91</span>
+            <input className="input" type="tel" inputMode="numeric" autoComplete="tel-national" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="98765 43210" required />
+          </div>
+          <input className="input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" minLength={8} required />
+          <button disabled={busy} className="btn-primary w-full py-3">{busy ? "Signing in…" : "Sign in"}</button>
+          <div className="flex flex-wrap justify-between gap-2 text-sm">
+            <button type="button" onClick={() => { setPhoneMode("code"); setError(""); }} className="min-h-11 text-primary">New here or forgot password? Get a WhatsApp code</button>
+            <button type="button" onClick={() => { setPhoneMode("reset"); setError(""); }} className="min-h-11 text-muted hover:text-fg">Reset by email</button>
+          </div>
+        </form>
+      ) : method === "phone" && !sent && phoneMode === "reset" ? (
+        <form onSubmit={sendReset} className="space-y-3">
+          <p className="text-sm text-muted">Enter the recovery email saved in your Profile. We&apos;ll send a link to set a new password.</p>
+          <input className="input" type="email" autoComplete="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="you@example.com" required />
+          <button disabled={busy} className="btn-primary w-full py-3">{busy ? "Sending…" : "Send reset link"}</button>
+          {notice && <p role="status" className="rounded-xl bg-success-soft p-3 text-sm">{notice}</p>}
+          <button type="button" onClick={() => { setPhoneMode("password"); setNotice(""); }} className="w-full text-sm text-muted hover:text-fg">Back to password sign-in</button>
+        </form>
+      ) : !sent ? (
         <form onSubmit={sendCode} className="space-y-3">
           {method === "phone" ? (
             <div className="flex gap-2">
@@ -185,7 +234,8 @@ function LoginForm() {
           ) : (
             <input className="input" type="email" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="you@example.com" autoComplete="email" required />
           )}
-          <button disabled={busy} className="btn-primary w-full py-3">{busy ? "Sending…" : "Send code"}</button>
+          <button disabled={busy} className="btn-primary w-full py-3">{busy ? "Sending…" : method === "phone" ? "Send WhatsApp code" : "Send code"}</button>
+          {method === "phone" && <button type="button" onClick={() => setPhoneMode("password")} className="w-full text-sm text-muted hover:text-fg">I have a password</button>}
         </form>
       ) : (
         <form onSubmit={verify} className="space-y-3">
