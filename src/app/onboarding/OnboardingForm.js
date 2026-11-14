@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GraduationCap, House, Info, Users } from "lucide-react";
+import { GraduationCap, House, Info, Loader2, Users } from "lucide-react";
 import Logo from "@/components/Logo";
 import { IconTile } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
@@ -21,7 +21,13 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
   const [by, setBy] = useState(null);
   const [form, setForm] = useState({ name: "", code: "", school: "", grade: "", gName: "", gPhone: "", kidPhone: "", consent: false });
   const [schoolChoices, setSchoolChoices] = useState(null);
-  const done = () => { router.replace(next ?? "/dashboard"); router.refresh(); };
+  const done = () => {
+    const to = next ?? "/dashboard";
+    router.replace(to);
+    router.refresh();
+    // If the page change stalls on a slow network, load it directly so the loading screen can't hang.
+    setTimeout(() => { if (window.location.pathname.startsWith("/onboarding")) window.location.assign(to); }, 8000);
+  };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [terms, setTerms] = useState(false); // teacher terms pop-up
@@ -110,6 +116,16 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
   }
 
   return (
+    <>
+    {busy && (
+      <div role="status" aria-live="polite" className="fixed inset-0 z-50 grid place-items-center bg-bg/95 px-6 text-center backdrop-blur-sm">
+        <div>
+          <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
+          <p className="mt-4 text-lg font-semibold">Setting up your course…</p>
+          <p className="mt-1 text-sm text-muted">Saving your details and unlocking your modules. This takes a few seconds, please don&apos;t close this page.</p>
+        </div>
+      </div>
+    )}
     <div className="grid min-h-screen bg-bg place-items-center px-4 py-10">
       <div className="w-full max-w-lg">
         <div className="mb-8 flex justify-center"><Logo /></div>
@@ -233,5 +249,6 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
         </div>
       )}
     </div>
+    </>
   );
 }
