@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { CircleCheck, IndianRupee, Save } from "lucide-react";
+import { CircleCheck, IndianRupee, Loader2, Save } from "lucide-react";
 import PriceTag from "@/components/PriceTag";
 import { savePrice } from "./actions";
 
@@ -27,7 +27,7 @@ export default function PriceEditor({ price, listPrice }) {
             <input name="list_price" type="number" min={1} max={100000} className="input" value={l} onChange={(e) => setL(e.target.value)} placeholder="Optional" /></label>
         </div>
         <p className="text-xs text-muted">Changes the LMS checkout, the website and the website checkout together. Coupons still apply on top.</p>
-        <button disabled={pending} className="btn-primary"><Save className="h-4 w-4" /> {pending ? "Saving…" : "Save price"}</button>
+        <button disabled={pending} aria-busy={pending} className="btn-primary">{pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {pending ? "Saving…" : "Save price"}</button>
       </div>
       <div className="rounded-2xl border border-border p-4 text-center">
         <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">Preview</div>

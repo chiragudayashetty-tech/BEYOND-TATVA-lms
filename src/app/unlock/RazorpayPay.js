@@ -3,7 +3,7 @@
 import PriceTag from "@/components/PriceTag";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, CreditCard, MessageCircle, ShieldCheck, Tag } from "lucide-react";
+import { Check, CreditCard, MessageCircle, ShieldCheck, Tag, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isInApp } from "@/lib/android-app";
 
@@ -142,7 +142,7 @@ export default function RazorpayPay({ price, listPrice, enabled, name, email, ph
         <span className="label">Parent&apos;s mobile number</span>
         <input className="input" type="tel" inputMode="numeric" maxLength={10} value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="98450 12345" autoComplete="tel-national" required />
       </label>
-      <button onClick={pay} disabled={busy} className="btn-primary mt-4 w-full"><CreditCard className="h-4 w-4" /> {busy ? "Opening payment…" : `Pay ₹${amount} and unlock`}</button>
+      <button onClick={pay} disabled={busy} className="btn-primary mt-4 w-full">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />} {busy ? "Opening payment…" : `Pay ₹${amount} and unlock`}</button>
 
       {msg && (
         <div role={msg.tone === "error" ? "alert" : "status"} className={`mt-3 rounded-xl p-3 text-sm ${msg.tone === "error" ? "bg-danger-soft text-danger" : "bg-surface-2 text-muted"}`}>
