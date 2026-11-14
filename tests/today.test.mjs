@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addDays, due, groupByTab, istToday, leadsToFollow, mobile, schoolsToFollow, waLink } from "../src/lib/today.js";
+import { addDays, due, groupByTab, istToday, leadsToFollow, mobile, schoolsToFollow, waLink, staleSheets } from "../src/lib/today.js";
 
 const today = "2026-11-08";
 
@@ -67,4 +67,14 @@ test("leads: closed / enrolled / not interested never show, even with a due date
     { student: "Open", status: "Call back", next_date: today },
   ], today);
   assert.deepEqual(rows.map((r) => r.student), ["Open"]);
+});
+
+test("sync alarm: a sheet silent for 30+ minutes is stale", () => {
+  const now = Date.parse("2026-11-14T12:00:00Z");
+  const rows = staleSheets([
+    { book: "sheets", last_pull_at: "2026-11-14T11:55:00Z" },
+    { book: "tracker", last_pull_at: "2026-11-14T11:20:00Z" },
+    { book: "x", last_pull_at: null },
+  ], now);
+  assert.deepEqual(rows.map((r) => r.book), ["tracker", "x"]);
 });

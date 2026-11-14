@@ -985,3 +985,39 @@ select 'W14 section and outcome carried' t, section = 'B' and outcome = 'lost' a
 select 'W15 enrolled lead is won' t, outcome = 'won' as pass from public.admin_pipeline() where name = 'Twin B';
 select 'W16 still one row per student' t, count(*) = count(distinct student_id) as pass from public.admin_pipeline() where student_id is not null;
 reset role;
+
+-- Leads Tracker sync (20261114000006).
+update public.leads set book = 'v2' where reference like 'crmw-twin-%';
+select 'W17 new leads default to the tracker book' t, column_default like '%tracker%' as pass from information_schema.columns where table_name = 'leads' and column_name = 'book';
+select 'W18 tracker creates a lead with section, status, note, source slug' t, r -> 0 ->> 'result' = 'created' as pass
+  from (select public.tracker_upsert_leads('[{"row":2,"school":"Durga English Medium School","student":"Ria","grade":"9","section":"b","phone":"98451 22222","parent":"Mom","status":"Call back","note":"after 6","next_date":"2026-11-20","source":"Workshop","sheet":{"Device":"Phone"}}]') r) x;
+select 'W19 stored right' t, book = 'tracker' and section = 'B' and status = 'Call back' and next_step = 'after 6' and source = 'workshop' and grade = 9 and sheet ->> 'Device' = 'Phone' as pass
+  from public.leads where student_name = 'Ria';
+select 'W20 same phone + name again = same lead (no duplicate)' t, r -> 0 ->> 'result' = 'matched' and (select count(*) from public.leads where student_name = 'Ria') = 1 as pass
+  from (select public.tracker_upsert_leads('[{"row":3,"student":"ria","phone":"9845122222","status":"Closed"}]') r) x;
+select 'W21 sibling on the same phone is a new lead, named as sibling' t, r -> 0 ->> 'result' = 'created' and r -> 0 ->> 'siblings' = 'ria' as pass
+  from (select public.tracker_upsert_leads('[{"row":4,"student":"Rohan","phone":"9845122222"}]') r) x;
+select 'W22 bad rows report, good rows save' t, r -> 0 ->> 'result' = 'error' and r -> 1 ->> 'result' = 'error' as pass
+  from (select public.tracker_upsert_leads('[{"row":5,"student":"","phone":"9845133333"},{"row":6,"student":"X","phone":"123"}]') r) x;
+select 'W23 full snapshot: tracker leads only (old-sheet twins left out), ids and schools' t,
+  s -> 'ids' @> to_jsonb(array[(select id from public.leads where lower(student_name) = 'ria')]) and not s::text like '%Twin A%'
+  and jsonb_array_length(s -> 'ids') = jsonb_array_length(s -> 'leads') and s ? 'schools' and (s ->> 'full')::boolean as pass
+  from (select public.tracker_snapshot(null) s) x;
+select 'W24 incremental: nothing changed since now' t, jsonb_array_length(public.tracker_snapshot(now() + interval '1 second') -> 'leads') = 0 as pass;
+select set_config('bt.t0', clock_timestamp()::text, false);
+select pg_sleep(0.05);
+update public.leads set status = 'Enrolled', updated_source = 'studio' where student_name = 'Rohan';
+select 'W25 incremental picks up a Studio change, nothing else' t, (s -> 'leads' -> 0 ->> 'student') = 'Rohan' and jsonb_array_length(s -> 'leads') = 1 as pass
+  from (select public.tracker_snapshot(current_setting('bt.t0')::timestamptz) s) x;
+select public.tracker_upsert_leads('[{"row":4,"student":"Rohan","phone":"9845122222","status":"Call","note":"typed","touched":["note"]}]');
+select 'W26 stale sheet row keeps the Studio value, takes the touched cell' t, status = 'Enrolled' and next_step = 'typed' as pass
+  from public.leads where student_name = 'Rohan';
+select public.sheet_sync_seen('tracker', 'pull', 3);
+select 'W27 health recorded' t, last_pull_at is not null and last_rows = 3 as pass from public.sheet_sync_health where book = 'tracker';
+set role authenticated; select pg_temp.as_user('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0');
+do $$ begin perform public.tracker_upsert_leads('[]'); raise exception 'W28 FAIL';
+exception when insufficient_privilege then raise notice 'W28 pass: students cannot write tracker leads'; end $$;
+do $$ begin perform public.tracker_snapshot(null); raise exception 'W29 FAIL';
+exception when insufficient_privilege then raise notice 'W29 pass: students cannot read the tracker'; end $$;
+select 'W30 students cannot read sync health' t, count(*) = 0 as pass from public.sheet_sync_health;
+reset role;

@@ -24,6 +24,12 @@ export async function GET(request) {
     console.error("sheet snapshot failed", error.message);
     return NextResponse.json({ error: "temporary failure" }, { status: 500 });
   }
+  // Leads that live in the School Leads Tracker (book = 'tracker', /api/sheets/leads) are not sent to the old
+  // per-school sheet, so the two sheets never fight over a row.
+  const { data: tracker } = await db.from("leads").select("id").eq("book", "tracker");
+  const skip = new Set((tracker ?? []).map((t) => t.id));
+  if (skip.size && Array.isArray(data?.leads)) data.leads = data.leads.filter((l) => !skip.has(l.id));
+  await db.rpc("sheet_sync_seen", { p_book: "sheets", p_kind: "pull" });
   console.info("sheets sync: pull ok", { leads: data?.leads?.length ?? 0, schools: data?.schools?.length ?? 0 });
   return NextResponse.json(data, { headers: { "cache-control": "no-store" } });
 }

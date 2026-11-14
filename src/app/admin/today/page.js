@@ -5,7 +5,7 @@ import { COURSE_ID } from "@/lib/catalog";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, isPreview, requireRole } from "@/lib/supabase/server";
 import { statusTone } from "@/lib/outreach";
-import { addDays, due, groupByTab, isDueNow, istToday, leadsToFollow, schoolsToFollow, shortDate, telLink, waLink } from "@/lib/today";
+import { addDays, due, staleSheets, groupByTab, isDueNow, istToday, leadsToFollow, schoolsToFollow, shortDate, telLink, waLink } from "@/lib/today";
 import ContactActions from "./ContactActions";
 
 export const metadata = { title: "Today · Studio · Beyond Tatva" };
@@ -40,11 +40,15 @@ export default async function TodayPage({ searchParams }) {
   const today = istToday();
   const weekAgo = `${addDays(today, -7)}T00:00:00+05:30`; // the last 7 days, IST
   const supabase = await createClient();
-  const [{ data: schoolRows }, { count: paidWeek }, { leads: leadRows, error: leadError }] = await Promise.all([
+  const [{ data: schoolRows }, { count: paidWeek }, { leads: leadRows, error: leadError }, { data: health }] = await Promise.all([
     supabase.from("outreach_schools").select("id, name, area, contact, phone, status, after_status, next_step, next_date, history, calls, visits"),
     supabase.from("purchases").select("id", { count: "exact", head: true }).in("status", ["pending", "claimed"]).gte("created_at", weekAgo),
     loadLeads(),
+    supabase.from("sheet_sync_health").select("book, last_pull_at"),
   ]);
+  // A sheet that hasn't pulled for 30+ minutes has stopped syncing (timers off, key changed, script error).
+  const SHEET_NAMES = { sheets: "School Outreach sheet", tracker: "School Leads Tracker" };
+  const stale = staleSheets(health);
   const allLeads = leadsToFollow(leadRows, today);
   const schoolNames = [...new Set([...(schoolRows ?? []).map((s) => s.name), ...allLeads.map((l) => l.school)].filter(Boolean))].sort();
   const schools = schoolsToFollow(schoolRows, today).filter((s) => sameSchool(s.name));
@@ -54,6 +58,12 @@ export default async function TodayPage({ searchParams }) {
   return (
     <Shell roles={["admin"]}>
       <PageTitle title="Today" subtitle="Who to contact, and what happened. Every log also shows up in the Google Sheets within 5 minutes." />
+      {stale.map((h) => (
+        <p key={h.book} role="alert" className="mb-4 flex items-start gap-2 rounded-xl bg-danger-soft p-3 text-sm text-danger">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+          <span><b>{SHEET_NAMES[h.book] ?? h.book} stopped syncing</b>{h.last_pull_at ? ` (last sync ${new Date(h.last_pull_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })})` : ""}. Open the sheet → Beyond Tatva sync → Check sync. Cell A1 says why.</span>
+        </p>
+      ))}
       <form method="get" className="mb-4 flex flex-wrap items-end gap-2" aria-label="Filter by school">
         <label className="min-w-0 flex-1 basis-56"><span className="label">School</span>
           <select name="school" defaultValue={pick} className="input"><option value="">All schools</option>{schoolNames.map((x) => <option key={x}>{x}</option>)}</select>

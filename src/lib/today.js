@@ -66,3 +66,8 @@ export function waLink(phone, { name, student } = {}) {
     : `Namaskara${first(name) ? ` ${first(name)}` : ""}! This is Chirag from Beyond Tatva (AI course for Grades 8–10). Is this a good time to talk?`;
   return `https://wa.me/91${m}?text=${encodeURIComponent(text)}`;
 }
+
+// Sheets whose last pull is older than 30 minutes (or never): their sync has stopped.
+export function staleSheets(health, now = Date.now(), minutes = 30) {
+  return (health ?? []).filter((h) => !h.last_pull_at || now - Date.parse(h.last_pull_at) > minutes * 60 * 1000);
+}
