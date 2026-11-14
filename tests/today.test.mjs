@@ -58,3 +58,13 @@ test("schools: sheet words (2026-11-14) — hot, dropped, closed after the works
   ], today);
   assert.deepEqual(rows.map((r) => r.name).sort(), ["Asked", "Confirmed", "Following", "Meeting"]);
 });
+
+test("leads: closed / enrolled / not interested never show, even with a due date", () => {
+  const rows = leadsToFollow([
+    { student: "Closed", status: "Closed", next_date: today },
+    { student: "Enrolled", status: "Enrolled", next_date: today },
+    { student: "NotInt", status: "Not interested", next_date: today },
+    { student: "Open", status: "Call back", next_date: today },
+  ], today);
+  assert.deepEqual(rows.map((r) => r.student), ["Open"]);
+});

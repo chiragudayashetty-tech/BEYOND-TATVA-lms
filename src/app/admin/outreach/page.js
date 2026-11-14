@@ -3,7 +3,8 @@ import { School } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle, StatCard } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { OUTREACH_STATUSES, isOpen, normalStatus, statusTone, todayIST } from "@/lib/outreach";
+import { AFTER_STATUSES, OUTREACH_STATUSES, isOpen, normalStatus, statusTone, todayIST } from "@/lib/outreach";
+import { leadOutcome } from "@/lib/crm";
 import { OutreachForm, OutreachRow } from "./OutreachForms";
 
 export const metadata = { title: "School outreach · Admin · Beyond Tatva" };
@@ -11,18 +12,32 @@ export const metadata = { title: "School outreach · Admin · Beyond Tatva" };
 const fmt = (d) => new Date(`${d}T00:00:00+05:30`).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short" });
 
 export default async function OutreachPage({ searchParams }) {
-  const { status: filter } = await searchParams;
+  const { status: filter, after } = await searchParams;
   const supabase = await createClient();
-  const { data, error } = await supabase.from("outreach_schools")
-    .select("id, name, area, contact, phone, status, after_status, calls, visits, history, next_step, next_date, notes, updated_at")
-    .order("next_date", { ascending: true, nullsFirst: false }).order("name");
+  const [{ data, error }, { data: leadRows }] = await Promise.all([
+    supabase.from("outreach_schools")
+      .select("id, name, area, contact, phone, status, after_status, calls, visits, history, next_step, next_date, notes, updated_at")
+      .order("next_date", { ascending: true, nullsFirst: false }).order("name"),
+    supabase.from("leads").select("school_name, status, do_not_contact"),
+  ]);
+  // Lead numbers per school (case-insensitive name match): forms → won, for the card and the Pipeline link.
+  const leadStats = new Map();
+  for (const l of leadRows ?? []) {
+    const k = String(l.school_name ?? "").trim().toLowerCase();
+    if (!k) continue;
+    const c = leadStats.get(k) ?? { total: 0, won: 0, open: 0 };
+    const o = leadOutcome(l.status, false, l.do_not_contact);
+    c.total += 1; if (o === "won") c.won += 1; if (o === "open") c.open += 1;
+    leadStats.set(k, c);
+  }
   const all = data ?? [];
   const today = todayIST();
   const due = all.filter((s) => s.next_date && s.next_date <= today && isOpen(s));
   const won = all.filter((s) => ["Workshop confirmed", "Workshop done"].includes(normalStatus(s.status))).length;
   const st = (s) => normalStatus(s.status) || "Not contacted";
   const counts = Object.fromEntries(OUTREACH_STATUSES.map((x) => [x, all.filter((s) => st(s) === x).length]));
-  const rows = filter === "due" ? due : filter ? all.filter((s) => st(s) === filter) : all;
+  const byStatus = filter === "due" ? due : filter ? all.filter((s) => st(s) === filter) : all;
+  const rows = after ? byStatus.filter((s) => (s.after_status || "") === after) : byStatus;
   const chip = (key, label, n) => (
     <Link key={key} href={key ? `?status=${encodeURIComponent(key)}` : "?"} className={`chip min-h-11 px-4 ${filter === key || (!filter && !key) ? "bg-primary text-primary-fg" : "bg-surface-2"}`}>{label} · {n}</Link>
   );
@@ -45,6 +60,12 @@ export default async function OutreachPage({ searchParams }) {
         {chip("due", "Due", due.length)}
         {OUTREACH_STATUSES.filter((st) => counts[st]).map((st) => chip(st, st, counts[st]))}
       </div>
+      <div className="mb-4 flex flex-wrap gap-2 text-sm" aria-label="After-workshop status">
+        {AFTER_STATUSES.map((a) => {
+          const n = all.filter((s) => s.after_status === a).length;
+          return n ? <Link key={a} href={after === a ? "?" : `?after=${encodeURIComponent(a)}`} className={`chip min-h-11 px-4 ${after === a ? "bg-primary text-primary-fg" : "bg-surface-2"}`}>After: {a} · {n}</Link> : null;
+        })}
+      </div>
 
       {error && <p role="alert" className="mb-4 text-sm text-danger">{error.message}</p>}
       {rows.length ? (
@@ -64,7 +85,13 @@ export default async function OutreachPage({ searchParams }) {
                     {!s.area && !s.contact && !s.phone && "No contact yet"}
                   </div>
                   {(s.next_step || s.next_date) && <p className="mt-2 text-sm"><b>Next:</b> {s.next_step || "Follow up"}{s.next_date && ` · ${fmt(s.next_date)}`}</p>}
-                  <p className="mt-1 text-xs text-muted">{s.calls} calls · {s.visits} visits</p>
+                  <p className="mt-1 text-xs text-muted">
+                    {s.calls} calls · {s.visits} visits
+                    {leadStats.get(s.name.trim().toLowerCase()) && (() => {
+                      const c = leadStats.get(s.name.trim().toLowerCase());
+                      return <> · <Link className="text-primary underline" href={`/admin/pipeline?school=${encodeURIComponent(s.name)}`}>{c.total} leads, {c.open} open, {c.won} won</Link></>;
+                    })()}
+                  </p>
                 </div>
               </div>
               <OutreachRow school={s} statuses={OUTREACH_STATUSES} />

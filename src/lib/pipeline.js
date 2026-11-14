@@ -15,6 +15,6 @@ const cell = (v) => {
 };
 
 export function toCsv(rows) {
-  const cols = ["stage", "stalled", "name", "parent_name", "phone", "grade", "school", "source", "lead_at", "signed_up_at", "last_watch_at", "seconds_watched", "module0_done_at", "bought_at"];
+  const cols = ["stage", "outcome", "status", "stalled", "name", "parent_name", "phone", "grade", "section", "school", "siblings", "next_step", "next_date", "source", "lead_at", "signed_up_at", "last_watch_at", "seconds_watched", "module0_done_at", "bought_at"];
   return [cols.join(","), ...rows.map((r) => cols.map((c) => cell(c === "stage" ? STAGES[r.stage - 1]?.label : r[c])).join(","))].join("\n");
 }
