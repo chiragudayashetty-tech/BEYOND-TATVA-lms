@@ -1,6 +1,6 @@
 # Beyond Tatva LMS: project status
 
-_Maintained by Claude (lead). Last updated: 2026-11-12. If this file and the code disagree, the code on `main` wins: tell Claude._
+_Maintained by Claude (lead). Last updated: 2026-11-14. If this file and the code disagree, the code on `main` wins: tell Claude._
 
 AI course for Grades 8–10 in Udupi. **Payments happen only in this LMS** (Razorpay on `/unlock`, live). The website
 (beyondtatva.in, separate repo `BEYOND-TATVA-web`) markets and sends people here; it takes no money. Students sign in, watch weekly modules, take quizzes and
@@ -84,7 +84,7 @@ cross-student tests for guardians / sessions / purchases / lesson_media.
 - Payment, order, enrollment and webhook API bodies are size-capped (`src/lib/body.js`).
 - Account = the student; parent phone stored for messages; access lives on one account (Studio can move it).
 - Free Module 0 on unlisted YouTube; paid modules move to **Bunny Stream** (signed links), on hold.
-- Phone/WhatsApp login waits for DLT registration.
+- Password login (email + mobile + password, no code) since 2026-11-14. WhatsApp codes wait for **Meta Business verification** (not DLT: DLT is SMS only). No SMS anywhere.
 - GitHub `main` is the only source of truth. No separate folders or copies.
 - **More courses will come later** (e.g. an advanced AI course). Don't build multi-course screens yet,
   but don't add new single-course assumptions either: always store `course_id` on new data, and prefer
@@ -118,14 +118,35 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - Env vars set (Production): LMS `SUPABASE_SERVICE_ROLE_KEY`, `ENROLLMENT_WEBHOOK_SECRET`; website `ENROLLMENT_WEBHOOK_SECRET`, `LMS_URL`.
 - Leads/pipeline migration applied to Supabase.
 
-## Waiting on Chirag
+## Done 2026-11-14 (PRs #153–#156, migrations 20261114000003–06, all applied)
+- Login: email + mobile + password, automatic reset email (Resend SMTP), Profile → Password, Studio → New password.
+- School Outreach sync fixed (was stuck 8–14 Nov), two status columns, sheet imported once.
+- SRVK leads closed (37 Not interested + Poorvi Enrolled, history notes kept).
+- CRM: Pipeline filters (school, class, section, siblings, status, source, due, search), group by school, Today school filter.
+- New School Leads Tracker sheet (100-school setup) + incremental sync, tested on a copy; red banner if a sheet stops.
+- Incident: `RAZORPAY_KEY_SECRET` was overwritten by mistake in Vercel and redeployed; Chirag fixed it the same day
+  (payment tested). `SHEETS_SYNC_SECRET` rotated; both sheets re-keyed. Lesson: check the variable *name* before pasting.
+
+## Waiting on Chirag (2026-11-14)
+- Old archived sheet ("Workshop Leads v2 … Srvk closed"): delete its two timers (it now fails every 5 min with the old key).
+- Clean-up: delete test accounts "Test 1" and the school "lokis school"; merge Poorvi Hegde's duplicate account
+  (Studio → People → Duplicates); decide if admin accounts should be left out of Pipeline (Claude: 1-line change).
+- Supabase: paste the "Reset Password" email template (docs/login-setup.md step 5); raise email rate limit to ~100/hour.
+- Supabase Phone provider + `SEND_SMS_HOOK_SECRET` so students can sign in by typing their mobile (step 6). Optional.
+- Start Meta Business verification + a dedicated WhatsApp number (needed for WhatsApp automations and codes).
+- Before the Durga workshop (Fri 20 Nov): enter forms in the School Leads Tracker; check Studio → Pipeline → Durga.
 - Parent consent text: mention the XP leaderboard (first name + initial; opt-out in Profile).
 - Real Module 0 videos; set each paid module's week in Studio → Content (Batch 1 starts 15 Nov 2026).
 
 ## Backlog (owner → task)
 **Claude (lead: database, security, integrations)**
 - Certificates: completion rule, certificate ID, public QR verification page, PDF.
-- Resend email sender + login code email templates (before students use email login).
+- ~~Resend email sender~~ done (SMTP set). Login/reset email templates: Reset Password template given 2026-11-14.
+- **Next: automations.** Message queue + templates + opt-in/do-not-contact checks + send log + scheduled sender.
+  Email first (works now): welcome / how to log in, "module opens Sunday", inactive 7 days, payment received,
+  "Send payment link" status → message. WhatsApp after Meta verification. Automations page in Studio shows sent/failed.
+- CRM v2: per-person timeline (calls, messages, payments, progress) and auto follow-up tasks.
+- Optional: hide admin/test accounts from Pipeline and analytics.
 - Bunny Stream signed playback for paid modules (on hold).
 - **Play Store app** (TWA, no payment inside the app): checklist and status in `docs/PLAY-STORE.md`. Code side done; waiting on Chirag's Play Console account.
 - Automations (WhatsApp provider + email), CRM: after launch.
