@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { COURSE_ID } from "@/lib/catalog";
-import { webhookSignatureValid } from "@/lib/razorpay";
+import { fullRefundPaymentId, webhookSignatureValid } from "@/lib/razorpay";
 import { readLimited } from "@/lib/body";
 
 // POST /api/razorpay-webhook: Razorpay calls this on payment.captured / order.paid, even if the parent closed
 // the browser or lost signal after paying. Records the purchase for the student in the order notes.
 // Safe to receive many times: record_purchase uses the payment id as reference, so a payment counts once.
 // Razorpay → Settings → Webhooks → URL https://learn.beyondtatva.in/api/razorpay-webhook,
-// events payment.captured + order.paid, secret = RAZORPAY_WEBHOOK_SECRET in Vercel.
+// events payment.captured + order.paid + refund.processed, secret = RAZORPAY_WEBHOOK_SECRET in Vercel.
 export async function POST(request) {
   const secret = (process.env.RAZORPAY_WEBHOOK_SECRET || "").trim();
   if (!secret) return NextResponse.json({ error: "webhook not set up" }, { status: 500 });
@@ -22,6 +22,18 @@ export async function POST(request) {
     event = JSON.parse(raw);
   } catch {
     return NextResponse.json({ error: "bad json" }, { status: 400 });
+  }
+  // A full refund made in the Razorpay dashboard ends access (same as Studio → Enrollments → Refunded).
+  // Partial refunds keep access. Only our LMS payments: the reference is the Razorpay payment id.
+  if (event.event === "refund.processed" || event.event === "payment.refunded") {
+    const refundedId = fullRefundPaymentId(event);
+    if (!refundedId) return NextResponse.json({ ignored: true, reason: "partial refund" });
+    const { data: outcome, error } = await createAdminClient().rpc("revoke_purchase", { p_reference: refundedId });
+    if (error) {
+      console.error("razorpay webhook: revoke_purchase failed", refundedId, error.message);
+      return NextResponse.json({ error: "retry" }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, status: outcome });
   }
   if (event.event !== "payment.captured" && event.event !== "order.paid") return NextResponse.json({ ignored: true });
 
