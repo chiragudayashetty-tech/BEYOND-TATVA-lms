@@ -1,5 +1,6 @@
 "use client";
 
+import PriceTag from "@/components/PriceTag";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, CreditCard, MessageCircle, ShieldCheck, Tag } from "lucide-react";
@@ -28,7 +29,7 @@ async function post(url, body) {
   }
 }
 
-export default function RazorpayPay({ price, enabled, name, email, phone, whatsapp }) {
+export default function RazorpayPay({ price, listPrice, enabled, name, email, phone, whatsapp }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null); // { tone: "error" | "info", text, paymentId? }
@@ -113,10 +114,10 @@ export default function RazorpayPay({ price, enabled, name, email, phone, whatsa
 
   return (
     <>
-      <div className="mt-5 flex items-baseline gap-1.5">
-        {coupon && <span className="text-lg text-muted line-through">₹{price}</span>}
-        <span className="font-display text-4xl font-semibold">₹{amount}</span>
-        <span className="text-sm text-muted">one time · incl. GST</span>
+      <div className="mt-5">
+        {/* With a coupon the price counts down from the normal price to the coupon price. */}
+        <PriceTag key={amount} price={amount} listPrice={coupon ? price : listPrice} className="!justify-start" />
+        <span className="text-sm text-muted">one time · incl. GST{coupon && ` · coupon ${coupon.code}`}</span>
       </div>
       <ul className="mt-4 space-y-2 text-sm">
         {["Every paid module and its lessons", "Quizzes, assignments and feedback", "Certificate at the end"].map((t) => (
