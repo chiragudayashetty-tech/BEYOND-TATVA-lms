@@ -41,6 +41,15 @@ export async function saveCourse(_, fd) {
   }).eq("id", COURSE_ID));
 }
 
+// Price only (Studio home → Pricing). The website and both checkouts read it via /api/price.
+export async function savePrice(_, fd) {
+  const price = num(fd, "price");
+  const list = num(fd, "list_price") || null;
+  if (!price || price < 1) return { ok: false, error: "Price must be between ₹1 and ₹1,00,000." };
+  if (list && list < price) return { ok: false, error: "The original price must be at least the price (or leave it empty)." };
+  return run((s) => s.from("courses").update({ price_inr: price, list_price_inr: list }).eq("id", COURSE_ID));
+}
+
 export async function saveModule(_, fd) {
   const row = {
     title: str(fd, "title"),
