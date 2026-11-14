@@ -58,7 +58,7 @@ Keep the existing cards (funnel, sources, grades, revenue, module completion, qu
 
 `insights` = `{ engagement: { students, active_7d, active_30d, minutes_per_active_7d, stopped_paid, never_started_paid },
 lessons: [{ module, lesson, started, finished }], sources: [{ source, signups, paid }], refunds: { count, paise },
-schools: [{ school, keys, used, students }], workshops: [{ title, starts_at, seats, registered, attended, signed_up, paid }] }`
+schools: [{ school, keys, used, students }] }`  (the `workshops` block was removed 2026-11-14)
 
 1. **Engagement:** 4 `StatCard`s: "Active this week" (`active_7d` of `students`), "Active this month",
    "Avg minutes per active student (7 days)", "Paid but stopped 14+ days" (`stopped_paid`, tone danger,
@@ -68,7 +68,7 @@ schools: [{ school, keys, used, students }], workshops: [{ title, starts_at, sea
 3. **Sources that pay:** table source / sign-ups / paid / conversion % (sorted by paid). Empty → `Empty`.
 4. **Refunds:** `StatCard` "Refunds" `{count}` · ₹`{paise/100}`.
 5. **Schools:** table school / keys issued / used / % used / students. Phones: stacked rows, no sideways scroll.
-6. **Workshops:** per workshop: date, `registered/seats`, attended, signed up, paid, as a 4-step mini funnel.
+6. ~~**Workshops:**~~ removed 2026-11-14. Was: per workshop: date, `registered/seats`, attended, signed up, paid, as a 4-step mini funnel.
 
 ---
 

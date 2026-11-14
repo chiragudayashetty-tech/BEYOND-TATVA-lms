@@ -283,7 +283,7 @@ export async function dedupeLeads() {
   return leadRpc("admin_dedupe_leads", { p_course: COURSE_ID }, "Duplicates removed");
 }
 
-// Offline leads (typed in or pasted) and registering existing leads for a workshop.
+// Offline leads (typed in or pasted).
 export async function addLead(_, fd) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("admin_add_lead", {

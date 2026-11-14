@@ -31,7 +31,7 @@ export default async function AnalyticsPage({ searchParams }) {
   const startAt = utcBoundaryForIstDate(from);
   const endAt = utcBoundaryForIstDate(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 1)));
   const supabase = await createClient();
-  const [scoreResult, schoolScoresResult, schoolListResult, profileResult, chapterResult, lessonResult, progressResult, accessResult, quizResult, attemptResult, resourceResult, leadResult, allLeadLinksResult, registrationResult, workshopResult, schoolsResult, purchaseResult] = await Promise.all([
+  const [scoreResult, schoolScoresResult, schoolListResult, profileResult, chapterResult, lessonResult, progressResult, accessResult, quizResult, attemptResult, resourceResult, leadResult, allLeadLinksResult, schoolsResult, purchaseResult] = await Promise.all([
     supabase.rpc("admin_student_scores", { p_school_id: schoolId && schoolId !== "none" ? schoolId : null, p_days: days }),
     supabase.rpc("admin_school_scores", { p_days: days }),
     supabase.rpc("admin_schools"),
@@ -45,8 +45,6 @@ export default async function AnalyticsPage({ searchParams }) {
     fetchAll((a, b) => supabase.from("resource_views").select("student_id, opens").range(a, b)),
     supabase.from("leads").select("id, student_id, source, created_at").eq("course_id", COURSE_ID).gte("created_at", startAt).lt("created_at", endAt),
     supabase.from("leads").select("id, student_id").eq("course_id", COURSE_ID),
-    supabase.from("workshop_registrations").select("id, student_name, parent_phone, lead_id, workshop_id, attended_at, created_at").gte("created_at", startAt).lt("created_at", endAt),
-    supabase.from("workshops").select("id, title, school_id"),
     supabase.from("schools").select("id, name"),
     supabase.from("purchases").select("created_at, amount_paise, status").gte("created_at", startAt).lt("created_at", endAt),
   ]);
@@ -119,21 +117,11 @@ export default async function AnalyticsPage({ searchParams }) {
   });
 
   const leadById = new Map((allLeadLinksResult.data ?? []).map((lead) => [lead.id, lead]));
-  const workshopsById = new Map((workshopResult.data ?? []).map((workshop) => [workshop.id, workshop]));
-  const followups = (registrationResult.data ?? []).filter((registration) => {
-    const lead = leadById.get(registration.lead_id);
-    const workshop = workshopsById.get(registration.workshop_id);
-    const schoolMatches = !schoolId || (schoolId === "none" ? !workshop?.school_id : workshop?.school_id === schoolId);
-    return Boolean(registration.attended_at) && schoolMatches && !lead?.student_id;
-  }).map((registration) => {
-    const workshop = workshopsById.get(registration.workshop_id);
-    return { id: registration.id, student_name: registration.student_name, parent_phone: registration.parent_phone, school: schoolNames.get(workshop?.school_id) ?? "–", workshop: workshop?.title ?? "Workshop" };
-  });
   const linkedStudentIds = new Set((allLeadLinksResult.data ?? []).map((lead) => lead.student_id).filter(Boolean));
   const direct = profiles.map((profile) => scoreById.get(profile.id)).filter((student) => student && !linkedStudentIds.has(student.student_id)).map((student) => ({ ...student, lessons_started: m0StartedIds.has(student.student_id) ? 1 : 0 }));
 
   const totalRevenue = (purchaseResult.data ?? []).filter((row) => row.status !== "revoked").reduce((sum, row) => sum + (row.amount_paise ?? 0), 0);
-  const overallError = scoreResult.error || schoolScoresResult.error || profileResult.error || chapterResult.error || lessonResult.error || progressResult.error || accessResult.error || quizResult.error || attemptResult.error || resourceResult.error || leadResult.error || allLeadLinksResult.error || registrationResult.error || workshopResult.error || schoolsResult.error || purchaseResult.error;
+  const overallError = scoreResult.error || schoolScoresResult.error || profileResult.error || chapterResult.error || lessonResult.error || progressResult.error || accessResult.error || quizResult.error || attemptResult.error || resourceResult.error || leadResult.error || allLeadLinksResult.error || schoolsResult.error || purchaseResult.error;
 
   return <Shell roles={["admin"]}>
     <PageTitle title="Student analytics" subtitle="See who signed up, how far they got, and where students may need help.">
@@ -152,7 +140,7 @@ export default async function AnalyticsPage({ searchParams }) {
       <BarChart title="Bought by school · conversion %" data={conversionBars(schoolRows)} format={(value) => `${value}%`} colors={["bg-success", "bg-primary", "bg-warning"]} />
       <BarChart title="Revenue by IST week" data={revenue} format={(value) => money(value)} colors={["bg-success", "bg-primary", "bg-warning"]} />
     </div>
-    <section className="mt-8"><h2 className="mb-4 text-xl font-semibold">Lead matching</h2><LeadMatching sources={sourceRows} followups={followups} direct={direct} /></section>
+    <section className="mt-8"><h2 className="mb-4 text-xl font-semibold">Lead matching</h2><LeadMatching sources={sourceRows} direct={direct} /></section>
     <section className="mt-8"><Card title="Schools at a glance" action={<Link href={`/admin/analytics/schools?days=${days}`} className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">Open school analytics</Link>}>
       {(schoolScoresResult.data ?? []).length ? <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead className="bg-surface-2 text-xs text-muted"><tr><th className="px-3 py-3">School</th><th className="px-3 py-3">Students</th><th className="px-3 py-3">Paid</th><th className="px-3 py-3">Finished M0</th><th className="px-3 py-3">Avg score</th></tr></thead><tbody className="divide-y divide-border">{(schoolScoresResult.data ?? []).slice(0, 8).map((school) => <tr key={school.school_id ?? "none"}><td className="px-3 py-3">{school.school}</td><td className="px-3 py-3">{school.students}</td><td className="px-3 py-3">{school.paid}</td><td className="px-3 py-3">{school.finished_module0}</td><td className="px-3 py-3">{school.avg_score == null ? <span title="Not enough student activity to calculate">–</span> : <Badge tone={school.avg_score >= 70 ? "success" : school.avg_score >= 40 ? "warning" : "danger"}>{school.avg_score}</Badge>}</td></tr>)}</tbody></table></div> : <Empty title="No school data yet" body="School comparisons will appear here." />}
     </Card></section>
@@ -162,7 +150,7 @@ export default async function AnalyticsPage({ searchParams }) {
 function leadLabel(source) {
   if (source === "Unknown") return source;
   if (["website", "loki", "module0", "qr", "web"].includes(source)) return `Website · ${source}`;
-  if (source === "workshop") return "Workshop form";
+  if (source === "workshop") return "Workshop form (old)";
   if (["manual", "import"].includes(source)) return `Admin-entered · ${source}`;
   if (["outreach", "outreach_studio"].includes(source)) return "Outreach studio";
   return source;

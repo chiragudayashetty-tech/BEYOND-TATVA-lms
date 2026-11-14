@@ -39,6 +39,11 @@ Two AI agents work on this repo. Read this and `docs/PROJECT.md` before every ta
 - **No new paid services or dependencies** without Chirag's OK (say why in the PR).
 - **Don't change live data** (Supabase, Vercel settings, GitHub settings).
 
+## Removed features
+Check `docs/PROJECT.md` → "Removed features" before building. Example: the workshop registration system
+(tables, `/w/` page, attendance) was removed on 2026-11-14; don't bring it back unless Chirag asks. "Workshop booked/done"
+in School outreach is a sales status and stays.
+
 ## Conventions
 - Next.js 16 (see the note above), React 19, Tailwind 4, Supabase with RLS on every table.
 - UI: reuse `src/components/ui.js` (Card, Badge, StatCard, Empty, PageTitle) and existing classes
