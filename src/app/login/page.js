@@ -8,12 +8,13 @@ import { safeNext } from "@/lib/safe-next";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
 
-import { loginLabel, parseLoginId, passwordProblem } from "@/lib/login-id";
+import { cleanEmail, indianMobile, parseLoginId, passwordProblem, showPhone } from "@/lib/login-id";
 import { supportWhatsApp } from "@/lib/social";
 
 // Sign in: Google, phone or email + password (no code, Chirag 2026-11-14), or an email code.
 // WhatsApp codes (api/auth/send-otp) come back once Meta verification is done.
 const friendly = (msg = "") => {
+  if (/phone.*(disabled|not enabled)|Phone logins/i.test(msg)) return "Sign-in with mobile number isn't switched on yet. Use your email and the same password.";
   if (/Invalid login credentials/i.test(msg)) return "Wrong number/email or password. Try again, or tap Forgot password.";
   if (/provider is not enabled|Unsupported provider/i.test(msg)) return "Google sign-in isn't switched on yet. Use your phone or email.";
   if (/expired|invalid/i.test(msg)) return "That code didn't work. Check it, or send a new one.";
@@ -29,6 +30,8 @@ function LoginForm() {
   const [mode, setMode] = useState("login");
   const [contact, setContact] = useState("");
   const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
   const [password2, setPassword2] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [notice, setNotice] = useState("");
@@ -121,22 +124,24 @@ function LoginForm() {
     e.preventDefault();
     rememberNext();
     setError("");
-    const id = parseLoginId(contact);
-    if (!id) return setError("Type a 10-digit mobile number or an email address.");
+    // Sign-up: email AND mobile (both go on the account). Sign-in: either one.
+    const id = mode === "signup" ? { kind: "email", email: cleanEmail(email) } : parseLoginId(contact);
     if (mode === "signup") {
+      if (!id.email) return setError("Type a real email address (e.g. name@gmail.com).");
+      if (!indianMobile(mobile)) return setError("Type a 10-digit Indian mobile number.");
       const problem = passwordProblem(password);
       if (problem) return setError(problem);
       if (password !== password2) return setError("The two passwords don't match.");
-    }
+    } else if (!id) return setError("Type your mobile number or email.");
     setBusy(true);
     try {
       if (mode === "signup") {
         const r = await fetch("/api/auth/signup", { method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ id: contact, password, website: e.target.website?.value || "" }) });
+          body: JSON.stringify({ email, phone: mobile, password, website: e.target.website?.value || "" }) });
         const data = await r.json().catch(() => ({}));
         if (!r.ok) return setError(data.error || "Couldn't create the account. Try again.");
       }
-      const { error } = await supabase.auth.signInWithPassword({ email: id.email, password });
+      const { error } = await supabase.auth.signInWithPassword(id.kind === "phone" ? { phone: `+${id.phone}`, password } : { email: id.email, password });
       if (error) return setError(friendly(error.message));
       await finish();
     } catch {
@@ -199,7 +204,7 @@ function LoginForm() {
   }
 
   const id = parseLoginId(contact);
-  const helpLink = supportWhatsApp(`Hi Beyond Tatva! I forgot my password. My login number is ${id?.kind === "phone" ? loginLabel({ phone: id.phone }) : contact}. Student name: `);
+  const helpLink = supportWhatsApp(`Hi Beyond Tatva! I forgot my password. My login is ${id?.kind === "phone" ? showPhone(id.phone) : contact}. Student name: `);
 
   return (
     <>
@@ -217,7 +222,7 @@ function LoginForm() {
     <div className="card p-6 shadow-xl shadow-black/5 sm:p-8">
       <h1 className="text-2xl font-semibold">{mode === "signup" ? "Create your account" : mode === "forgot" ? "Forgot password" : "Sign in"}</h1>
       <p className="mt-1 text-sm text-muted">
-        {mode === "signup" ? "Use the student's own phone number or email. You'll log in with it every time."
+        {mode === "signup" ? "Use the student's own email and mobile number. You can sign in with either."
           : mode === "forgot" ? "Type the number or email you signed up with."
           : "Use Google, or your phone number / email and password."}
       </p>
@@ -231,11 +236,27 @@ function LoginForm() {
           <div className="h-px flex-1 bg-border" /> or with phone / email <div className="h-px flex-1 bg-border" />
         </div>
         <form onSubmit={passwordSubmit} className="space-y-3">
-          <div>
-            <label className="label" htmlFor="login-id">Mobile number or email</label>
-            <input id="login-id" className="input" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="98765 43210 or you@example.com"
-              autoComplete="username" autoCapitalize="none" spellCheck={false} required />
-          </div>
+          {mode === "signup" ? <>
+            <div>
+              <label className="label" htmlFor="su-email">Email</label>
+              <input id="su-email" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
+                autoComplete="email" autoCapitalize="none" spellCheck={false} required />
+            </div>
+            <div>
+              <label className="label" htmlFor="su-phone">Mobile number (WhatsApp)</label>
+              <div className="flex gap-2">
+                <span className="input grid w-16 shrink-0 place-items-center">+91</span>
+                <input id="su-phone" className="input" type="tel" inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="98765 43210" autoComplete="tel-national" required />
+              </div>
+              <p className="mt-1 text-xs text-muted">You can sign in with either. We use the number to help if you forget your password.</p>
+            </div>
+          </> : (
+            <div>
+              <label className="label" htmlFor="login-id">Mobile number or email</label>
+              <input id="login-id" className="input" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="98765 43210 or you@example.com"
+                autoComplete="username" autoCapitalize="none" spellCheck={false} required />
+            </div>
+          )}
           <div>
             <label className="label" htmlFor="login-pw">{mode === "signup" ? "Make a password (8+ characters)" : "Password"}</label>
             <div className="relative">
@@ -270,7 +291,7 @@ function LoginForm() {
         </div>
       ) : notice === "phone" ? (
         <div className="mt-6 space-y-3 text-sm">
-          <p className="rounded-xl bg-surface-2 p-3">Message us on WhatsApp from the parent&apos;s phone. We&apos;ll check it&apos;s you and send a temporary password, usually the same day. (Reset by WhatsApp code is coming soon.)</p>
+          <p className="rounded-xl bg-surface-2 p-3">Message us on WhatsApp from this number. We&apos;ll check it&apos;s you and send a new password on WhatsApp, usually the same day. Or type your email above instead to get a reset link.</p>
           {helpLink && <a href={helpLink} target="_blank" rel="noopener noreferrer" className="btn-primary block w-full py-3 text-center">Message us on WhatsApp</a>}
           <button type="button" onClick={() => go("login")} className="btn-secondary w-full py-3">Back to sign in</button>
         </div>

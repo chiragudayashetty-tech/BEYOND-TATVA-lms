@@ -1,9 +1,5 @@
-// Password login: one box takes a phone number or an email. Pure helpers, tested in tests/login-id.test.mjs.
-//
-// Phone accounts are stored with a hidden login address <91XXXXXXXXXX>@phone.beyondtatva.in (Supabase signs
-// in with email + password without needing SMS) and the real phone on the account. Nothing is ever sent to
-// that address. It can never be a Studio admin: the Studio list matches "@beyondtatva.in" exactly.
-export const PHONE_ALIAS_DOMAIN = "phone.beyondtatva.in";
+// Password accounts (Chirag 2026-11-14): every account has an email AND a mobile number, both on the
+// Supabase user, and signs in with either one + the password. Pure helpers, tested in tests/login-id.test.mjs.
 export const PASSWORD_MIN = 8;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -15,27 +11,29 @@ export function indianMobile(input) {
   return ten && /^[6-9]\d{9}$/.test(ten) ? `91${ten}` : null;
 }
 
-// { kind: "phone", phone, email } | { kind: "email", email } | null (not a phone number or email).
+export function cleanEmail(input) {
+  const email = String(input ?? "").trim().toLowerCase();
+  return EMAIL_RE.test(email) && email.length <= 254 ? email : null;
+}
+
+// Login box: { kind: "phone", phone } | { kind: "email", email } | null.
 export function parseLoginId(input) {
   const raw = String(input ?? "").trim();
   if (!raw) return null;
   if (raw.includes("@")) {
-    const email = raw.toLowerCase();
-    if (!EMAIL_RE.test(email) || email.length > 254 || isPhoneAlias(email)) return null;
-    return { kind: "email", email };
+    const email = cleanEmail(raw);
+    return email ? { kind: "email", email } : null;
   }
   const phone = indianMobile(raw);
-  return phone ? { kind: "phone", phone, email: `${phone}@${PHONE_ALIAS_DOMAIN}` } : null;
+  return phone ? { kind: "phone", phone } : null;
 }
 
-export const isPhoneAlias = (email) => String(email ?? "").toLowerCase().endsWith(`@${PHONE_ALIAS_DOMAIN}`);
+export const showPhone = (p) => (p && p.length === 12 ? `+${p.slice(0, 2)} ${p.slice(2, 7)} ${p.slice(7)}` : p || "");
 
-// What to show a person as "you sign in with": the phone for phone accounts, never the hidden address.
+// "you sign in with …": email and/or phone.
 export function loginLabel(user) {
   if (!user) return "";
-  if (user.email && !isPhoneAlias(user.email)) return user.email;
-  const phone = user.phone || (isPhoneAlias(user.email) ? user.email.split("@")[0] : "");
-  return phone ? `+${phone.slice(0, 2)} ${phone.slice(2, 7)} ${phone.slice(7)}` : "";
+  return [user.email, showPhone(user.phone)].filter(Boolean).join(" or ");
 }
 
 // null when fine, else a sentence a 13-year-old understands.
@@ -49,4 +47,4 @@ export function passwordProblem(pw) {
 
 // Studio admin addresses can never be created with a password here: an admin must prove the inbox
 // (Google or email code). Exact "@beyondtatva.in" or anything under it.
-export const isStaffDomain = (email) => /@([a-z0-9-]+\.)*beyondtatva\.in$/i.test(String(email ?? "")) && !isPhoneAlias(email);
+export const isStaffDomain = (email) => /@([a-z0-9-]+\.)*beyondtatva\.in$/i.test(String(email ?? ""));

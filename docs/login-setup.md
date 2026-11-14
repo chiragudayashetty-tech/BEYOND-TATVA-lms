@@ -41,8 +41,13 @@ Supabase's free built-in sender only delivers to **members of your Supabase team
 Fine for you to test; students won't receive codes. Before students log in by email, add a custom SMTP sender
 (Resend free tier: 3,000/month) under Authentication → Emails → SMTP Settings. Google sign-in has no such limit.
 
-## 5. Phone login
-Off until DLT registration (India). Turn on later with Supabase phone provider + `NEXT_PUBLIC_PHONE_LOGIN=1`.
+## 5. Sign in with mobile number + password (2026-11-14)
+Accounts are made with email + mobile + password (no code). Sign-in with the **email** works with no setup.
+Sign-in with the **mobile number** needs Supabase's phone provider on:
+1. Vercel (LMS, Production): add `SEND_SMS_HOOK_SECRET` (step 2 shows it). Redeploy.
+2. Supabase → Authentication → **Hooks** → Send SMS hook → HTTPS → `https://learn.beyondtatva.in/api/auth/send-otp` → copy its secret into step 1.
+3. Supabase → Authentication → Sign In / Providers → **Phone** → Enable → save. No SMS provider needed (the hook replaces it).
+Until WhatsApp is connected no codes are sent; password sign-in doesn't send any.
 
 ## Test checklist
 1. Open the LMS in Chrome (not inside WhatsApp/Instagram) → Continue with Google → chiragudayashetty@gmail.com → you land in **Studio**.

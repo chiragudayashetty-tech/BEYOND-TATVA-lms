@@ -1,26 +1,25 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { indianMobile, isPhoneAlias, isStaffDomain, loginLabel, parseLoginId, passwordProblem } from "../src/lib/login-id.js";
+import { cleanEmail, indianMobile, isStaffDomain, loginLabel, parseLoginId, passwordProblem } from "../src/lib/login-id.js";
 
 test("phone numbers in every common shape", () => {
   for (const s of ["9845012345", "98450 12345", "+91 98450-12345", "919845012345", "09845012345"]) assert.equal(indianMobile(s), "919845012345");
   for (const s of ["12345", "5845012345", "91984501234", "abc"]) assert.equal(indianMobile(s), null);
 });
 
-test("one box: phone or email", () => {
-  assert.deepEqual(parseLoginId(" 98450 12345 "), { kind: "phone", phone: "919845012345", email: "919845012345@phone.beyondtatva.in" });
+test("login box: phone or email", () => {
+  assert.deepEqual(parseLoginId(" 98450 12345 "), { kind: "phone", phone: "919845012345" });
   assert.deepEqual(parseLoginId("Ravi@Gmail.com"), { kind: "email", email: "ravi@gmail.com" });
   assert.equal(parseLoginId("ravi@"), null);
   assert.equal(parseLoginId(""), null);
-  // Nobody can type the hidden phone address as an email.
-  assert.equal(parseLoginId("919845012345@phone.beyondtatva.in"), null);
+  assert.equal(cleanEmail(" A@B.co "), "a@b.co");
+  assert.equal(cleanEmail("nope"), null);
 });
 
-test("hidden phone address never shown", () => {
-  assert.equal(isPhoneAlias("919845012345@phone.beyondtatva.in"), true);
-  assert.equal(loginLabel({ email: "919845012345@phone.beyondtatva.in", phone: "919845012345" }), "+91 98450 12345");
-  assert.equal(loginLabel({ email: "919845012345@phone.beyondtatva.in" }), "+91 98450 12345");
-  assert.equal(loginLabel({ email: "a@b.com", phone: "919845012345" }), "a@b.com");
+test("login label shows email and phone", () => {
+  assert.equal(loginLabel({ email: "a@b.com", phone: "919845012345" }), "a@b.com or +91 98450 12345");
+  assert.equal(loginLabel({ email: "a@b.com" }), "a@b.com");
+  assert.equal(loginLabel({ phone: "919845012345" }), "+91 98450 12345");
 });
 
 test("staff addresses can't be created with a password", () => {
