@@ -53,7 +53,7 @@ async function currentUser(supabase) {
   const { data } = await supabase.auth.getClaims();
   const c = data?.claims;
   if (!c?.sub) return null;
-  return { id: c.sub, email: c.email ?? null, phone: c.phone || null, user_metadata: c.user_metadata ?? {}, app_metadata: c.app_metadata ?? {} };
+  return { id: c.sub, email: c.email ?? null, phone: c.phone || null, user_metadata: c.user_metadata ?? {}, app_metadata: c.app_metadata ?? {}, aal: c.aal ?? null };
 }
 
 async function realSession() {
@@ -96,6 +96,12 @@ export async function requireRole(roles) {
     redirect(back ? `/onboarding?next=${encodeURIComponent(back)}` : "/onboarding");
   }
   if (!roles.includes(session.profile.role) && session.profile.role !== "admin") redirect(homeFor(session.profile.role));
+  // Two-step login for Studio admins: off until REQUIRE_ADMIN_MFA=1 (postponed 2026-11-14, see docs/PROJECT.md).
+  if (process.env.REQUIRE_ADMIN_MFA === "1" && session.profile.role === "admin" && session.user.id !== "preview" && session.user.aal !== "aal2") {
+    const { headers } = await import("next/headers");
+    const back = safeNext((await headers()).get("x-pathname"), "/admin");
+    redirect(`/mfa?next=${encodeURIComponent(back)}`);
+  }
   return session;
 }
 

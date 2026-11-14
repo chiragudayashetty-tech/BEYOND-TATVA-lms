@@ -7,6 +7,11 @@ end $$;
 create schema auth;
 create table auth.users (id uuid primary key, email text);
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+-- Claims: tests run as a two-step (aal2) login unless request.jwt.claim.aal says otherwise.
+create function auth.jwt() returns jsonb language sql stable as $$
+  select jsonb_build_object('sub', current_setting('request.jwt.claim.sub', true),
+                            'aal', coalesce(nullif(current_setting('request.jwt.claim.aal', true), ''), 'aal2')) $$;
+grant execute on function auth.jwt() to anon, authenticated, service_role;
 grant usage on schema auth, public to anon, authenticated, service_role;
 grant execute on function auth.uid() to anon, authenticated, service_role;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;

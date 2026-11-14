@@ -10,7 +10,7 @@ export default function LeaderboardSwitch({ hidden = false }) {
     const next = !isHidden; setIsHidden(next); setError("");
     startTransition(async () => {
       const { error: rpcError } = await createClient().rpc("set_leaderboard_hidden", { p_hidden: next });
-      if (rpcError) { setIsHidden(!next); setError("Could not save this setting. Please try again."); return; }
+      if (rpcError) { setIsHidden(!next); setError(/parent/i.test(rpcError.message) ? "Ask a parent to confirm first (see Parent or guardian above)." : "Could not save this setting. Please try again."); return; }
       router.refresh();
     });
   }
