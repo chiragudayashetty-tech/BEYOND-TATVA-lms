@@ -17,7 +17,7 @@ export default function PriceEditor({ price, listPrice }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 font-semibold"><IndianRupee className="h-4 w-4 text-primary" /> Pricing</h2>
           {state && (state.ok
-            ? <span className="inline-flex items-center gap-1 text-sm text-success"><CircleCheck className="h-4 w-4" /> Saved. Website and app update within about a minute.</span>
+            ? <span className="inline-flex items-center gap-1 text-sm text-success"><CircleCheck className="h-4 w-4" /> Saved. Website and app update within a few seconds.</span>
             : <span role="alert" className="text-sm text-danger">{state.error}</span>)}
         </div>
         <div className="grid gap-3 sm:grid-cols-2">

@@ -41,7 +41,7 @@ function CourseForm({ course }) {
       <div className="flex items-center justify-between"><h2 className="font-semibold">Course details</h2><Status state={state} /></div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Title"><input name="title" className="input" defaultValue={course.title} required /></Field>
-        <Field label="Price (₹, one time)" hint="What parents pay. Updates the website and both checkouts within about a minute."><input name="price" type="number" min={1} max={100000} required className="input" defaultValue={course.price} /></Field>
+        <Field label="Price (₹, one time)" hint="What parents pay. Updates the website and both checkouts within a few seconds."><input name="price" type="number" min={1} max={100000} required className="input" defaultValue={course.price} /></Field>
         <Field label="Original price (₹, shown crossed out)" hint="Optional. Leave empty to hide the crossed-out price and the Save % badge."><input name="list_price" type="number" min={1} max={100000} className="input" defaultValue={course.listPrice ?? ""} /></Field>
       </div>
       <Field label="Tagline"><input name="tagline" className="input" defaultValue={course.tagline} /></Field>
