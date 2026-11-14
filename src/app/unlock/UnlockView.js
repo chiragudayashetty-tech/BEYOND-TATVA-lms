@@ -8,9 +8,10 @@ import { IconTile } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { isInApp } from "@/lib/android-app";
 import RazorpayPay from "./RazorpayPay";
+import PriceTag from "@/components/PriceTag";
 import AppNoPurchase from "@/components/AppNoPurchase";
 
-export default function UnlockView({ price, hasAccess, preview, pay }) {
+export default function UnlockView({ price, listPrice, hasAccess, preview, pay }) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -63,6 +64,7 @@ export default function UnlockView({ price, hasAccess, preview, pay }) {
         <IconTile icon={CreditCard} tone="success" />
         <h2 className="mt-4 text-lg font-semibold">Pay online</h2>
         <p className="mt-1 text-sm text-muted">One payment unlocks modules 1–5, including the ones still to premiere.</p>
+        <PriceTag price={price} listPrice={listPrice} className="mt-4 !justify-start" />
         <RazorpayPay price={price} {...pay} />
         <p className="mt-3 text-xs text-muted">Full refund within 7 days if no more than 1 paid lesson is watched. <Link href="/refund-policy" className="font-medium text-primary">Refund policy</Link></p>
       </section>

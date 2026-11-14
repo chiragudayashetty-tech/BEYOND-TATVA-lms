@@ -6,6 +6,7 @@ import { iconFor } from "@/components/course";
 import { fmtPremiere, isReleased, nextPremiere } from "@/lib/catalog";
 import { getCourse } from "@/lib/data";
 import { createClient, isPreview } from "@/lib/supabase/server";
+import PriceEditor from "./PriceEditor";
 
 export const metadata = { title: "Studio · Beyond Tatva" };
 
@@ -40,6 +41,8 @@ export default async function AdminPage() {
           <AlertTriangle className="h-5 w-5 shrink-0 text-warning" /> Local preview: numbers show as 0 and changes won&apos;t save. Sign in with your Studio account to manage real data.
         </div>
       )}
+
+      <PriceEditor price={course.price} listPrice={course.listPrice} />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Students" value={stats.students ?? 0} hint={`${stats.teachers ?? 0} teachers`} icon={Users} />

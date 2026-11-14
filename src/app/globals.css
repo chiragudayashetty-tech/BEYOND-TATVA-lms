@@ -186,3 +186,17 @@ h1, h2, h3, h4 {
 /* Play Store app (src/lib/android-app.js): `web-only` is hidden inside the app, `app-only` everywhere else. */
 html.in-app .web-only { display: none !important; }
 html:not(.in-app) .app-only { display: none !important; }
+
+/* Animated price (components/PriceTag.js) */
+.bt-price { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: .5rem; }
+.bt-price-now { font-size: 2.25rem; font-weight: 800; letter-spacing: -.02em; }
+.bt-price-was { position: relative; color: var(--color-muted, #6b7280); text-decoration: none; }
+.bt-price-was::after { content: ""; position: absolute; left: -2px; right: -2px; top: 52%; height: 2px; background: #ef4444; transform: scaleX(0); transform-origin: left; transition: transform .45s ease .1s; }
+.bt-price.is-done .bt-price-was::after { transform: scaleX(1); }
+.bt-price-save { font-size: .75rem; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: #dcfce7; color: #15803d; opacity: 0; transform: scale(.6); }
+.bt-price.is-done .bt-price-save { animation: bt-save-pop .5s cubic-bezier(.3,1.6,.5,1) forwards, bt-save-glow 2.4s ease-in-out .6s infinite; }
+.bt-price.is-done .bt-price-now { animation: bt-price-bump .4s ease; }
+@keyframes bt-save-pop { to { opacity: 1; transform: scale(1); } }
+@keyframes bt-save-glow { 0%, 100% { box-shadow: 0 0 0 0 rgb(34 197 94 / .45); } 50% { box-shadow: 0 0 0 6px rgb(34 197 94 / 0); } }
+@keyframes bt-price-bump { 50% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .bt-price-save { opacity: 1; transform: none; animation: none !important; } .bt-price-was::after { transition: none; } }
