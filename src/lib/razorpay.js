@@ -52,3 +52,17 @@ export function fullRefundPaymentId(event) {
   const refunded = Number.isInteger(payment.amount_refunded) ? payment.amount_refunded : 0;
   return payment.refund_status === "full" || refunded >= payment.amount ? id : null;
 }
+
+export const fetchPayment = (keys, paymentId) => call(keys, "GET", `/payments/${encodeURIComponent(paymentId)}`);
+export const refundPayment = (keys, paymentId, amount, notes) =>
+  call(keys, "POST", `/payments/${encodeURIComponent(paymentId)}/refund`, { amount, speed: "normal", notes });
+
+// What a Studio refund should do for this Razorpay payment: "refund" the rest, "done" (already fully
+// refunded, just remove access) or an error. Only captured payments can be refunded.
+export function refundPlan(payment) {
+  if (!payment?.id || !Number.isInteger(payment.amount) || payment.amount <= 0) return { error: "Razorpay didn't return this payment." };
+  const refunded = Number.isInteger(payment.amount_refunded) ? payment.amount_refunded : 0;
+  if (payment.refund_status === "full" || refunded >= payment.amount) return { action: "done" };
+  if (payment.status !== "captured" && payment.status !== "refunded") return { error: `This payment is "${payment.status}", not captured, so there is nothing to refund.` };
+  return { action: "refund", amount: payment.amount - refunded };
+}

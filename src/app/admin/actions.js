@@ -5,6 +5,7 @@ import { COURSE_TAG } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { COURSE_ID } from "@/lib/catalog";
 import { VIDEO_HELP, parseVideo } from "@/lib/video";
+import { fetchPayment, razorpayKeys, refundPayment, refundPlan } from "@/lib/razorpay";
 
 // Admin writes. Row-level security rejects every one of these unless the caller is an admin.
 
@@ -146,7 +147,27 @@ export async function addEnrollment(_, fd) {
   return { ok: true, message: statusText[data] ?? "Saved." };
 }
 
+// Website payments (reference = Razorpay payment id): send the full amount back through Razorpay, then
+// remove access. Manual entries (UPI, cash, school): only remove access; the money goes back outside the app.
 export async function revokeEnrollment(reference) {
+  if (typeof reference === "string" && reference.startsWith("pay_")) {
+    const supabase = await createClient();
+    const { data: admin } = await supabase.rpc("is_admin");
+    if (admin !== true) return { ok: false, error: "Only an admin can do this. Sign in with your admin account." };
+    const keys = razorpayKeys();
+    if (!keys) return { ok: false, error: "Razorpay keys are not set, so no refund was made." };
+    const got = await fetchPayment(keys, reference).catch(() => null);
+    if (!got?.ok) return { ok: false, error: "Couldn't reach Razorpay. No refund was made; try again." };
+    const plan = refundPlan(got.data);
+    if (plan.error) return { ok: false, error: plan.error };
+    if (plan.action === "refund") {
+      const r = await refundPayment(keys, reference, plan.amount, { reason: "Refunded from Studio" }).catch(() => null);
+      if (!r?.ok) return { ok: false, error: `Razorpay refused the refund: ${r?.data?.error?.description ?? "no reply"}. Access was not removed.` };
+    }
+    const res = await run((s) => s.rpc("admin_revoke_purchase", { p_reference: reference }));
+    if (!res.ok) return { ...res, error: `Money was refunded, but removing access failed: ${res.error}` };
+    return { ok: true, message: plan.action === "refund" ? `Refunded ₹${(plan.amount / 100).toLocaleString("en-IN")} and removed access.` : "Already refunded in Razorpay. Access removed." };
+  }
   return run((s) => s.rpc("admin_revoke_purchase", { p_reference: reference }));
 }
 

@@ -24,3 +24,16 @@ test("body limit refuses big requests", async () => {
   assert.equal(await readLimited(req("x".repeat(20)), 10), null);
   assert.equal(await readLimited(req("hello"), 10), "hello");
 });
+
+import { refundPlan } from "../src/lib/razorpay.js";
+
+test("refund plan: refunds what is left of a captured payment", () => {
+  assert.deepEqual(refundPlan({ id: "pay_1", status: "captured", amount: 49900, amount_refunded: 0 }), { action: "refund", amount: 49900 });
+  assert.deepEqual(refundPlan({ id: "pay_1", status: "refunded", amount: 49900, amount_refunded: 10000 }), { action: "refund", amount: 39900 });
+});
+
+test("refund plan: already full refund just removes access; uncaptured or missing is an error", () => {
+  assert.deepEqual(refundPlan({ id: "pay_1", status: "refunded", amount: 100, amount_refunded: 100, refund_status: "full" }), { action: "done" });
+  assert.ok(refundPlan({ id: "pay_1", status: "failed", amount: 100 }).error);
+  assert.ok(refundPlan({}).error);
+});
