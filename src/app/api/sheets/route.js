@@ -7,10 +7,14 @@ import { sheetsKeyValid } from "@/lib/sheets-key";
 //   GET  /api/sheets                          → merges duplicate leads, then { leads: [... with tab], schools: [...], at }
 //   POST /api/sheets { kind: "leads"|"schools", rows: [...] } → [{ row, id, result, error?, duplicate_phone? }]
 export const dynamic = "force-dynamic";
-const deny = () => NextResponse.json({ error: "bad key" }, { status: 401 });
+const deny = (method) => {
+  // Logged so a broken sheet (wrong or old key) shows up in Vercel logs instead of failing silently.
+  console.warn("sheets sync: bad key", method);
+  return NextResponse.json({ error: "bad key" }, { status: 401 });
+};
 
 export async function GET(request) {
-  if (!sheetsKeyValid(request.headers.get("x-sheets-key"))) return deny();
+  if (!sheetsKeyValid(request.headers.get("x-sheets-key"))) return deny("GET");
   const db = createAdminClient();
   // Merge true duplicates (same phone + same/no child name) before every pull; siblings are kept.
   const { error: mergeError } = await db.rpc("sheet_merge_duplicates");
@@ -20,11 +24,12 @@ export async function GET(request) {
     console.error("sheet snapshot failed", error.message);
     return NextResponse.json({ error: "temporary failure" }, { status: 500 });
   }
+  console.info("sheets sync: pull ok", { leads: data?.leads?.length ?? 0, schools: data?.schools?.length ?? 0 });
   return NextResponse.json(data, { headers: { "cache-control": "no-store" } });
 }
 
 export async function POST(request) {
-  if (!sheetsKeyValid(request.headers.get("x-sheets-key"))) return deny();
+  if (!sheetsKeyValid(request.headers.get("x-sheets-key"))) return deny("POST");
   const raw = await request.text();
   if (raw.length > 2_000_000) return NextResponse.json({ error: "too large" }, { status: 413 });
   let body;
@@ -51,5 +56,6 @@ export async function POST(request) {
     console.error("sheet push failed", body.kind, error.message);
     return NextResponse.json({ error: /rows must/.test(error.message) ? error.message : "temporary failure" }, { status: /rows must/.test(error.message) ? 400 : 500 });
   }
+  console.info("sheets sync: push ok", body.kind, body.rows.length);
   return NextResponse.json(data);
 }

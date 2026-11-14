@@ -36,6 +36,7 @@ function onOpen() {
   SpreadsheetApp.getUi().createMenu('Beyond Tatva sync')
     .addItem('Set up sync', 'setupSync')
     .addItem('Sync now', 'syncAll')
+    .addItem('Check sync (fix triggers)', 'checkSync')
     .addToUi();
 }
 
@@ -207,6 +208,7 @@ function pull() {
   var res = UrlFetchApp.fetch(API, { headers: { 'x-sheets-key': key }, muteHttpExceptions: true });
   if (res.getResponseCode() !== 200) throw new Error('Pull failed (' + res.getResponseCode() + ')');
   var data = JSON.parse(res.getContentText());
+  PropertiesService.getDocumentProperties().setProperty('last_pull', Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM HH:mm'));
   if (ts[0].kind === 'schools') { if (data && Array.isArray(data.schools)) pullSchools_(ts[0], data.schools); return; }
   if (!data || !Array.isArray(data.leads)) return;
 
@@ -317,6 +319,27 @@ function pullSchools_(t, schools) {
     t.sheet.insertRowsAfter(last, adds.length);              // keep any totals rows below the table
     t.sheet.getRange(last + 1, 1, adds.length, width).setValues(adds);
   }
+}
+
+// Shows why sync isn't running and repairs the 5-minute trigger. Google silently disables a trigger
+// after repeated failures or when the script's permissions change; this puts it back.
+function checkSync() {
+  var ui = SpreadsheetApp.getUi(), msgs = [];
+  var key = PropertiesService.getScriptProperties().getProperty('KEY');
+  if (!key) return ui.alert('No sync key saved. Run "Set up sync" first.');
+  var res = UrlFetchApp.fetch(API, { headers: { 'x-sheets-key': key }, muteHttpExceptions: true });
+  var code = res.getResponseCode();
+  msgs.push(code === 200 ? '✅ LMS answers and the key is right.' : code === 401 ? '❌ The LMS rejected the key. Run "Set up sync" and paste the current SHEETS_SYNC_SECRET.' : '❌ LMS error ' + code + '. Try again in a minute.');
+  var triggers = ScriptApp.getProjectTriggers(), hasPull = triggers.some(function (t) { return t.getHandlerFunction() === 'pull'; }),
+      hasEdit = triggers.some(function (t) { return t.getHandlerFunction() === 'onEditSync'; });
+  if (!hasPull) ScriptApp.newTrigger('pull').timeBased().everyMinutes(5).create();
+  if (!hasEdit) ScriptApp.newTrigger('onEditSync').forSpreadsheet(SpreadsheetApp.getActive()).onEdit().create();
+  msgs.push(hasPull && hasEdit ? '✅ Both triggers are on.' : '🔧 Missing trigger(s) re-created: ' + [hasPull ? '' : '5-min pull', hasEdit ? '' : 'on-edit push'].filter(String).join(', '));
+  if (!tables_().length) msgs.push('❌ No tab here has the expected header ("Parent WhatsApp", or "School" + "Calls").');
+  var last = PropertiesService.getDocumentProperties().getProperty('last_pull');
+  msgs.push('Last successful pull: ' + (last || 'never recorded'));
+  if (code === 200) { try { pull(); msgs.push('✅ Pulled just now.'); } catch (err) { msgs.push('❌ Pull failed: ' + err.message); } }
+  ui.alert('Sync check', msgs.join('\n'), ui.ButtonSet.OK);
 }
 
 function syncAll() {

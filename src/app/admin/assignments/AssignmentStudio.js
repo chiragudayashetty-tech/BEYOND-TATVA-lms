@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
 import { ChevronDown, ClipboardCheck, ExternalLink, FileText, Plus, RotateCcw, Trash2 } from "lucide-react";
 import FormStatus from "@/components/FormStatus";
@@ -51,7 +52,7 @@ function ReviewCard({ s, assignment }) {
     <li className="space-y-3 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <div className="font-semibold">{s.student}</div>
+          <Link href={`/admin/analytics/students/${s.student_id}`} className="font-semibold hover:text-primary hover:underline">{s.student}</Link>
           <div className="text-xs text-muted">{assignment?.title ?? "Assignment"} · handed in {when(s.updated_at)}</div>
         </div>
         <Badge tone={{ submitted: "warning", graded: "success", returned: "neutral" }[s.status]}>

@@ -84,7 +84,7 @@ export default async function QuizResultsPage({ params }) {
                 <details className="group">
                   <summary className="flex min-h-14 cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
                     <span className="min-w-0 flex-1 basis-40">
-                      <span className="block truncate font-semibold">{s.name}</span>
+                      <Link href={`/admin/analytics/students/${s.id}`} className="block truncate font-semibold hover:text-primary hover:underline">{s.name}</Link>
                       <span className="text-xs text-muted">{s.grade ? `Grade ${s.grade} · ` : ""}{s.tries.map((t, k) => `Try ${k + 1}: ${t.score}/${t.total}`).join(" · ")}</span>
                     </span>
                     <span className="text-sm text-muted">Average {Math.round(s.avg * 10) / 10}/{s.tries[0].total}</span>

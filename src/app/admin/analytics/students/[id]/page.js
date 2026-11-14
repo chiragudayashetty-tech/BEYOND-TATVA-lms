@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle, Progress, StatCard } from "@/components/ui";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, requireRole } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata = { title: "Student activity · Analytics · Beyond Tatva" };
 
@@ -12,7 +13,9 @@ const weights = ["Lessons · 35", "Quizzes · 25", "Checkpoints · 10", "Assignm
 
 export default async function StudentActivityPage({ params }) {
   const { id } = await params;
+  await requireRole(["admin"]);
   const supabase = await createClient();
+  const details = await studentDetails(supabase, id);
   const [{ data, error }, { data: duplicateGroups }] = await Promise.all([
     supabase.rpc("admin_student_activity", { p_student_id: id }),
     supabase.rpc("admin_duplicate_candidates"),
@@ -52,6 +55,11 @@ export default async function StudentActivityPage({ params }) {
       <StatCard label="Resources opened" value={`${summary.resources_opened}/${summary.resources_total}`} hint={`${summary.resource_downloads} downloads`} />
       <StatCard label="Last active" value={summary.last_active ? date(summary.last_active) : <span title="No tracked learning activity yet">–</span>} hint={`${summary.active_days_30} active days in 30d`} />
     </div>
+    <Card title="All details" className="mb-5">
+      <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
+        {details.map(([k, v]) => <div key={k} className="min-w-0"><dt className="text-xs text-muted">{k}</dt><dd className="break-words font-medium">{v || "–"}</dd></div>)}
+      </dl>
+    </Card>
     <div className="grid gap-5 xl:grid-cols-2">
       <Card title="Learning score breakdown" action={<details className="relative text-xs text-muted"><summary className="min-h-11 cursor-pointer list-none py-3">How the score works ⓘ</summary><div className="absolute right-0 z-10 mt-1 w-72 rounded-xl border border-border bg-surface p-3 shadow-lg"><p>Each part is capped at its points:</p><ul className="mt-2 list-disc space-y-1 pl-4"><li>Lessons completed: 35</li><li>Quiz scores: 25 (average of the student&apos;s tries, 2 per quiz)</li><li>Checkpoints: 10</li><li>Assignments submitted: 10</li><li>PDFs and resources opened: 5</li><li>Active days in the last 30: 15 (full at 10 days)</li></ul></div></details>}>
         <div className="space-y-4">{weights.map((label, index) => {
@@ -83,4 +91,26 @@ export default async function StudentActivityPage({ params }) {
       </Card>
     </div>
   </Shell>;
+}
+
+// Everything collected about a student, for Studio only (admin checked above). Email comes from the auth account.
+async function studentDetails(supabase, id) {
+  const [{ data: p }, { data: access }, { data: purchases }, auth] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
+    supabase.from("course_access").select("source, reference, granted_at").eq("student_id", id),
+    supabase.from("purchases").select("reference, amount_paise, status, created_at").eq("claimed_by", id),
+    createAdminClient().auth.admin.getUserById(id).catch(() => ({ data: null })),
+  ]);
+  const u = auth?.data?.user;
+  const when = (v) => v ? new Date(v).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }) : null;
+  return [
+    ["Full name", p?.full_name], ["Login email", u?.email], ["Login phone", u?.phone && `+${u.phone}`],
+    ["Signs in with", u?.app_metadata?.providers?.join(", ")], ["Last sign-in", when(u?.last_sign_in_at)],
+    ["Grade", p?.grade], ["School", p?.school_name], ["Parent WhatsApp", p?.guardian_phone], ["Student phone", p?.student_phone],
+    ["Account set up by", p?.signed_up_by], ["Parent consent", when(p?.guardian_consent_at) && `${when(p.guardian_consent_at)}${p.consent_by ? ` (by ${p.consent_by})` : ""}`],
+    ["Came from", [p?.signup_source, p?.signup_utm?.utm_source, p?.signup_utm?.utm_campaign].filter(Boolean).join(" · ")],
+    ["Course access", (access ?? []).map((a) => `${a.source}${a.reference ? ` (${a.reference})` : ""} · ${when(a.granted_at)}`).join("; ")],
+    ["Payments", (purchases ?? []).map((e) => `₹${(e.amount_paise ?? 0) / 100} · ${e.status} · ${when(e.created_at)}`).join("; ")],
+    ["Leaderboard", p?.leaderboard_hidden ? "Hidden" : "Shown"], ["Account created", when(p?.created_at ?? u?.created_at)],
+  ];
 }
