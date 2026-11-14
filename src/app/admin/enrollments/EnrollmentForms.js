@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { Plus, Undo2, UserCheck } from "lucide-react";
 import FormStatus from "@/components/FormStatus";
 import { addEnrollment, approveSuggestion, assignEnrollment, revokeEnrollment } from "../actions";
@@ -23,11 +23,24 @@ export function AddEnrollment() {
   );
 }
 
-export function RevokeButton({ reference }) {
+export function RevokeButton({ reference, amountPaise }) {
   const [pending, start] = useTransition();
+  const [state, setState] = useState(null);
+  const online = typeof reference === "string" && reference.startsWith("pay_");
+  const rupees = amountPaise != null ? `₹${(amountPaise / 100).toLocaleString("en-IN")}` : "the full amount";
+  const ask = () => {
+    if (online) {
+      if (prompt(`This sends ${rupees} back to the parent through Razorpay and removes the course. It can't be undone.\n\nType REFUND to confirm.`)?.trim() !== "REFUND") return;
+    } else if (!confirm("Remove access? Return the money yourself first (UPI/cash). This removes the course from the student's account.")) return;
+    start(async () => setState(await revokeEnrollment(reference)));
+  };
   return (
-    <button disabled={pending} onClick={() => confirm("Refunded? This removes the course from the student's account.") && start(() => revokeEnrollment(reference))}
-      className="btn-ghost px-2 py-1 text-xs text-danger"><Undo2 className="h-3.5 w-3.5" /> {pending ? "Revoking…" : "Refunded"}</button>
+    <div className="flex flex-col items-end gap-1">
+      <button disabled={pending} onClick={ask} className="btn-ghost px-2 py-1 text-xs text-danger">
+        <Undo2 className="h-3.5 w-3.5" /> {pending ? (online ? "Refunding…" : "Removing…") : online ? `Refund ${rupees}` : "Remove access"}
+      </button>
+      <FormStatus state={state} />
+    </div>
   );
 }
 

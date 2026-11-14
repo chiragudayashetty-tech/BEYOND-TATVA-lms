@@ -57,7 +57,7 @@ export default async function EnrollmentsPage({ searchParams }) {
                     <Badge tone={tone[r.status]}>{label[r.status]}</Badge>
                     {r.status === "pending" && r.suggested_student && name[r.suggested_student] && <ApproveButton purchaseId={r.id} studentName={name[r.suggested_student]} />}
                     {r.status === "pending" && <AssignForm purchaseId={r.id} students={students ?? []} />}
-                    {r.status !== "revoked" && <RevokeButton reference={r.reference} />}
+                    {r.status !== "revoked" && <RevokeButton reference={r.reference} amountPaise={r.amount_paise} />}
                   </div>
                 </li>
               ))}
