@@ -480,6 +480,12 @@ set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeee
 do $$ begin perform public.student_xp(auth.uid()); raise exception 'K2 FAIL';
 exception when others then if sqlerrm like 'K2%' then raise; end if; raise notice 'K2 pass: XP helper is internal'; end $$;
 select 'K3 dashboard XP matches the shared XP' t, (public.my_learning_stats() ->> 'xp')::int >= 10 as pass;
+select 'K3b new students start off the leaderboard' t, (public.xp_leaderboard() -> 'me' ->> 'hidden')::boolean as pass;
+do $$ begin perform public.set_leaderboard_hidden(false); raise exception 'K3c FAIL';
+exception when others then if sqlerrm like 'K3c%' then raise; end if; raise notice 'K3c pass: joining needs a parent: %', sqlerrm; end $$;
+reset role; update public.profiles set parent_verified_at = now() where id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+select public.set_leaderboard_hidden(false);
 select 'K4 leaderboard: top list, my rank, short names only' t,
   jsonb_array_length(b -> 'top') between 1 and 10 and (b -> 'me' ->> 'rank')::int >= 1
   and not exists (select 1 from jsonb_array_elements(b -> 'top') e where e ->> 'name' ~ ' [A-Za-z]{2,}') as pass
@@ -939,3 +945,73 @@ set role anon;
 do $$ begin perform public.register_workshop('test-ws', 'Kid', 9, 'Parent', '9845099999', true); raise exception 'U4x FAIL';
 exception when insufficient_privilege then raise notice 'U4 pass: workshop sign-up closed'; end $$;
 reset role;
+
+-- ── Security hardening (2026-11-14) ─────────────────────────────────────────
+-- A fresh student with no course access, a parent number on file and a signup tick.
+insert into auth.users (id, email) values ('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', 'fresh@x.in');
+insert into public.profiles (id, role, full_name, grade, guardian_name, guardian_phone, guardian_consent_at, consent_by)
+values ('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', 'student', 'Fresh Kid', 9, 'Parent', '919845077777', now(), 'student');
+select 'X1 signup tick is recorded with wording version and hash' t,
+  count(*) = 1 and bool_and(r.version = 'student-signup-v1' and r.body_sha256 = t.body_sha256 and length(r.body_sha256) = 64 and r.method = 'student_tick')
+  as pass from public.consent_records r join public.consent_texts t using (version) where r.student_id = 'f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0';
+do $$ begin update public.consent_texts set body = 'changed' where version = 'student-signup-v1'; raise exception 'X2 FAIL';
+exception when others then if sqlerrm like 'X2%' then raise; end if; raise notice 'X2 pass: consent wording cannot be edited in place'; end $$;
+
+-- Admin needs a two-step login.
+set role authenticated;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select set_config('request.jwt.claim.aal', 'aal1', false);
+select 'X3 admin with password only is not admin' t, not public.is_admin() as pass;
+select 'X4 and sees no student data' t, count(*) = 0 as pass from public.consent_records;
+select set_config('request.jwt.claim.aal', 'aal2', false);
+select 'X5 admin after two-step login is admin' t, public.is_admin() as pass;
+select 'X6 admin reads consent records' t, count(*) >= 1 as pass from public.consent_records;
+
+-- One student can't see another student's rows in the tables that had no cross-student test.
+select pg_temp.as_user('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0');
+select 'X7 no other student''s guardians, sessions or purchases' t,
+  (select count(*) from public.guardians) = 0 and (select count(*) from public.activity_sessions where user_id <> auth.uid()) = 0
+  and (select count(*) from public.purchases) = 0 as pass;
+select 'X8 no paid video links without access' t, count(*) = 0 as pass
+  from public.lesson_media m join public.lessons l on l.id = m.lesson_id join public.chapters c on c.id = l.chapter_id where not c.is_free;
+select 'X9 only own consent records' t, count(*) = 1 and bool_and(student_id = auth.uid()) as pass from public.consent_records;
+select 'X10 new student starts off the leaderboard' t, hidden as pass from (select leaderboard_hidden hidden from public.profiles where id = auth.uid()) x;
+
+-- Parent confirmation by WhatsApp code.
+do $$ begin perform public.parent_consent_issue(auth.uid(), repeat('a', 64)); raise exception 'X11 FAIL';
+exception when insufficient_privilege then raise notice 'X11 pass: students cannot issue codes'; end $$;
+select 'X12 codes table is unreadable' t, count(*) = 0 as pass from public.parent_consent_codes;
+select 'X13 no code yet' t, public.parent_consent_verify('123456') = 'no_code' as pass;
+reset role;
+select 'X14 server issues a code to the parent number on file' t,
+  r ->> 'status' = 'ok' and r ->> 'phone' = '919845077777' as pass
+  from (select public.parent_consent_issue('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', encode(sha256(convert_to('482913', 'UTF8')), 'hex')) r) x;
+select 'X15 second send within a minute waits' t,
+  public.parent_consent_issue('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', repeat('b', 64)) ->> 'status' = 'cooldown' as pass;
+set role authenticated; select pg_temp.as_user('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0');
+select 'X16 wrong code' t, public.parent_consent_verify('000000') = 'wrong' as pass;
+select 'X17 right code confirms the parent' t, public.parent_consent_verify('482913') = 'verified' as pass;
+select 'X18 parent confirmation recorded' t, count(*) = 1 as pass from public.consent_records where method = 'parent_whatsapp_otp' and version = 'parent-confirm-v1';
+select public.set_leaderboard_hidden(false);
+select 'X19 confirmed student may join the leaderboard' t, not leaderboard_hidden as pass from public.profiles where id = auth.uid();
+reset role;
+insert into public.parent_consent_codes (student_id, phone, code_sha256, expires_at, attempts)
+values ('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', '919845077777', repeat('c', 64), now() + interval '5 minutes', 5)
+on conflict (student_id) do update set attempts = 5;
+set role authenticated; select pg_temp.as_user('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0');
+select 'X20 five wrong tries locks the code' t, public.parent_consent_verify('482913') = 'too_many' as pass;
+reset role;
+
+-- Public workshop signup limits (signup is closed above; reopen it for this test only).
+update public.workshops set starts_at = now() + interval '7 days', seats = 100 where slug = 'udupi-ai-day';
+grant execute on function public.register_workshop(text, text, int, text, text, boolean) to anon;
+set role anon;
+select set_config('request.headers', '{"x-forwarded-for": "203.0.113.9, 10.0.0.1"}', false);
+select public.register_workshop('udupi-ai-day', 'Kid' || i, 9, 'Parent', '98450' || lpad(i::text, 5, '1'), true) from generate_series(1, 8) i;
+do $$ begin perform public.register_workshop('udupi-ai-day', 'Kid9', 9, 'Parent', '9845099990', true); raise exception 'X21 FAIL';
+exception when others then if sqlerrm like 'X21%' then raise; end if; raise notice 'X21 pass: %', sqlerrm; end $$;
+select set_config('request.headers', '{"x-forwarded-for": "198.51.100.7"}', false);
+select 'X22 another connection can still sign up' t, public.register_workshop('udupi-ai-day', 'Kid10', 9, 'Parent', '9845099991', true) = 'registered' as pass;
+reset role;
+revoke execute on function public.register_workshop(text, text, int, text, text, boolean) from anon;
+select 'X23 IP is stored for public signups' t, count(*) = 8 as pass from public.workshop_registrations where registered_ip = '203.0.113.9';

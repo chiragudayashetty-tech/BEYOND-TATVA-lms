@@ -38,3 +38,17 @@ test("a lesson saved on the device plays in our own player and tracks progress",
   assert.deepEqual(v, { kind: "file", src: "blob:https://learn.beyondtatva.in/1b2c" });
   assert.equal(tracksProgress(v), true);
 });
+
+test("signBunnyEmbed signs per view and drops any pasted token", async () => {
+  const { signBunnyEmbed } = await import("../src/lib/bunny.js");
+  const { createHash } = await import("node:crypto");
+  const id = "0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b";
+  const raw = `https://iframe.mediadelivery.net/play/12345/${id}?token=old&expires=1`;
+  assert.equal(signBunnyEmbed(raw, { key: "" }), raw, "no key: unchanged");
+  const now = 1_800_000_000_000;
+  const url = new URL(signBunnyEmbed(raw, { key: "k", now, ttlSeconds: 100 }));
+  assert.equal(url.pathname, `/embed/12345/${id}`);
+  assert.equal(url.searchParams.get("expires"), String(1_800_000_100));
+  assert.equal(url.searchParams.get("token"), createHash("sha256").update("k" + id + "1800000100").digest("hex"));
+  assert.equal(signBunnyEmbed("https://youtu.be/abcdefghijk", { key: "k" }), "https://youtu.be/abcdefghijk");
+});

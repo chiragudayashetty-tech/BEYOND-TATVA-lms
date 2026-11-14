@@ -49,6 +49,15 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Tests | `npm test`, `npm run test:db`, `npm run test:e2e` (Playwright smoke; 2 checks parked as TODO). |
 | Pipeline | Studio → Pipeline: one row per person, stages 1–5 (lead → bought), "stopped >24h" filter, CSV export, Parents / School enquiries tabs. Leads matched to students by parent phone; `?src=`/UTM saved at sign-up. |
 
+## Security hardening (2026-11-14, branch claude/optimistic-keller-or7qxv, migration 20261114000001 NOT applied)
+- Admin MFA: `is_admin()` needs an `aal2` login; Studio pages send admins to `/mfa` (authenticator app).
+- Workshop signup limits: 3 per parent phone per day, 8 per IP per hour (trigger on workshop_registrations).
+- Consent: `consent_texts` (versioned wording + hash, never edited in place), `consent_records` (who, method, version).
+- Parent confirmation: `/api/parent-consent` sends a WhatsApp code to the guardian number on file; Profile card.
+- Leaderboard off by default; joining needs parent confirmation.
+- Signed Bunny streaming links per view (`BUNNY_EMBED_TOKEN_KEY`).
+- Order: Chirag enrols MFA at /mfa right after deploy, then "apply", then Bunny key + switch on.
+
 ## Decisions (don't reopen without Chirag)
 - **Website and LMS are completely separate.** The website (www.beyondtatva.in) is the front door for
   everyone: marketing, posts, selling, enrolling. The LMS (learn.beyondtatva.in) is only for

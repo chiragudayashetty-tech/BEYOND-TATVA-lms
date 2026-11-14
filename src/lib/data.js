@@ -4,6 +4,7 @@ import { createClient as createAnonClient } from "@supabase/supabase-js";
 import { createClient, getSession } from "./supabase/server";
 import { SUPABASE_KEY, SUPABASE_URL } from "./supabase/config";
 import { COURSE_ID, buildCourse } from "./catalog";
+import { signBunnyEmbed } from "./bunny";
 
 const CATALOG = {
   course: "id, title, tagline, description, grade, hero_url, price_inr, list_price_inr, batch1_start",
@@ -59,7 +60,8 @@ export const getCourse = cache(async (courseId = COURSE_ID) => {
 export async function getLessonVideo(lessonId) {
   const supabase = await createClient();
   const { data } = await supabase.from("lesson_media").select("video_url").eq("lesson_id", lessonId).maybeSingle();
-  return data?.video_url ?? null;
+  // Bunny links are signed per view (BUNNY_EMBED_TOKEN_KEY); unchanged when the key isn't set.
+  return data?.video_url ? signBunnyEmbed(data.video_url, { key: process.env.BUNNY_EMBED_TOKEN_KEY }) : null;
 }
 
 // Dashboard stats from my_learning_stats() (migration 10): XP with breakdown, lessons, quizzes, assignments, quick checks.

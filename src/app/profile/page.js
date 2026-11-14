@@ -8,6 +8,8 @@ import { Avatar, Badge, Card, PageTitle } from "@/components/ui";
 import { getSession } from "@/lib/supabase/server";
 import ProfileEditor from "./ProfileEditor";
 import LeaderboardSwitch from "./LeaderboardSwitch";
+import ParentConfirm from "./ParentConfirm";
+import { createClient } from "@/lib/supabase/server";
 import { getLeaderboard } from "@/lib/data";
 
 export const metadata = { title: "Profile · Beyond Tatva" };
@@ -33,6 +35,16 @@ export default async function ProfilePage() {
   const { user, profile } = await getSession();
   const student = profile?.role === "student";
   const board = student ? await getLeaderboard() : null;
+  // Parent confirmation (migration 20261114000001). Read separately so the page still works before it is applied.
+  let parent = null;
+  if (student && user.id !== "preview") {
+    const supabase = await createClient();
+    const [{ data: p, error }, { data: text }] = await Promise.all([
+      supabase.from("profiles").select("parent_verified_at, leaderboard_hidden").eq("id", user.id).maybeSingle(),
+      supabase.from("consent_texts").select("body").eq("purpose", "parent_confirm").eq("active", true).maybeSingle(),
+    ]);
+    if (!error && p) parent = { verified: Boolean(p.parent_verified_at), hidden: p.leaderboard_hidden, wording: text?.body ?? "" };
+  }
   const name = profile.full_name ? ` I'm ${profile.full_name}.` : "";
   const doubts = supportWhatsApp(`Hi Beyond Tatva!${name} I have a doubt in the course: `);
   const helpline = supportWhatsApp(`Hi Beyond Tatva!${name} I need help with my account.`);
@@ -59,6 +71,7 @@ export default async function ProfilePage() {
                   ? <><ShieldCheck className="h-3.5 w-3.5 text-success" /><span className="text-success">Parent consent given</span></>
                   : <span className="text-warning">Parent consent not recorded yet.</span>}
               </div>
+              {parent && <ParentConfirm verified={parent.verified} wording={parent.wording} />}
               <p className="mt-2 text-xs text-muted">This account opens only with {user.email ?? user.phone}. Course updates go to the parent&apos;s WhatsApp (coming soon).</p>
             </div>
           )}
@@ -75,7 +88,7 @@ export default async function ProfilePage() {
           <section className="card divide-y divide-border overflow-hidden">
             <div className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-subtle">Preferences</div>
             <Row icon={Moon} label="Dark mode" hint="Easier on the eyes at night"><ThemeSwitch /></Row>
-            {student && <LeaderboardSwitch hidden={board?.me?.hidden ?? false} />}
+            {student && <LeaderboardSwitch hidden={parent?.hidden ?? board?.me?.hidden ?? true} />}
             <Row icon={Bell} label="Notifications" hint="Class reminders and grades" href="/profile#settings" />
           </section>
           <section className="card divide-y divide-border overflow-hidden">

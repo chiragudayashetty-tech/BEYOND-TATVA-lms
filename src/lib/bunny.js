@@ -25,3 +25,18 @@ export function bunnyMp4Url({ host, videoId, quality, key = "", now = Date.now()
   const token = createHash("sha256").update(key + path + expires).digest("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   return `https://${cleanHost}${path}?token=${token}&expires=${expires}`;
 }
+
+// Bunny Stream embed links (the in-app player). With "Embed view token authentication" on in the Bunny
+// library, a link needs ?token=sha256_hex(key + videoId + expires)&expires=. We sign one fresh link per
+// page view, after the access check, so a copied link stops working after a few hours.
+const EMBED = /^https:\/\/(iframe|player)\.mediadelivery\.net\/(embed|play)\/(\d+)\/([a-f0-9-]{8,64})/i;
+
+export function signBunnyEmbed(videoUrl, { key = "", now = Date.now(), ttlSeconds = 4 * 3600 } = {}) {
+  if (!key || typeof videoUrl !== "string") return videoUrl;
+  const m = videoUrl.trim().match(EMBED);
+  if (!m) return videoUrl;
+  const [, , , library, videoId] = m;
+  const expires = Math.floor(now / 1000) + ttlSeconds;
+  const token = createHash("sha256").update(key + videoId + expires).digest("hex");
+  return `https://iframe.mediadelivery.net/embed/${library}/${videoId}?token=${token}&expires=${expires}`;
+}
