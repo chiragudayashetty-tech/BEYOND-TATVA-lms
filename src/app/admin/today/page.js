@@ -30,7 +30,9 @@ async function loadLeads() {
   }
 }
 
-export default async function TodayPage() {
+export default async function TodayPage({ searchParams }) {
+  const pick = String((await searchParams)?.school ?? "").trim();
+  const sameSchool = (x) => !pick || String(x ?? "").trim().toLowerCase() === pick.toLowerCase();
   if (!isPreview) {
     const { profile } = await requireRole(["admin"]);
     if (profile?.role !== "admin") return null;
@@ -43,13 +45,22 @@ export default async function TodayPage() {
     supabase.from("purchases").select("id", { count: "exact", head: true }).in("status", ["pending", "claimed"]).gte("created_at", weekAgo),
     loadLeads(),
   ]);
-  const schools = schoolsToFollow(schoolRows, today);
-  const leads = leadsToFollow(leadRows, today);
+  const allLeads = leadsToFollow(leadRows, today);
+  const schoolNames = [...new Set([...(schoolRows ?? []).map((s) => s.name), ...allLeads.map((l) => l.school)].filter(Boolean))].sort();
+  const schools = schoolsToFollow(schoolRows, today).filter((s) => sameSchool(s.name));
+  const leads = allLeads.filter((l) => sameSchool(l.school));
   const groups = groupByTab(leads);
 
   return (
     <Shell roles={["admin"]}>
       <PageTitle title="Today" subtitle="Who to contact, and what happened. Every log also shows up in the Google Sheets within 5 minutes." />
+      <form method="get" className="mb-4 flex flex-wrap items-end gap-2" aria-label="Filter by school">
+        <label className="min-w-0 flex-1 basis-56"><span className="label">School</span>
+          <select name="school" defaultValue={pick} className="input"><option value="">All schools</option>{schoolNames.map((x) => <option key={x}>{x}</option>)}</select>
+        </label>
+        <button className="btn-primary min-h-11">Show</button>
+        {pick && <a href="/admin/today" className="btn-secondary min-h-11">All</a>}
+      </form>
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatCard label="Schools due" value={schools.filter((s) => isDueNow(s, today)).length} hint="today or overdue" icon={School} tone="warning" />
         <StatCard label="Leads due" value={leads.filter((l) => isDueNow(l, today)).length} hint="today or overdue" icon={Users} tone="warning" />

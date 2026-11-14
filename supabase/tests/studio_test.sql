@@ -971,3 +971,17 @@ select 'W9 sheet sets both statuses' t, r -> 0 ->> 'result' = 'created' as pass
   from (select public.sheet_upsert_schools('[{"row":2,"name":"After Test School","status":"Workshop done","after_status":"Closed"}]') r) x;
 select 'W10 after-workshop status saved' t, after_status = 'Closed' and status = 'Workshop done' as pass from public.outreach_schools where name = 'After Test School';
 select 'W11 snapshot carries after_status' t, exists (select 1 from jsonb_array_elements(public.sheet_snapshot() -> 'schools') e where e ->> 'after_status' = 'Closed') as pass;
+
+-- CRM filters (20261114000005): siblings stay separate, one outcome rule, section carried.
+insert into public.leads (course_id, reference, phone, student_name, grade, section, school_name, source, status)
+values ('ai-for-students', 'crmw-twin-a', '+919811100001', 'Twin A', 9, 'B', 'Sib School', 'workshop', 'Closed'),
+       ('ai-for-students', 'crmw-twin-b', '+919811100001', 'Twin B', 9, 'B', 'Sib School', 'workshop', 'Enrolled');
+select 'W12 outcome rule' t, public.lead_outcome('Call back', false, false) = 'open' and public.lead_outcome('Not interested', false, false) = 'lost'
+  and public.lead_outcome('Closed', true, false) = 'won' and public.lead_outcome('Call', false, true) = 'dnc' and public.lead_outcome('Enrolled', false, true) = 'won' as pass;
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'W13 siblings are two rows, each names the other' t, count(*) = 2 and bool_and(siblings in ('Twin A', 'Twin B')) as pass
+  from public.admin_pipeline() where phone = '+919811100001';
+select 'W14 section and outcome carried' t, section = 'B' and outcome = 'lost' as pass from public.admin_pipeline() where name = 'Twin A';
+select 'W15 enrolled lead is won' t, outcome = 'won' as pass from public.admin_pipeline() where name = 'Twin B';
+select 'W16 still one row per student' t, count(*) = count(distinct student_id) as pass from public.admin_pipeline() where student_id is not null;
+reset role;

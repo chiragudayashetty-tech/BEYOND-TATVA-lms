@@ -1,4 +1,5 @@
 import { isHot, isOpen } from "./outreach.js";
+import { leadOutcome } from "./crm.js";
 // Studio → Today: who to contact, in what order. Pure helpers (tested in tests/today.test.mjs).
 
 const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" });
@@ -24,10 +25,11 @@ export function schoolsToFollow(schools, today) {
     .sort(byDue(today));
 }
 
-// Not paid, not do-not-contact, and due within a week or still open ("not interested" is closed).
+// Open leads only (src/lib/crm.js: not won = paid/Enrolled, not lost = Closed/Not interested, not do-not-contact),
+// due within a week or with no clear status yet.
 export function leadsToFollow(leads, today) {
   return (leads ?? [])
-    .filter((l) => !l.paid && !l.do_not_contact)
+    .filter((l) => leadOutcome(l.status, l.paid, l.do_not_contact) === "open")
     .filter((l) => {
       const s = String(l.status ?? "").trim();
       return ["overdue", "today", "soon"].includes(due(l.next_date, today)) || !s || (/interested|call/i.test(s) && !/not interested/i.test(s));
@@ -38,7 +40,8 @@ export function leadsToFollow(leads, today) {
 export function groupByTab(leads) {
   const groups = new Map();
   for (const l of leads) {
-    const tab = l.tab || "Manual";
+    // By school (one Leads tab for every school since 2026-11-14); website leads without a school stay "Website".
+    const tab = String(l.school ?? "").trim() || l.tab || "Manual";
     groups.set(tab, [...(groups.get(tab) ?? []), l]);
   }
   // Website first (fresh inbound), then schools by name.
