@@ -41,3 +41,14 @@ export function webhookSignatureValid(raw, signature, secret) {
   const b = Buffer.from(String(signature));
   return a.length === b.length && timingSafeEqual(a, b);
 }
+
+// Webhook refund events (refund.processed / payment.refunded). Returns the payment id to revoke when the
+// payment is now fully refunded, else null. Partial refunds keep access (Chirag decides in Studio).
+export function fullRefundPaymentId(event) {
+  if (event?.event !== "refund.processed" && event?.event !== "payment.refunded") return null;
+  const payment = event.payload?.payment?.entity;
+  const id = payment?.id || event.payload?.refund?.entity?.payment_id;
+  if (!id || !Number.isInteger(payment?.amount) || payment.amount <= 0) return null;
+  const refunded = Number.isInteger(payment.amount_refunded) ? payment.amount_refunded : 0;
+  return payment.refund_status === "full" || refunded >= payment.amount ? id : null;
+}

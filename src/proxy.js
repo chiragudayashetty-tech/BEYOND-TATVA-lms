@@ -3,7 +3,7 @@ import { SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase/config";
 import { NextResponse } from "next/server";
 import { safeNext } from "@/lib/safe-next";
 
-const PUBLIC = ["/", "/login", "/delete-account", "/.well-known/assetlinks.json"];
+const PUBLIC = ["/", "/login", "/delete-account", "/refund-policy", "/.well-known/assetlinks.json"];
 
 // Refreshes the Supabase session cookie and sends logged-out visitors to /login.
 // Also passes the requested path to Server Components (x-pathname) so onboarding can send people back.
