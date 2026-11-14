@@ -64,6 +64,7 @@ export default function UnlockView({ price, hasAccess, preview, pay }) {
         <h2 className="mt-4 text-lg font-semibold">Pay online</h2>
         <p className="mt-1 text-sm text-muted">One payment unlocks modules 1–5, including the ones still to premiere.</p>
         <RazorpayPay price={price} {...pay} />
+        <p className="mt-3 text-xs text-muted">Full refund within 7 days if no more than 1 paid lesson is watched. <Link href="/refund-policy" className="font-medium text-primary">Refund policy</Link></p>
       </section>
 
       <details ref={keyDetails} id="key" className="card scroll-mt-24 p-5 sm:p-6">

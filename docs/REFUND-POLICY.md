@@ -1,14 +1,14 @@
-# Refund policy (DRAFT, needs Chirag's approval before publishing)
+# Refund policy (approved by Chirag 2026-11-14)
 
-Status: draft 2026-11-14. Not shown anywhere yet. Once approved: publish it on the website
-(`/refund-policy`, linked in the footer) and link it under the Pay button on LMS `/unlock`.
-Razorpay also expects a public refund policy page on your website.
+Live page: LMS `/refund-policy` (public, no sign-in), linked under the Pay button on `/unlock`.
+Website footer should link to https://learn.beyondtatva.in/refund-policy (Razorpay expects a public page).
 
-Decisions for Chirag (draft defaults in brackets):
-1. Refund window: [7 days from payment]
-2. Usage limit: [no more than 2 paid lessons watched]
-3. School-paid and access-key enrollments: [refunds go through the school / whoever paid]
-4. Refund time: [5–7 working days, back to the original payment method]
+Decisions (Chirag 2026-11-14):
+1. Refund window: 7 days from payment
+2. Usage limit: no more than 1 paid lesson watched
+3. Requests: WhatsApp only
+4. School-paid and access-key enrollments: refunds go to whoever paid
+5. Refund time: 5–7 working days, back to the original payment method
 
 ---
 
@@ -21,11 +21,11 @@ for your child, you can get your money back.
 
 **You get a full refund if:**
 - you ask within **7 days** of paying, **and**
-- the student has watched **no more than 2 paid lessons**.
+- the student has watched **no more than 1 paid lesson**.
 
 **We can't refund:**
 - requests made more than 7 days after payment
-- accounts where more than 2 paid lessons have been watched
+- accounts where more than 1 paid lesson has been watched
 - accounts closed because the course rules were broken (for example, sharing your login or videos)
 
 If something went wrong on our side (you were charged twice, or the course didn't work on your
@@ -33,7 +33,7 @@ device and we couldn't fix it), we refund in full, whatever the date.
 
 ### How to ask for a refund
 
-Message us on WhatsApp at [support number] or email [support email] with:
+Message us on WhatsApp (button on the page) with:
 - the student's name
 - the email or phone number used to sign in
 - the payment reference from your Razorpay receipt (starts with `pay_`)
