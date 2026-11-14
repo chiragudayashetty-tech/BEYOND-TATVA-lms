@@ -44,7 +44,7 @@ export default function RefundPolicyPage() {
           <h2 className="font-semibold">Paid by a school or with an access key</h2>
           <p className="text-muted">If your school paid, or you used an access key, please ask whoever paid. Refunds go back to them.</p>
         </section>
-        <p className="mt-4 text-center text-sm text-muted"><Link href="/" className="font-medium text-primary">Back to Beyond Tatva</Link></p>
+        <p className="mt-4 text-center text-sm text-muted"><Link href="/" className="inline-flex min-h-11 items-center px-3 font-medium text-primary">Back to Beyond Tatva</Link></p>
       </div>
     </main>
   );

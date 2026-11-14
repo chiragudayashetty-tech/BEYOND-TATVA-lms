@@ -78,7 +78,7 @@ export default function PlannerView({ serverPlan = {}, userId = null }) {
               return (
                 <button key={k} onClick={() => setSelected(d)}
                   className={`planner-day-hit flex flex-col items-center gap-1 rounded-xl py-2.5 text-sm transition ${on ? "bg-primary text-primary-fg" : k === key(today) ? "ring-1 ring-primary" : "hover:bg-surface-2"}`}>
-                  <span className={`text-[11px] uppercase ${on ? "text-primary-fg/80" : "text-subtle"}`}>{d.toLocaleDateString("en-IN", { weekday: "short" })}</span>
+                  <span className={`text-xs uppercase ${on ? "text-primary-fg/80" : "text-subtle"}`}>{d.toLocaleDateString("en-IN", { weekday: "short" })}</span>
                   <span className="font-semibold">{d.getDate()}</span>
                   <span className={`h-1 w-1 rounded-full ${plan[k]?.length ? (on ? "bg-primary-fg" : "bg-primary") : "bg-transparent"}`} />
                 </button>

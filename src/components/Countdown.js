@@ -27,7 +27,7 @@ export default function Countdown({ to, compact = false, onDone }) {
       {[[d, "days"], [h, "hours"], [m, "mins"], [s, "secs"]].map(([v, l]) => (
         <div key={l} className="min-w-14 rounded-xl bg-white/10 px-2 py-2 text-center ring-1 ring-inset ring-white/15">
           <div className="font-display text-2xl font-semibold tabular-nums">{String(v).padStart(2, "0")}</div>
-          <div className="text-[10px] uppercase tracking-wider opacity-70">{l}</div>
+          <div className="text-xs uppercase tracking-wider opacity-80">{l}</div>
         </div>
       ))}
     </div>

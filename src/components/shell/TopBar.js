@@ -38,7 +38,7 @@ export default function TopBar({ name, role, greeting }) {
 
         <form
           onSubmit={(e) => { e.preventDefault(); router.push(`/search?q=${encodeURIComponent(q)}`); }}
-          className="ml-auto hidden w-full max-w-sm items-center gap-2 rounded-xl border border-border bg-surface px-3 md:flex"
+          className="ml-auto hidden w-full max-w-sm items-center gap-2 rounded-xl border border-border bg-surface px-3 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15 md:flex"
         >
           <Search className="h-4 w-4 text-subtle" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search courses, lessons, topics" className="w-full bg-transparent py-2.5 text-sm outline-none placeholder:text-subtle" />

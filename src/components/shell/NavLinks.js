@@ -57,7 +57,7 @@ export function MobileTabs({ items }) {
           const active = isActive(pathname, href);
           return (
             <li key={href}>
-              <Link href={href} className={`relative flex min-h-14 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium ${active ? "text-primary" : "text-subtle"}`}>
+              <Link href={href} className={`relative flex min-h-14 flex-col items-center justify-center gap-1 py-2 text-xs font-medium ${active ? "text-primary" : "text-subtle"}`}>
                 <Icon className="h-5 w-5" strokeWidth={active ? 2.25 : 1.75} />
                 {label}
                 <Pending />

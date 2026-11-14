@@ -39,7 +39,7 @@ export default async function UnlockPage() {
             <AppNoPurchase className="mt-4" />
             {paid ? (
               <div className="mt-4 rounded-xl bg-success-soft p-4 text-sm text-success">
-                <p className="font-semibold">Payment received ✓</p>
+                <p className="font-semibold">Payment received</p>
                 <p className="mt-1">Fill in a few details and your course opens.</p>
                 <a href="/onboarding?next=%2Fcourse" className="btn-primary mt-3 w-full">Continue</a>
               </div>

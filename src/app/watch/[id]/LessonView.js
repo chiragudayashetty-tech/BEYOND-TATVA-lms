@@ -189,7 +189,7 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
             </div>
           </div>
           <div role="status" className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium ${done ? "bg-success-soft text-success" : "bg-surface-2 text-muted"}`}>
-            {done ? <><CircleCheck className="h-4 w-4" /> Completed ✓</> : watchSeconds > 0 ? watchedPct == null ? <span title="The video length is unavailable, so a percentage cannot be calculated.">–</span> : `${watchedPct}% watched` : "Not started"}
+            {done ? <><CircleCheck className="h-4 w-4" /> Completed</> : watchSeconds > 0 ? watchedPct == null ? <span title="The video length is unavailable, so a percentage cannot be calculated.">–</span> : `${watchedPct}% watched` : "Not started"}
           </div>
           {saveError && <p role="alert" className="w-full text-sm text-danger">{saveError}</p>}
         </div>

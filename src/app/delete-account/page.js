@@ -36,7 +36,7 @@ export default function DeleteAccountPage() {
 
           <p className="text-muted">Want only part of your data deleted, or a copy of it? Ask the same way. More details are in our <a href="https://www.beyondtatva.in/privacy" className="font-medium text-primary">privacy policy</a>.</p>
         </section>
-        <p className="mt-4 text-center text-sm text-muted"><Link href="/" className="font-medium text-primary">Back to Beyond Tatva</Link></p>
+        <p className="mt-4 text-center text-sm text-muted"><Link href="/" className="inline-flex min-h-11 items-center px-3 font-medium text-primary">Back to Beyond Tatva</Link></p>
       </div>
     </main>
   );

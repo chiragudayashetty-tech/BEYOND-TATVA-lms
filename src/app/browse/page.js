@@ -121,7 +121,7 @@ export default async function Dashboard() {
 }
 
 function Stat({ ring, title, sub, href }) {
-  const body = <>{ring}<div className="text-xs font-bold leading-tight">{title}</div><div className="text-[11px] leading-tight text-white/75">{sub}</div></>;
+  const body = <>{ring}<div className="text-xs font-bold leading-tight">{title}</div><div className="text-xs leading-tight text-white/85">{sub}</div></>;
   const cls = "flex min-w-0 flex-col items-center gap-1 text-center";
   return href ? <Link href={href} className={cls}>{body}</Link> : <div className={cls}>{body}</div>;
 }
