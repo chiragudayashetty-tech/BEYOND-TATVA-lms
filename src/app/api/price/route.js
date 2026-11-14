@@ -4,8 +4,9 @@ import { SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase/config";
 import { COURSE_ID } from "@/lib/catalog";
 
 // GET /api/price: the course price set in Admin → Content. Public (it's on the website anyway).
-// The website shows it and its Razorpay checkout charges it. Cached for 60 seconds.
-export const revalidate = 60;
+// The website shows it and its Razorpay checkout charges it. Read fresh each time (CDN keeps it 5 s),
+// so a price saved in Admin shows on the website within seconds.
+export const dynamic = "force-dynamic";
 
 const CORS = { "access-control-allow-origin": "*", "access-control-allow-methods": "GET, OPTIONS" };
 
@@ -15,7 +16,7 @@ export async function GET() {
   if (error || !data?.price_inr) return NextResponse.json({ error: "Price unavailable" }, { status: 503, headers: { ...CORS, "cache-control": "no-store" } });
   return NextResponse.json(
     { course: COURSE_ID, price: data.price_inr, list_price: data.list_price_inr ?? null, currency: "INR" },
-    { headers: { ...CORS, "cache-control": "public, s-maxage=60, stale-while-revalidate=300" } },
+    { headers: { ...CORS, "cache-control": "public, max-age=0, s-maxage=5, stale-while-revalidate=5" } },
   );
 }
 
