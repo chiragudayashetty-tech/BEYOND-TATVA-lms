@@ -3,7 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { ArrowRight, CircleCheck, KeyRound, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { createClass, createSchool, deleteStudent, exportStudent, grantAccess, moveAccess, setTeacherRevoked } from "../actions";
+import { createClass, createSchool, deleteStudent, resetStudentPassword, exportStudent, grantAccess, moveAccess, setTeacherRevoked } from "../actions";
 
 function Status({ state }) {
   if (!state) return null;
@@ -109,9 +109,19 @@ export function StudentDataButtons({ studentId, name }) {
       alert(r.ok ? r.message : r.error);
     });
   }
+  // Forgot password: only after the parent messaged from the phone number on file.
+  function newPassword() {
+    if (!confirm(`Make a new temporary password for ${name}? Their old password stops working. Do this only after checking it's really them (message from the parent's number on file).`)) return;
+    start(async () => {
+      const r = await resetStudentPassword(studentId);
+      if (!r.ok) return alert(r.error);
+      prompt(`Send this to the parent. Sign in with ${r.login} and this password, then change it in Profile → Password:`, r.password);
+    });
+  }
   return (
     <div className="flex flex-wrap gap-1">
       <button type="button" disabled={pending} onClick={download} className="btn-ghost px-3 py-1 text-xs">Export</button>
+      <button type="button" disabled={pending} onClick={newPassword} className="btn-ghost px-3 py-1 text-xs">New password</button>
       <button type="button" disabled={pending} onClick={remove} className="btn-ghost px-3 py-1 text-xs text-danger">Delete</button>
     </div>
   );

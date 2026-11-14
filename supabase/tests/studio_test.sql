@@ -948,3 +948,13 @@ reset role;
 
 select 'X21 workshop registration system is gone' t, to_regclass('public.workshops') is null and to_regclass('public.workshop_registrations') is null
   and to_regprocedure('public.register_workshop(text,text,int,text,text,boolean)') is null as pass;
+
+-- Password sign-up limit (20261114000003): 5 per IP per hour, students can't call it or read the log.
+select 'W1 first five sign-ups from one IP pass' t, bool_and(public.password_signup_allowed('1.2.3.4') = 'ok') as pass from generate_series(1, 5);
+select 'W2 sixth in the hour waits' t, public.password_signup_allowed('1.2.3.4') = 'hourly_limit' as pass;
+select 'W3 another IP is unaffected' t, public.password_signup_allowed('5.6.7.8') = 'ok' as pass;
+set role authenticated; select pg_temp.as_user('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0');
+do $$ begin perform public.password_signup_allowed('9.9.9.9'); raise exception 'W4 FAIL';
+exception when insufficient_privilege then raise notice 'W4 pass: students cannot call the sign-up limit'; end $$;
+select 'W5 sign-up log is unreadable' t, count(*) = 0 as pass from public.signup_attempts;
+reset role;

@@ -14,7 +14,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 ## Built and live
 | Area | Notes |
 |---|---|
-| Login | Email link (built-in sender: testing only), Google. Phone hidden until DLT. |
+| Login | (2026-11-14, branch `claude/festive-wright-wtxgmd`) Google; **phone or email + password, no code** (`/api/auth/signup` creates the account, browser signs in with `signInWithPassword`); email code as a fallback. Phone accounts use a hidden login address `91XXXXXXXXXX@phone.beyondtatva.in` + the real phone on the account (`src/lib/login-id.js`; never shown, can never be a Studio admin). Email+password accounts are flagged `password_unverified`: the first Google / email-code / reset-link sign-in replaces that password (anti-squatting, `src/lib/password-accounts.js`). Studio/`@beyondtatva.in` addresses can't sign up with a password. Sign-up limit 5/IP/hour, 20/day (`20261114000003`, **needs "apply"**). Forgot password: email → reset link to Profile → Password; phone → WhatsApp us → Studio → People → **New password** (temporary). Profile → Password sets/changes it for everyone. WhatsApp codes return once Meta verification is done (not DLT: DLT is SMS only). |
 | Onboarding | One login per child: the student or a parent sets up the student account (parent WhatsApp required, child phone optional, consent tick). Teachers: teacher code. No parent accounts or codes. |
 | Course | 1 course, Module 0 free (one fixed date) + paid modules, access via key/payment/admin. |
 | Weekly batches | (2026-11-09) A student's batch = first Sunday 10:00 IST after they got course access; everyone before 15 Nov 2026 is Batch 1. Each paid module has a week (1–5) and opens on that batch Sunday. Batch 1 order: modules 1, 3, 2, 4, 5. Studio → Content shows each module's week and Batch 1 unlock date. |
@@ -91,7 +91,7 @@ cross-student tests for guardians / sessions / purchases / lesson_media.
   enrollments, quizzes, assignments) is already per course; the screens assume one course today.
 
 **Live database (checked 2026-11-09), plus `20261109000001_weekly_batches` (applied 2026-11-09 after "apply 1"):** applied through `20261109000001_weekly_batches`, plus `20261109000002_otp_send_limits` (live as version 20261109141955; don't apply again).
-Plus `20261109000003_upload_limits_close_workshops` (applied 2026-11-09). `20261112000001_quiz_two_tries_xp_rules` applied 2026-11-13 (live under its own version number; do not apply again). Nothing waiting for "apply".
+Plus `20261109000003_upload_limits_close_workshops` (applied 2026-11-09). `20261112000001_quiz_two_tries_xp_rules` applied 2026-11-13 (live under its own version number; do not apply again). Waiting for "apply": `20261114000003_password_signup_limits` (sign-up still works before it is applied, without the limit).
 
 ## Road to launch (2026-11-02, timed on real pace: ~5–6 PRs/hour, migration PR 10–20 min)
 | Phase | What | Who | Time |

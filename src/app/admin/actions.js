@@ -394,3 +394,27 @@ export async function logContact(_, fd) {
   revalidatePath("/admin/today");
   return { ok: true, message: "Saved. The Google Sheet updates within 5 minutes." };
 }
+
+// Forgot password on a phone account (until WhatsApp reset codes): Studio makes a temporary password and
+// reads it out / sends it to the parent. Students only; never another admin or a teacher.
+export async function resetStudentPassword(studentId) {
+  const supabase = await createClient();
+  const { data: isAdmin } = await supabase.rpc("is_admin");
+  if (!isAdmin) return { ok: false, error: "Only an admin can do this. Sign in with your admin account." };
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const { tempPassword } = await import("@/lib/password-accounts");
+  const admin = createAdminClient();
+  const { data: target } = await admin.from("profiles").select("role").eq("id", studentId).maybeSingle();
+  if (target?.role !== "student") return { ok: false, error: "Passwords can be reset here for students only." };
+  const { data: live, error: readError } = await admin.auth.admin.getUserById(studentId);
+  if (readError || !live?.user) return { ok: false, error: "Couldn't find this login." };
+  const password = tempPassword();
+  const { error } = await admin.auth.admin.updateUserById(studentId, {
+    password,
+    app_metadata: { ...live.user.app_metadata, password_unverified: false },
+  });
+  if (error) return { ok: false, error: error.message };
+  const { loginLabel } = await import("@/lib/login-id");
+  console.info("studio password reset", studentId.slice(0, 8));
+  return { ok: true, password, login: loginLabel(live.user) };
+}
