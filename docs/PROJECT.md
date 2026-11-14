@@ -41,6 +41,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Limits (2026-11-09) | Uploads: 10 MB + photo/PDF only (bucket), max **15 files per assignment, 60 per student** (DB rule); files a student removes are deleted on save. WhatsApp login codes: 1/min, 5/hour per phone. Studio Assignments/Enrollments show "Show more" when a list hits its limit. |
 | Load test | `scripts/load-test.mjs`: N test accounts sign in and open dashboard/course/lesson at once, prints p50/p95/p99. Preview only (refuses production). Not run yet. |
 | Removed 2026-11-09 | Workshop sign-up page `/w/<slug>` and Studio's UPI-screenshot card (0 claims ever). |
+| Removed 2026-11-14 | Whole workshop registration system: tables `workshops` + `workshop_registrations`, `get_workshop`, `register_workshop`, `admin_register_leads`, Insights `workshops` block, Analytics "Workshop attendees to follow up" (migration `20261114000002_remove_workshops`). |
 | Next step + phone pass (2026-11-10, on branch `claude/eloquent-carson-kh7eqx`, not merged yet) | One "next step" everywhere (`nextStep()` in `src/lib/catalog.js`): half-watched lesson → next lesson → module quiz → assignment → unlock → wait → certificate. Shown on the dashboard hero, top of the course page and after a lesson ("Lesson complete" + one button). Each open module has one big Start / Continue / Take the quiz button. Dashboard lost its duplicate "Start here" and "Continue watching" cards. Paid students no longer see "Unlock for ₹" on a module that hasn't opened yet. Studio sidebar grouped (Teach / Students and payments / Grow); Studio home links every section (Reconciliation, School keys, Analytics were unreachable on a phone). Tap targets ≥ 44 px and no sideways scroll on Studio home, Content, Teacher. Security headers on every response (`next.config.mjs`): no framing, nosniff, referrer policy, HSTS. Smoke suite: 35 pass; the 2 `/course` failures are only the test sandbox blocking the hero video. |
 | Learning rules (2026-11-12; `20261112000001_quiz_two_tries_xp_rules` applied 2026-11-13) | **XP:** 10 per right quiz answer on the average of the student's tries; 100 per fully watched module; up to 50 per marked assignment (by marks); 10 per right quick check. The per-quiz XP number is no longer used. **2 tries per quiz**; answers show after a pass or the 2nd try. Rules live in one place for screens (`QUIZ_TRIES`, `XP_RULES` in `src/lib/catalog.js`) and in `student_xp` / `submit_quiz` in the database. **Studio → Quizzes → Review results** (`/admin/quizzes/<id>`): every student's tries and picked answers, % right per question, most common mistake, "Give tries back" (`admin_reset_quiz_attempts`). Scorecard quiz part = average of tries (was best try). |
 | Offline downloads (2026-11-13, merged in #140; off until the Bunny steps are done) | "Download for offline" on each open module and lesson; `/downloads` page; saved inside the app, resumable, plays without internet, offline watch time syncs later. **Not live until Chirag does the 4 Bunny/Vercel steps in `docs/OFFLINE-DOWNLOADS.md`** (MP4 fallback, `BUNNY_CDN_HOST`, CORS). No database change. |
@@ -50,7 +51,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Pipeline | Studio → Pipeline: one row per person, stages 1–5 (lead → bought), "stopped >24h" filter, CSV export, Parents / School enquiries tabs. Leads matched to students by parent phone; `?src=`/UTM saved at sign-up. |
 
 ## Security hardening (2026-11-14, migration 20261114000001 not applied yet)
-Live once applied: consent wording versions + consent records, workshop signup limits, leaderboard off by default,
+Live once applied: consent wording versions + consent records, leaderboard off by default, workshop system removed (`20261114000002`),
 cross-student tests for guardians / sessions / purchases / lesson_media.
 
 **Postponed by Chirag, built but switched off (turn on when needed):**
@@ -60,6 +61,15 @@ cross-student tests for guardians / sessions / purchases / lesson_media.
   Until then paid video links can be copied and shared.
 - Parent WhatsApp confirmation: built (`/api/parent-consent`, Profile card hidden until `WHATSAPP_TOKEN` is set).
   When WhatsApp is connected, Claude adds "parent confirmed" as a requirement to join the leaderboard.
+
+## Removed features (don't rebuild without Chirag asking)
+- **Workshop registrations** (removed 2026-11-14). Parents booking a child into a Beyond Tatva workshop via a public
+  link, seats, attendance, attendee follow-up. Gone from database, Studio and analytics.
+  **Still here on purpose, don't remove:** school outreach statuses "Workshop booked" / "Workshop done" (school sales
+  pipeline, Sheets tab creation, Today page), old leads with source `workshop` (shown as "Workshop form (old)"),
+  coupon codes named like WORKSHOP499 (just names). In-school workshops are a *sales activity*, tracked in School
+  outreach and Pipeline, not a product feature.
+- **UPI-screenshot payments card** (removed 2026-11-09).
 
 ## Decisions (don't reopen without Chirag)
 - **Website and LMS are completely separate.** The website (www.beyondtatva.in) is the front door for

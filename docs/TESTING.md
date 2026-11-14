@@ -15,11 +15,10 @@ _Started 2026-11-02. Claude (lead) keeps this file current. Code freeze: only fi
 Supabase security advisor + manual checks of live grants:
 - **No critical or high findings.**
 - Students can update only safe profile columns (name etc.). `role` and `school_id` are **not** writable (column grants checked live). Studio admin needs `role = admin` **and** a confirmed email on the Studio list.
-- Public (not signed in) can call only `get_workshop` and `register_workshop`. Both are intended for `/w/…`.
+- Public (not signed in) can call no database functions (workshop sign-up removed 2026-11-14).
 - Every table has RLS. `studio_admins` has no policies on purpose (edited only in the Supabase dashboard).
 - "Leaked password protection": not relevant (no passwords; email link + Google).
 - Low, accepted: a student can set a rude display name, which other students would see on the leaderboard as a first name. Fix if it happens: Studio → People → edit name; the student can hide/be hidden.
-- Low, accepted: a bot could fill workshop seats with fake numbers (see PR 56). Add Vercel rate limiting if it happens.
 - Performance advisor: one missing index (`data_deletions.deleted_by`, tiny table) and some "multiple policies" notes. Fine at our size; tidy after launch.
 
 ## 3. Real phones (Chirag + 2–3 families): **to do**
@@ -38,20 +37,14 @@ Phones: one cheap Android (Chrome), one iPhone (Safari), and links opened **insi
 9. Profile: dark mode switch, "Show me on the leaderboard" off → you disappear from Top learners.
 10. Install prompt / "Add to home screen" works; reopening keeps you signed in.
 
-**B. Workshop parent (no account)**
-1. Open a test workshop link `/w/<name>` from WhatsApp, not signed in.
-2. Sign up with consent ticked → "You're registered". Again with the same number → "already registered".
-3. Studio → Workshops: the sign-up is there; tap "Check in" on a phone; CSV downloads and opens.
-4. Studio → Pipeline: the parent appears as a lead (source `workshop`).
-
-**C. School (Studio on Chirag's phone and laptop)**
+**B. School (Studio on Chirag's phone and laptop)**
 1. Studio → School keys → Upload class list with a 3-row CSV (one bad phone number first: errors show, nothing saved; fix it: keys created; download CSV).
 2. A test child redeems one key → shows in that class (Studio → People).
 
 ## 4. Studio pass (Chirag, laptop, ~30 min): **to do**
 Every Studio page loads and makes sense with real data: Content, Quizzes, Assignments (mark one), Enrollments,
 School keys, People (export + delete a **test** student), Pipeline (notes, follow-ups due), Analytics + Insights,
-Workshops. Write down anything confusing, not just broken.
+School outreach. Write down anything confusing, not just broken.
 
 ## 5. Backup restore drill (Chirag + Claude, ~15 min): **to do**
 Needs the backup passphrase, which only Chirag has. Steps in `docs/BACKUPS.md` → "Restore drill": download the

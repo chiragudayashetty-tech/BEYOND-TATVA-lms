@@ -409,43 +409,6 @@ do $$ begin perform public.redeem_access_key((select code from b_codes where stu
 exception when others then if sqlerrm like 'B7%' then raise; end if; raise notice 'B7 pass: %', sqlerrm; end $$;
 reset role;
 
--- ── Workshops ────────────────────────────────────────────────────────────────
--- Workshop sign-up is closed since 2026-11-09 (U4); re-open it here only to keep testing the old logic.
-grant execute on function public.get_workshop(text), public.register_workshop(text, text, int, text, text, boolean) to anon, authenticated;
-set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
-insert into public.workshops (slug, title, starts_at, venue, seats, published) values
-  ('udupi-ai-day', 'AI Day', now() + interval '7 days', 'Town Hall', 2, true),
-  ('draft-day', 'Draft', now() + interval '7 days', null, 10, false),
-  ('past-day', 'Past', now() - interval '1 day', null, 10, true);
-reset role;
-set role anon; select pg_temp.as_user('');
-select 'W1 public sees published workshops only' t, count(*) = 2 and bool_and(published) as pass from public.workshops;
-select 'W2 seats left shown, draft hidden' t, (public.get_workshop('udupi-ai-day') ->> 'seats_left')::int = 2 and public.get_workshop('draft-day') is null as pass;
-select 'W3 parent registers without an account' t, public.register_workshop('udupi-ai-day', 'Asha', 9, 'Mum', '98450 44444', true) = 'registered' as pass;
-select 'W4 same phone again is not a second seat' t, public.register_workshop('udupi-ai-day', 'Asha', 9, 'Mum', '+919845044444', true) = 'already' as pass;
-do $$ begin perform public.register_workshop('udupi-ai-day', 'Ravi', 8, 'Dad', '9845055555', false); raise exception 'W5 FAIL';
-exception when others then if sqlerrm like 'W5%' then raise; end if; raise notice 'W5 pass: %', sqlerrm; end $$;
-select 'W6 second family takes the last seat' t, public.register_workshop('udupi-ai-day', 'Ravi', 8, 'Dad', '9845055555', true) = 'registered' as pass;
-do $$ begin perform public.register_workshop('udupi-ai-day', 'Meera', 10, 'Mum', '9845066666', true); raise exception 'W7 FAIL';
-exception when others then if sqlerrm like 'W7%' then raise; end if; raise notice 'W7 pass: %', sqlerrm; end $$;
-do $$ begin perform public.register_workshop('draft-day', 'Meera', 10, 'Mum', '9845066666', true); raise exception 'W8 FAIL';
-exception when others then if sqlerrm like 'W8%' then raise; end if; raise notice 'W8 pass: %', sqlerrm; end $$;
-do $$ begin perform public.register_workshop('past-day', 'Meera', 10, 'Mum', '9845066666', true); raise exception 'W9 FAIL';
-exception when others then if sqlerrm like 'W9%' then raise; end if; raise notice 'W9 pass: %', sqlerrm; end $$;
-select 'W10 public cannot read registrations' t, count(*) = 0 as pass from public.workshop_registrations;
-do $$ begin insert into public.workshop_registrations (workshop_id, student_name, grade, parent_name, parent_phone, consent_at)
-  select id, 'X', 9, 'Y', '+919845077777', now() from public.workshops limit 1; raise exception 'W11 FAIL';
-exception when others then if sqlerrm like 'W11%' then raise; end if; raise notice 'W11 pass: %', sqlerrm; end $$;
-reset role;
-set role authenticated; select pg_temp.as_user('66666666-6666-6666-6666-666666666666');
-select 'W12 students cannot read registrations' t, count(*) = 0 as pass from public.workshop_registrations;
-select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
-select 'W13 admin sees registrations, each linked to a workshop lead' t, count(*) = 2
-  and bool_and(exists (select 1 from public.leads l where l.id = r.lead_id and l.source = 'workshop')) as pass from public.workshop_registrations r;
-update public.workshop_registrations set attended_at = now() where student_name = 'Asha';
-select 'W14 admin marks attendance' t, count(*) = 1 as pass from public.workshop_registrations where attended_at is not null;
-reset role;
-
 -- ── Learning log and dashboard stats ─────────────────────────────────────────
 -- Student eeee watched lesson 0 in the M2 block: 120 s then a jump to the cap a moment later.
 set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
@@ -496,10 +459,9 @@ select public.set_leaderboard_hidden(false);
 do $$ begin perform public.admin_insights(30); raise exception 'K6 FAIL';
 exception when others then if sqlerrm like 'K6%' then raise; end if; raise notice 'K6 pass: %', sqlerrm; end $$;
 select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
-select 'K7 owner insights: engagement, lessons, sources, schools, workshops' t,
+select 'K7 owner insights: engagement, lessons, sources, schools' t,
   (i -> 'engagement' ->> 'students')::int > 0 and jsonb_array_length(i -> 'lessons') > 0
-  and jsonb_typeof(i -> 'sources') = 'array' and jsonb_array_length(i -> 'schools') >= 1
-  and (i -> 'workshops' -> 0 ->> 'registered')::int = 2 and (i -> 'workshops' -> 0 ->> 'attended')::int = 1 as pass
+  and jsonb_typeof(i -> 'sources') = 'array' and jsonb_array_length(i -> 'schools') >= 1 and not (i ? 'workshops') as pass
   from (select public.admin_insights(30) i) x;
 reset role;
 
@@ -599,9 +561,8 @@ select 'F1 list price set' t, list_price_inr = 3000 as pass from public.courses 
 do $$ begin update public.courses set price_inr = 0 where id = 'ai-for-students'; raise exception 'F2 FAIL'; exception when check_violation then raise notice 'F2 pass: price 0 rejected'; end $$;
 do $$ begin update public.courses set list_price_inr = 10 where id = 'ai-for-students'; raise exception 'F3 FAIL'; exception when check_violation then raise notice 'F3 pass: original price below price rejected'; end $$;
 
--- ── Admin lead entry, import, workshop invites ───────────────────────────────
+-- ── Admin lead entry and import ───────────────────────────────
 reset role;
-insert into public.workshops (id, slug, title, starts_at, seats) values ('abababab-abab-abab-abab-abababababab', 'test-ws', 'Test', now() + interval '1 day', 2);
 set role authenticated; select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
 do $$ begin perform public.admin_add_lead('9222222222'); raise exception 'J1 FAIL'; exception when others then if sqlerrm like 'J1%' then raise; end if; raise notice 'J1 pass: %', sqlerrm; end $$;
 select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
@@ -610,10 +571,6 @@ select 'J3 same phone again counts once' t, public.admin_add_lead('9222222222') 
 select 'J4 import saves good rows, reports bad ones' t,
   r -> 'saved' = '2' and jsonb_array_length(r -> 'invalid') = 1 as pass
   from (select public.admin_import_leads('[{"phone":"9333333333","parent_name":"A","student_name":"B","grade":"8"},{"phone":"123"},{"phone":"9444444444"}]', 'fair') r) x;
-do $$ begin perform public.admin_register_leads('abababab-abab-abab-abab-abababababab', array(select id from public.leads), false); raise exception 'J5 FAIL'; exception when others then if sqlerrm like 'J5%' then raise; end if; raise notice 'J5 pass: %', sqlerrm; end $$;
-select 'J6 complete leads registered, incomplete skipped' t,
-  (r ->> 'added')::int = 2 and jsonb_array_length(r -> 'skipped') >= 1 as pass
-  from (select public.admin_register_leads('abababab-abab-abab-abab-abababababab', array(select id from public.leads where phone in ('+919222222222', '+919333333333', '+919444444444')), true) r) x;
 reset role;
 
 -- ── Newsletters ──────────────────────────────────────────────────────────────
@@ -938,11 +895,6 @@ insert into storage.objects (bucket_id, name)
   select 'submissions', 'cc000000-0000-0000-0000-000000000001/a' || g || '/f.jpg' from generate_series(3, 47) g;
 select 'U3 60 files in total: no more anywhere' t,
   not public.submission_upload_allowed('cc000000-0000-0000-0000-000000000001/new/f.jpg') as pass;
-revoke execute on function public.register_workshop(text, text, int, text, text, boolean) from anon, authenticated;
-set role anon;
-do $$ begin perform public.register_workshop('test-ws', 'Kid', 9, 'Parent', '9845099999', true); raise exception 'U4x FAIL';
-exception when insufficient_privilege then raise notice 'U4 pass: workshop sign-up closed'; end $$;
-reset role;
 
 -- ── Security hardening (2026-11-14) ─────────────────────────────────────────
 -- A fresh student with no course access, a parent number on file and a signup tick.
@@ -994,16 +946,5 @@ set role authenticated; select pg_temp.as_user('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0
 select 'X20 five wrong tries locks the code' t, public.parent_consent_verify('482913') = 'too_many' as pass;
 reset role;
 
--- Public workshop signup limits (signup is closed above; reopen it for this test only).
-update public.workshops set starts_at = now() + interval '7 days', seats = 100 where slug = 'udupi-ai-day';
-grant execute on function public.register_workshop(text, text, int, text, text, boolean) to anon;
-set role anon;
-select set_config('request.headers', '{"x-forwarded-for": "203.0.113.9, 10.0.0.1"}', false);
-select public.register_workshop('udupi-ai-day', 'Kid' || i, 9, 'Parent', '98450' || lpad(i::text, 5, '1'), true) from generate_series(1, 8) i;
-do $$ begin perform public.register_workshop('udupi-ai-day', 'Kid9', 9, 'Parent', '9845099990', true); raise exception 'X21 FAIL';
-exception when others then if sqlerrm like 'X21%' then raise; end if; raise notice 'X21 pass: %', sqlerrm; end $$;
-select set_config('request.headers', '{"x-forwarded-for": "198.51.100.7"}', false);
-select 'X22 another connection can still sign up' t, public.register_workshop('udupi-ai-day', 'Kid10', 9, 'Parent', '9845099991', true) = 'registered' as pass;
-reset role;
-revoke execute on function public.register_workshop(text, text, int, text, text, boolean) from anon;
-select 'X23 IP is stored for public signups' t, count(*) = 8 as pass from public.workshop_registrations where registered_ip = '203.0.113.9';
+select 'X21 workshop registration system is gone' t, to_regclass('public.workshops') is null and to_regclass('public.workshop_registrations') is null
+  and to_regprocedure('public.register_workshop(text,text,int,text,text,boolean)') is null as pass;

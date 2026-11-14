@@ -99,7 +99,8 @@ limit before choosing, a clear error for too-big files, and a progress state on 
   `p_rows = [{ name, grade, parent_phone, section? }]` (max 200). Result: `{ ok: false, errors: [{ row, error }] }`
   (nothing saved; show errors per row, row numbers start at 1) or `{ ok: true, keys: [{ name, code, grade, class }] }`
   (offer a CSV download of name, class, code). Parse the CSV in the browser; no new dependency.
-- 8. **Claude: `claude/workshops-db` (tables, RPC, proxy public path), then Codex: `codex/workshops` (public page +
+- ~~8.~~ **Removed 2026-11-14:** the workshop registration system (`workshops`, `workshop_registrations`, `/w/<slug>`, `get_workshop`, `register_workshop`, `admin_register_leads`, insights `workshops` block). Do not rebuild it unless Chirag asks. See `docs/PROJECT.md` → Removed features.
+- 8. (historical) **Claude: `claude/workshops-db` (tables, RPC, proxy public path), then Codex: `codex/workshops` (public page +
   Studio UI only).** Tables: `workshops` (title, starts_at, venue, school_id null, seats, published, slug) and
   `workshop_registrations` (workshop_id, student_name, grade, parent_name, parent_phone normalised, consent_at,
   attended_at, lead_id). RLS: admins manage both; anonymous users may read **published** workshops only (no
