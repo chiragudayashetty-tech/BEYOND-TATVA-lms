@@ -12,6 +12,13 @@ _Agreed design, 2026-11-14. Status: School Outreach part is live; the School Lea
 
 Old sheet **"Workshop Leads v2 … Srvk closed"** is an archive. Its sync is switched off (delete its two triggers).
 
+## Built for 100 schools (set up 2026-11-14)
+- Leads tab: 10,000 rows; every dropdown, colour rule and the filter cover all of them. Options lists: up to 499 each.
+- Parent phone / Student WhatsApp are plain text (no 9.8E+09). Header row and Options column A are protected (warning).
+- Colours: green = paid or Enrolled, grey = Closed / Not interested / Do not contact, yellow date = due.
+- Follow-ups tab skips Closed / Not interested / Enrolled; Summary has Enrolled / Lost / Still open.
+- Over 10,000 students in a year: start a new file for the next academic year (old leads stay in the LMS).
+
 ## Everyday situations
 ### 1. A new school
 - Add it **once**: a new row in the School Outreach sheet (or Studio → School outreach → Add a school).
@@ -48,7 +55,8 @@ Old sheet **"Workshop Leads v2 … Srvk closed"** is an archive. Its sync is swi
 - **Don't rename these** (the LMS reads them by name): School · Student name · Class · Section · Parent phone · Parent name ·
   Student email · Next step · Next date · Paid? · Do not contact · LMS email · Source · ID.
   Renamed by mistake? Cell A1 turns red; rename it back.
-- Column **order** doesn't matter. Moving columns is fine.
+- Add new columns at the **far right** of Leads. Don't insert columns in the middle: the Summary and Follow-ups
+  formulas point at column letters. (The sync itself reads columns by name.)
 
 ### 7. Columns the LMS fills (don't type there)
 - **Paid?**: becomes **Yes** when the student pays on the LMS. Your "Pending" stays until then.
