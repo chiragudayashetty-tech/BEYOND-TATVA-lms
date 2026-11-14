@@ -69,11 +69,12 @@ export function Progress({ value, tone = "primary", className = "h-2" }) {
 export function Ring({ value, size = 140, stroke = 12, tone = "primary", children }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const color = { primary: "var(--primary)", success: "var(--success)", warning: "var(--warning)" }[tone];
+  const color = { primary: "var(--primary)", success: "var(--success)", warning: "var(--warning)", light: "#ffffff", accent: "var(--accent)" }[tone];
+  const track = tone === "light" || tone === "accent" ? "rgba(255,255,255,0.25)" : "var(--surface-2)";
   return (
     <div className="relative grid place-items-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-2)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
           strokeDasharray={c} strokeDashoffset={c * (1 - value / 100)} />
       </svg>

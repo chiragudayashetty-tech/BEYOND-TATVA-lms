@@ -57,6 +57,14 @@ export default async function Dashboard() {
           <p className="rounded-2xl rounded-bl-sm bg-surface px-4 py-2.5 text-sm font-semibold text-fg">{tip}</p>
         </div>
         <h1 className="text-2xl font-semibold sm:text-3xl">Hi {firstName}!</h1>
+        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-white/10 p-3">
+          <Stat ring={<Ring value={course.progress} size={56} stroke={6} tone="light"><span className="text-xs font-bold">{course.progress}%</span></Ring>} title="Course" sub={`${done}/${course.lessonCount} lessons`} />
+          {stats ? <Stat ring={<span className="grid h-14 w-14 place-items-center rounded-full bg-warning text-sm font-bold text-[#1e1b3a]">{stats.xp}</span>} title="XP" sub={board?.me ? `Rank #${board.me.rank} of ${board.players}` : "Earn XP to rank"} href="/leaderboard" />
+            : <Stat ring={<span className="grid h-14 w-14 place-items-center rounded-full bg-white/20 text-sm font-bold">0</span>} title="XP" sub="Earn XP to rank" />}
+          {stats?.checks_answered > 0
+            ? <Stat ring={<Ring value={stats.checks_correct / stats.checks_answered * 100} size={56} stroke={6} tone="accent"><span className="text-xs font-bold">{Math.round(stats.checks_correct / stats.checks_answered * 100)}%</span></Ring>} title="Quick checks" sub={`${stats.checks_correct}/${stats.checks_answered} right`} />
+            : <Stat ring={<span className="grid h-14 w-14 place-items-center rounded-full bg-white/20 text-xs font-bold">–</span>} title="Quick checks" sub="None yet" />}
+        </div>
         {go && <div>
           <p className="mb-2 text-sm text-white/85">{step.lesson ? `${go.hint} · ${go.title}` : go.hint}</p>
           <Link href={go.href} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[15px] font-bold text-[#3b2fc0] sm:inline-flex">
@@ -64,12 +72,6 @@ export default async function Dashboard() {
           </Link>
         </div>}
       </section>
-
-      <div className="mb-4 grid grid-cols-1 gap-3 min-[360px]:grid-cols-3 lg:mb-6">
-        <Tile tone="primary-soft"><Ring value={course.progress} size={64} stroke={7}><span className="text-sm font-semibold">{course.progress}%</span></Ring><TileText title="Course" sub={`${done} of ${course.lessonCount} lessons`} /></Tile>
-        {stats && <Tile tone="warning-soft"><span className="grid h-16 w-16 place-items-center rounded-full bg-warning text-base font-bold text-[#1e1b3a]">{stats.xp}</span><TileText title="XP" sub={board?.me ? `Rank #${board.me.rank} of ${board.players}` : "Earn XP to rank"} /></Tile>}
-        {stats?.checks_answered > 0 && <Tile tone="success-soft"><Ring value={stats.checks_correct / stats.checks_answered * 100} size={64} stroke={7} tone="success"><span className="text-sm font-semibold">{Math.round(stats.checks_correct / stats.checks_answered * 100)}%</span></Ring><TileText title="Quick checks" sub={`${stats.checks_correct} of ${stats.checks_answered} right`} /></Tile>}
-      </div>
 
       <div className="grid gap-4 lg:gap-6 xl:grid-cols-[1.4fr_1fr]">
         {current && <ContinueHero course={course} module={current} />}
@@ -80,7 +82,7 @@ export default async function Dashboard() {
 
       {(board || stats) && <section className="mt-6 grid gap-4 lg:gap-6 xl:grid-cols-2">
         {board && <div className="card rounded-3xl p-5">
-          <div className="mb-4 flex items-baseline justify-between gap-3"><h2 className="text-lg font-semibold">Top learners</h2><span className="text-xs text-muted">{board.players} learners</span></div>
+          <Link href="/leaderboard" className="mb-4 flex min-h-11 items-baseline justify-between gap-3"><h2 className="text-lg font-semibold">Top learners</h2><span className="text-sm font-medium text-primary">See all {board.players} →</span></Link>
           {podium.length > 0 ? <ol className="grid grid-cols-3 items-end gap-2 text-center" aria-label="Top 3">
             {podium.map((p) => <li key={p.rank} className={p.order}>
               {p.rank === 1 && <Crown className="mx-auto mb-1 h-5 w-5 fill-warning text-warning" aria-hidden="true" />}
@@ -108,9 +110,9 @@ export default async function Dashboard() {
           </div>
           <ViewAll href="/course">Course page</ViewAll>
         </div>
-        <div className="no-scrollbar -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-3">
+        <div className="no-scrollbar -mx-4 flex snap-x items-stretch gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:auto-rows-fr sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-3">
           {course.modules.map((m) => (
-            <div key={m.id} className="w-[78vw] shrink-0 snap-start sm:w-auto"><ModuleCard module={m} hasAccess={hasAccess} courseId={course.id} /></div>
+            <div key={m.id} className="flex w-[72vw] max-w-72 shrink-0 snap-start sm:w-auto sm:max-w-none"><ModuleCard module={m} hasAccess={hasAccess} /></div>
           ))}
         </div>
       </section>
@@ -118,12 +120,10 @@ export default async function Dashboard() {
   );
 }
 
-const tileTones = { "primary-soft": "bg-primary-soft", "warning-soft": "bg-warning-soft", "success-soft": "bg-success-soft" };
-function Tile({ tone, children }) {
-  return <div className={`flex items-center gap-3 rounded-3xl p-4 min-[360px]:flex-col min-[360px]:gap-2 min-[360px]:px-2 min-[360px]:text-center ${tileTones[tone]}`}>{children}</div>;
-}
-function TileText({ title, sub }) {
-  return <div><div className="text-sm font-bold">{title}</div><div className="text-xs text-muted">{sub}</div></div>;
+function Stat({ ring, title, sub, href }) {
+  const body = <>{ring}<div className="text-xs font-bold leading-tight">{title}</div><div className="text-[11px] leading-tight text-white/75">{sub}</div></>;
+  const cls = "flex min-w-0 flex-col items-center gap-1 text-center";
+  return href ? <Link href={href} className={cls}>{body}</Link> : <div className={cls}>{body}</div>;
 }
 function Mascot() {
   return <span className="grid h-13 w-13 shrink-0 place-items-center rounded-full bg-accent" aria-hidden="true">

@@ -1,250 +1,86 @@
 import Link from "next/link";
-import { Award, CalendarClock, Check, ChevronDown, CircleCheck, ClipboardList, Gift, KeyRound, Lock, PlayCircle, Sparkles } from "lucide-react";
-import { quizBadge, submissionBadge } from "@/components/activity";
+import { Award, CalendarClock, CircleCheck, ClipboardList, Download, FolderKanban, Gift, KeyRound, PlayCircle, Sparkles } from "lucide-react";
 import Shell from "@/components/shell/Shell";
-import { Badge, Card, IconTile, Progress, RichText } from "@/components/ui";
-import { NextStepCard, PremiereCard, Thumb, firstLesson, iconFor, moduleState } from "@/components/course";
-import Countdown from "@/components/Countdown";
-import { fmtPremiere, isComingSoon, isReleased, nextPremiere, nextStep, quizOpen } from "@/lib/catalog";
-import { getActivities, getCourse, getModuleResources } from "@/lib/data";
-import ModuleResources from "@/components/ModuleResources";
-import OfflineDownload from "@/components/OfflineDownload";
+import { IconTile, Ring } from "@/components/ui";
+import { ModuleCard, NextStepCard } from "@/components/course";
+import { isReleased, nextStep } from "@/lib/catalog";
+import { getActivities, getCourse } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 
 export const metadata = { title: "Course · Beyond Tatva" };
 
-const stateLabel = {
-  open: ["success", "Available"],
-  progress: ["primary", "In progress"],
-  done: ["success", "Completed"],
-  locked: ["neutral", "Locked"],
-  upcoming: ["primary", "Upcoming"],
-};
-
 const COURSE_BANNER = "/media/course-banner.jpg";
 
+// Compact course page: header, next step, what you get, then every module as a same-size card.
+// Tapping a module opens /course/<n> with its lessons, quiz, assignment and files.
 export default async function CoursePage({ searchParams }) {
   const { welcome } = await searchParams;
-  const [{ user, hasAccess }, course, activities, resources] = await Promise.all([getSession(), getCourse(), getActivities(), getModuleResources()]);
-  const quizByChapter = Object.fromEntries(activities.quizzes.map((q) => [q.chapter_id, q]));
-  const next = nextPremiere(course);
+  const [{ hasAccess }, course, activities] = await Promise.all([getSession(), getCourse(), getActivities()]);
   const step = nextStep(course, hasAccess, activities);
   const released = course.modules.filter((m) => isReleased(m)).length;
+  const done = course.lessons.filter((l) => l.done).length;
+  const paid = course.modules.filter((m) => !m.free).length;
+  const perks = [
+    [PlayCircle, `${course.modules.length} modules`, `${course.lessonCount} short video lessons`],
+    [CalendarClock, "Weekly premieres", "A new module every Sunday, 10 AM"],
+    [FolderKanban, "Hands-on projects", "Make real things with AI tools"],
+    [Sparkles, "Quiz in every module", "2 tries, earn XP"],
+    [ClipboardList, "Assignments", "Marked with feedback"],
+    [Download, "Watch offline", "Download modules in the app"],
+    [Award, "Certificate", "Finish every module (coming soon)"],
+  ];
 
   return (
     <Shell roles={["student", "teacher"]}>
-      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-        <div className="min-w-0 space-y-6">
-          {welcome && hasAccess && (
-            <div role="status" className="card flex items-start gap-4 border-success/40 bg-success-soft p-5">
-              <IconTile icon={CircleCheck} tone="success" />
-              <div>
-                <h2 className="font-semibold">Payment successful. The full course is yours.</h2>
-                <p className="mt-1 text-sm text-muted">Every module unlocks on this account as it premieres, every Sunday at 10 AM. Sign in with this same account on any device.</p>
-              </div>
-            </div>
-          )}
-          {/* First thing on the page, so a student never has to scroll to find where to go next. */}
-          {step.kind !== "unlock" && <NextStepCard step={step} courseId={course.id} />}
-
-          <div className="card overflow-hidden">
-            <div className="grid md:grid-cols-[1fr_1fr]">
-              <div className="p-6">
-                <Badge tone="primary">{course.grade}</Badge>
-                <h1 className="mt-3 text-3xl font-semibold">{course.title}</h1>
-                <RichText text={course.description} className="mt-3 text-[15px] leading-relaxed text-muted" />
-                <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-                  {[[`0–${course.modules.length - 1}`, "Modules"], [String(course.lessonCount), "Lessons"], ["Sun", "10 AM weekly"]].map(([v, l]) => (
-                    <div key={l} className="rounded-xl bg-surface-2 py-3">
-                      <div className="font-display text-xl font-semibold">{v}</div>
-                      <div className="text-xs text-muted">{l}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="relative aspect-[16/10] overflow-hidden bg-surface-2 md:aspect-auto md:min-h-56">
-                {course.hero ? (
-                  <video src={course.hero} poster={COURSE_BANNER} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />
-                ) : (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={COURSE_BANNER} alt="AI Superheroes: the six modules of the course" className="absolute inset-0 h-full w-full object-contain" />
-                )}
-              </div>
-            </div>
+      <div className="space-y-4 lg:space-y-5">
+        {welcome && hasAccess && (
+          <div role="status" className="card flex items-start gap-3 border-success/40 bg-success-soft p-4">
+            <IconTile icon={CircleCheck} tone="success" />
+            <div><h2 className="font-semibold">Payment successful. The full course is yours.</h2>
+              <p className="mt-0.5 text-sm text-muted">Modules unlock on this account every Sunday at 10 AM. Use this same account on any device.</p></div>
           </div>
+        )}
 
-          {!hasAccess && (
-            // Phones: the sidebar sits below every module, so surface the offer near the top too.
-            <div className="web-only card flex items-center gap-3 p-4 xl:hidden">
-              <IconTile icon={Gift} tone="success" />
-              <div className="min-w-0 flex-1">
-                <div className="font-semibold">Module 0 is free</div>
-                <div className="text-sm text-muted">Modules 1–5 for ₹{course.price}, one time</div>
-              </div>
-              <Link href="/unlock" className="btn-primary shrink-0 px-4">Unlock</Link>
-            </div>
-          )}
-
-          {next && <PremiereCard module={next} hasAccess={hasAccess} />}
-
-          <Card title="Modules" action={<span className="text-sm text-muted">{released} of {course.modules.length} out</span>}>
-            <ol className="relative">
-              {course.modules.map((m, i) => {
-                const state = moduleState(m, hasAccess);
-                const playable = state !== "upcoming" && state !== "locked";
-                const Icon = iconFor(m);
-                return (
-                  <li key={m.id} id={`m${m.n}`} className="relative flex scroll-mt-24 gap-4 pb-6 last:pb-0">
-                    {i < course.modules.length - 1 && <span className="absolute left-5 top-12 h-[calc(100%-3rem)] w-px bg-border" />}
-                    <span className={`relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
-                      state === "done" ? "bg-success text-white" : playable ? "bg-primary text-primary-fg" : "bg-surface-2 text-subtle"}`}>
-                      {state === "done" ? <Check className="h-5 w-5" /> : state === "locked" ? <Lock className="h-4 w-4" /> : state === "upcoming" ? <CalendarClock className="h-4 w-4" /> : <Icon className="h-5 w-5" />}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-col gap-4 sm:flex-row">
-                        <Thumb module={m} className="aspect-video w-full shrink-0 rounded-xl sm:w-44" dim={!playable} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-xs font-semibold uppercase tracking-wider text-subtle">Module {m.n}</span>
-                            <Badge tone={stateLabel[state][0]}>{stateLabel[state][1]}</Badge>
-                            {m.free && <Badge tone="success"><Gift className="h-3 w-3" /> Free</Badge>}
-                          </div>
-                          <h3 className="mt-1 text-lg font-semibold">{m.title}</h3>
-                          <p className="mt-0.5 text-sm text-muted">{m.blurb}</p>
-                          <div className="mt-2 text-xs text-muted">
-                            {state === "upcoming" && isComingSoon(m)
-                              ? <>Coming soon</>
-                              : state === "upcoming"
-                              ? <>Premieres {fmtPremiere(m.release)} · in <span className="font-semibold text-fg"><Countdown to={m.release} compact /></span></>
-                              : m.lessons.length === 0
-                              ? <>Lessons coming soon</>
-                              : <>{m.lessons.length} {m.lessons.length === 1 ? "lesson" : "lessons"} · {m.mins} min</>}
-                          </div>
-                          {(state === "progress" || state === "done") && <Progress value={m.progress} tone={state === "done" ? "success" : "primary"} className="mt-3 h-1.5 max-w-xs" />}
-                        </div>
-                      </div>
-
-                      {(() => {
-                        const list = (
-                          <ul className="mt-3 space-y-1">
-                            {m.lessons.map((l, li) => {
-                              const Row = playable ? Link : "div";
-                              return (
-                                <li key={l.id}>
-                                  <Row {...(playable ? { href: `/watch/${course.id}?l=${l.n}` } : {})}
-                                    className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm ${playable ? "hover:bg-surface-2" : "text-subtle"} ${l.current ? "bg-primary-soft" : ""}`}>
-                                    {l.done ? <CircleCheck className="h-4 w-4 text-success" /> : playable ? <PlayCircle className="h-4 w-4 text-primary" /> : <Lock className="h-3.5 w-3.5" />}
-                                    <span className="flex-1 font-medium">{li + 1}. {l.title}</span>
-                                    {l.current && <Badge tone="primary">Up next</Badge>}
-                                    <span className="text-xs text-muted">{l.mins} min</span>
-                                  </Row>
-                                </li>
-                              );
-                            })}
-                          {quizByChapter[m.id] && (
-                            <li>
-                              <Link href={`/quiz/${quizByChapter[m.id].id}`} className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-surface-2">
-                                <Sparkles className="h-4 w-4 text-warning" /><span className="flex-1 font-medium">{quizByChapter[m.id].title}</span>
-                                {quizBadge(activities.best[quizByChapter[m.id].id])}
-                              </Link>
-                            </li>
-                          )}
-                          {activities.assignments.filter((a) => a.chapter_id === m.id).map((a) => (
-                            <li key={a.id}>
-                              <Link href={`/assignments/${a.id}`} className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-surface-2">
-                                <ClipboardList className="h-4 w-4 text-primary" /><span className="flex-1 font-medium">{a.title}</span>
-                                {submissionBadge(activities.submissions[a.id], a)}
-                              </Link>
-                            </li>
-                          ))}
-                          </ul>
-                        );
-                        // Locked and upcoming modules fold their lessons away to keep the page short on phones.
-                        if (playable) return list;
-                        if (!m.lessons.length) return null; // nothing to peek at yet
-                        return (
-                          <details className="group mt-2">
-                            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-muted hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
-                              <ChevronDown className="h-4 w-4 transition group-open:rotate-180" /> See what&apos;s inside ({m.lessons.length} {m.lessons.length === 1 ? "lesson" : "lessons"})
-                            </summary>
-                            {list}
-                          </details>
-                        );
-                      })()}
-
-                      {playable && m.lessons.length > 0 && (() => {
-                        // One big button per open module: start, carry on, or (videos done) take the quiz.
-                        const quiz = quizByChapter[m.id];
-                        const quizDue = state === "done" && quiz && quizOpen(activities.best[quiz.id]);
-                        return (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {quizDue && <Link href={`/quiz/${quiz.id}`} className="btn-primary w-full sm:w-auto"><Sparkles className="h-4 w-4" /> Take the quiz</Link>}
-                            <Link href={`/watch/${course.id}?l=${firstLesson(m).n}`} className={`${state === "done" ? "btn-secondary" : "btn-primary"} w-full sm:w-auto`}>
-                              <PlayCircle className="h-4 w-4" /> {state === "done" ? "Watch again" : state === "progress" ? "Continue module" : `Start Module ${m.n}`}
-                            </Link>
-                          </div>
-                        );
-                      })()}
-                      {state === "locked" && (
-                        <Link href="/unlock" className="btn-secondary mt-3"><KeyRound className="h-4 w-4" /> Unlock module {m.n}</Link>
-                      )}
-                      {playable && m.lessons.length > 0 && (
-                        <OfflineDownload userId={user?.id} label={m.lessons.length > 1 ? `Download module (${m.lessons.length} videos)` : "Download for offline"}
-                          lessons={m.lessons.map((l) => ({ id: l.id, n: l.n, title: l.title, mins: l.mins, courseId: course.id, module: m.n, moduleTitle: m.title }))} />
-                      )}
-                      {playable && <ModuleResources files={resources[m.id]} />}
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          </Card>
-        </div>
-
-        <aside className="space-y-4">
-          <Card className={hasAccess ? "" : "hidden xl:block"}>
-            {hasAccess ? (
-              <>
-                <IconTile icon={CircleCheck} tone="success" />
-                <h2 className="mt-3 font-semibold">Full course unlocked</h2>
-                <p className="mt-1 text-sm text-muted">New modules appear here every Sunday at 10 AM.</p>
-              </>
-            ) : (
-              <>
-                <IconTile icon={Gift} tone="success" />
-                <h2 className="mt-3 font-semibold">Module 0 is free</h2>
-                <p className="mt-1 text-sm text-muted">Unlock modules 1–5 with a key from your school<span className="web-only">, or pay once online</span>.</p>
-                <div className="web-only mt-4 flex items-baseline gap-1"><span className="font-display text-3xl font-semibold">₹{course.price}</span><span className="text-sm text-muted">one time</span></div>
-                <Link href="/unlock" className="web-only btn-primary mt-4 w-full">Unlock full course</Link>
-                <Link href="/unlock#key" className="btn-ghost mt-1 w-full">I have an access key</Link>
-              </>
-            )}
-          </Card>
-
-          <Card title="Your progress">
-            <div className="flex items-end justify-between">
-              <span className="font-display text-3xl font-semibold">{course.progress}%</span>
-              <span className="text-sm text-muted">{course.lessons.filter((l) => l.done).length} of {course.lessonCount} lessons</span>
-            </div>
-            <Progress value={course.progress} className="mt-3 h-2" />
-          </Card>
-
-          <Card title="What you'll get">
-            <ul className="space-y-2.5 text-sm">
-              {[`${course.lessonCount} short video lessons with quick checks`, "A quiz and an assignment in every module", "A final project: your own chatbot", "A certificate at the end (verification coming soon)"].map((t) => (
-                <li key={t} className="flex gap-2.5"><Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />{t}</li>
-              ))}
-            </ul>
-          </Card>
-
-          <div className="card flex gap-4 p-5">
-            <IconTile icon={Award} tone="warning" />
-            <div>
-              <div className="font-semibold">Certificate</div>
-              <p className="mt-1 text-sm text-muted">Finish every module to earn it. Downloading and verification are coming soon.</p>
-            </div>
+        <section className="card flex items-center gap-4 overflow-hidden p-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={COURSE_BANNER} alt="" className="hidden h-28 w-44 shrink-0 object-cover sm:block" />
+          <div className="min-w-0 flex-1 py-3 pl-4 sm:pl-0">
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">{course.grade}</p>
+            <h1 className="truncate text-xl font-semibold sm:text-2xl">{course.title}</h1>
+            <p className="text-xs text-muted">{released} of {course.modules.length} modules out · {done} of {course.lessonCount} lessons done</p>
           </div>
-        </aside>
+          <div className="pr-4"><Ring value={course.progress} size={60} stroke={6}><span className="text-sm font-semibold">{course.progress}%</span></Ring></div>
+        </section>
+
+        {step.kind !== "unlock" && <NextStepCard step={step} courseId={course.id} />}
+        {!hasAccess && (
+          <div className="card flex flex-wrap items-center gap-3 border-primary/30 bg-primary-soft/40 p-4">
+            <IconTile icon={Gift} tone="success" />
+            <div className="min-w-0 flex-1 basis-48">
+              <div className="font-semibold">Module 0 is free</div>
+              <div className="text-sm text-muted">Unlock the other {paid} modules with a school key<span className="web-only"> or ₹{course.price} one time</span>.</div>
+            </div>
+            <Link href="/unlock" className="btn-primary w-full sm:w-auto"><KeyRound className="h-4 w-4" /> Unlock</Link>
+          </div>
+        )}
+
+        <section aria-label="What you'll get">
+          <h2 className="mb-2 font-semibold">What you&apos;ll get</h2>
+          <ul className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 lg:grid-cols-7">
+            {perks.map(([Icon, t, s]) => (
+              <li key={t} className="flex w-40 shrink-0 flex-col gap-1 rounded-2xl bg-surface-2 p-3 sm:w-auto">
+                <Icon className="h-4 w-4 text-primary" /><span className="text-sm font-semibold leading-tight">{t}</span><span className="text-xs leading-snug text-muted">{s}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section aria-label="Modules">
+          <h2 className="mb-2 font-semibold">Modules</h2>
+          <div className="grid auto-rows-fr grid-cols-2 gap-3 lg:grid-cols-3">
+            {course.modules.map((m) => <ModuleCard key={m.id} module={m} hasAccess={hasAccess} compact />)}
+          </div>
+        </section>
       </div>
     </Shell>
   );
