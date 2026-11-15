@@ -4,7 +4,7 @@ import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { COURSE_ID } from "@/lib/catalog";
 import { STAGES, STALL_HOURS } from "@/lib/pipeline";
-import { OUTCOMES, applyFilters, classSections, facets, filterQuery, groupBySchool, parseFilters, sortRows } from "@/lib/crm";
+import { OUTCOMES, applyFilters, classSections, facets, filterQuery, groupBySchool, parseFilters, schoolOf, sortRows } from "@/lib/crm";
 import { todayIST } from "@/lib/outreach";
 import { createClient } from "@/lib/supabase/server";
 import { NotesButton } from "./CrmNotes";
@@ -15,10 +15,25 @@ export const metadata = { title: "Pipeline · Studio · Beyond Tatva" };
 
 const date = (t) => (t ? new Date(t).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }) : null);
 const mins = (s) => `${Math.round((s ?? 0) / 60)} min`;
+const isClosed = (r) => (r.outcome ?? "open") !== "open";
+
+// School → status → rows, keeping the sorted order inside each group. Schools with most rows first.
+function groupRows(rows) {
+  const schools = new Map();
+  for (const r of rows) {
+    const school = schoolOf(r), status = String(r.status ?? "").trim() || "No status yet";
+    if (!schools.has(school)) schools.set(school, new Map());
+    const st = schools.get(school);
+    st.set(status, [...(st.get(status) ?? []), r]);
+  }
+  return [...schools.entries()].map(([school, st]) => ({ school, total: [...st.values()].reduce((n, x) => n + x.length, 0), statuses: [...st.entries()] }))
+    .sort((a, b) => b.total - a.total || a.school.localeCompare(b.school));
+}
 
 export default async function PipelinePage({ searchParams }) {
   const sp = await searchParams;
-  const { stage: stageParam, stalled, view: viewParam, followups } = sp;
+  const { stage: stageParam, stalled, view: viewParam, followups, tab: tabParam } = sp;
+  const tab = tabParam === "closed" ? "closed" : "open";
   const f = parseFilters(sp);
   const today = todayIST();
   const view = viewParam === "schools" ? "schools" : "parents";
@@ -40,7 +55,10 @@ export default async function PipelinePage({ searchParams }) {
   const everyone = (data ?? []).filter((r) => (view === "schools") === (r.source === "schools"));
   const choices = facets(everyone);
   // School / class / section / status / source / siblings / due / search (src/lib/crm.js). Stage cards count after these.
-  const all = applyFilters(everyone, f, today, isDue);
+  const filteredAll = applyFilters(everyone, f, today, isDue);
+  const openCount = filteredAll.filter((r) => !isClosed(r)).length, closedCount = filteredAll.length - openCount;
+  // Open / Closed tabs (closed = won, lost or do not contact). A status filter picks its own tab.
+  const all = f.outcome ? filteredAll : filteredAll.filter((r) => isClosed(r) === (tab === "closed"));
   const rows = sortRows(all.filter((r) => (stage ? r.stage === stage : true) && (stalled ? r.stalled : true) && (followups ? isDue(r) : true)));
   const bySchool = f.group === "school" && !f.school ? groupBySchool(all) : null;
   const breakdown = f.school ? classSections(all) : null;
@@ -49,7 +67,7 @@ export default async function PipelinePage({ searchParams }) {
   const stalledCount = all.filter((r) => r.stalled).length;
   const dueCount = all.filter(isDue).length;
   const href = (q, change = {}) => {
-    const qs = [view === "schools" && "view=schools", filterQuery(f, change), q].filter(Boolean).join("&");
+    const qs = [view === "schools" && "view=schools", tab === "closed" && "tab=closed", filterQuery(f, change), q].filter(Boolean).join("&");
     return `/admin/pipeline${qs ? `?${qs}` : ""}`;
   };
 
@@ -74,6 +92,7 @@ export default async function PipelinePage({ searchParams }) {
       <form method="get" action="/admin/pipeline" className="card mb-4 grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-6" aria-label="Filters">
         {view === "schools" && <input type="hidden" name="view" value="schools" />}
         {f.group && <input type="hidden" name="group" value={f.group} />}
+        {tab === "closed" && <input type="hidden" name="tab" value="closed" />}
         <label className="col-span-2 sm:col-span-3 lg:col-span-2"><span className="label">School</span>
           <select name="school" defaultValue={f.school ?? ""} className="input"><option value="">All schools</option>{[...(f.school && !choices.schools.some((x) => x.toLowerCase() === f.school.toLowerCase()) ? [f.school] : []), ...choices.schools].map((x) => <option key={x}>{x}</option>)}</select></label>
         <label><span className="label">Class</span>
@@ -93,6 +112,15 @@ export default async function PipelinePage({ searchParams }) {
           {filtered && <Link href={view === "schools" ? "/admin/pipeline?view=schools" : "/admin/pipeline"} className="btn-secondary min-h-11">Clear</Link>}
         </div>
       </form>
+
+      {!f.outcome && (
+        <div className="mb-4 flex gap-2" role="tablist" aria-label="Open or closed leads">
+          {[["open", `Open (${openCount})`], ["closed", `Closed (${closedCount})`]].map(([id, label]) => (
+            <Link key={id} role="tab" aria-selected={tab === id} className={`${tab === id ? "btn-primary" : "btn-secondary"} min-h-11`}
+              href={`/admin/pipeline?${[view === "schools" && "view=schools", id === "closed" && "tab=closed", filterQuery(f)].filter(Boolean).join("&")}`}>{label}</Link>
+          ))}
+        </div>
+      )}
 
       <div className="mb-4 flex flex-wrap gap-2">
         <Link href={href(followups ? "" : "followups=1")} className="btn-secondary min-h-11">Follow-ups due ({dueCount}){followups ? " · Show all" : ""}</Link>
@@ -153,37 +181,51 @@ export default async function PipelinePage({ searchParams }) {
         {rows.length === 0 ? (
           <div className="p-5"><Empty icon={Filter} title={filtered ? "No one matches these filters" : "Nobody here yet"} body={filtered ? "Change or clear the filters." : "Website leads appear once the website sends them to the LMS. Students appear when they sign in."} /></div>
         ) : (
-          <ul className="divide-y divide-border border-t border-border">
-            {rows.slice(0, 500).map((r) => (
-              <li key={r.student_id ?? r.lead_id} className="flex flex-wrap items-start gap-3 px-5 py-3 text-sm">
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium">{r.name}</div>
-                  <div className="truncate text-xs text-muted">
-                    {[r.parent_name && `Parent: ${r.parent_name}`, r.phone, r.grade && `Class ${r.grade}${r.section ? ` ${r.section}` : ""}`, r.school].filter(Boolean).join(" · ")}
-                  </div>
-                  {(r.status || r.next_date || r.siblings) && (
-                    <div className="mt-0.5 text-xs">
-                      {[r.status && `Status: ${r.status}`, r.next_date && `Next: ${r.next_step ? `${r.next_step}, ` : ""}${r.next_date}`].filter(Boolean).join(" · ")}
-                      {r.siblings && <span className="ml-1 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">Sibling of {r.siblings}</span>}
+          <div className="border-t border-border">
+            {groupRows(rows.slice(0, 500)).map((g) => (
+              <details key={g.school} open className="border-b border-border last:border-0">
+                <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 bg-surface-2 px-5 py-2 font-semibold">
+                  <span>{g.school}</span><span className="text-xs font-normal text-muted">{g.total}</span>
+                </summary>
+                {g.statuses.map(([status, list]) => (
+                  <div key={status}>
+                    <div className="px-5 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted">{status} · {list.length}</div>
+                    <ul className="divide-y divide-border">
+                {list.map((r) => (
+                  <li key={r.student_id ?? r.lead_id} className="flex flex-wrap items-start gap-3 px-5 py-3 text-sm">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium">{r.name}</div>
+                      <div className="truncate text-xs text-muted">
+                        {[r.parent_name && `Parent: ${r.parent_name}`, r.phone, r.grade && `Class ${r.grade}${r.section ? ` ${r.section}` : ""}`, r.school].filter(Boolean).join(" · ")}
+                      </div>
+                      {(r.status || r.next_date || r.siblings) && (
+                        <div className="mt-0.5 text-xs">
+                          {[r.status && `Status: ${r.status}`, r.next_date && `Next: ${r.next_step ? `${r.next_step}, ` : ""}${r.next_date}`].filter(Boolean).join(" · ")}
+                          {r.siblings && <span className="ml-1 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">Sibling of {r.siblings}</span>}
+                        </div>
+                      )}
+                      <div className="text-xs text-subtle">
+                        {[r.lead_at && `Lead ${date(r.lead_at)}`, r.signed_up_at && `Signed in ${date(r.signed_up_at)}`,
+                          r.seconds_watched > 0 && `Watched ${mins(r.seconds_watched)} (last ${date(r.last_watch_at)})`,
+                          r.bought_at && `Bought ${date(r.bought_at)}`].filter(Boolean).join(" · ")}
+                      </div>
                     </div>
-                  )}
-                  <div className="text-xs text-subtle">
-                    {[r.lead_at && `Lead ${date(r.lead_at)}`, r.signed_up_at && `Signed in ${date(r.signed_up_at)}`,
-                      r.seconds_watched > 0 && `Watched ${mins(r.seconds_watched)} (last ${date(r.last_watch_at)})`,
-                      r.bought_at && `Bought ${date(r.bought_at)}`].filter(Boolean).join(" · ")}
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge tone={STAGES[r.stage - 1].tone}>{STAGES[r.stage - 1].label}</Badge>
+                      {r.outcome && r.outcome !== "open" && <Badge tone={OUTCOMES.find((o) => o.id === r.outcome)?.tone}>{OUTCOMES.find((o) => o.id === r.outcome)?.label}</Badge>}
+                      {r.stalled && <Badge tone="danger">Stopped</Badge>}
+                      {r.source && <span className="text-[11px] text-subtle">from {r.source}</span>}
+                      <NotesButton person={r} notes={notesFor(r)} />
+                      <DeleteLeadButton leadId={r.lead_id} name={r.name} />
+                    </div>
+                  </li>
+                ))}
+                    </ul>
                   </div>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <Badge tone={STAGES[r.stage - 1].tone}>{STAGES[r.stage - 1].label}</Badge>
-                  {r.outcome && r.outcome !== "open" && <Badge tone={OUTCOMES.find((o) => o.id === r.outcome)?.tone}>{OUTCOMES.find((o) => o.id === r.outcome)?.label}</Badge>}
-                  {r.stalled && <Badge tone="danger">Stopped</Badge>}
-                  {r.source && <span className="text-[11px] text-subtle">from {r.source}</span>}
-                  <NotesButton person={r} notes={notesFor(r)} />
-                  <DeleteLeadButton leadId={r.lead_id} name={r.name} />
-                </div>
-              </li>
+                ))}
+              </details>
             ))}
-          </ul>
+          </div>
         )}
       </Card>
       {rows.length > 500 && <p className="mt-2 text-xs text-muted">Showing the newest 500. Export CSV for everyone.</p>}
