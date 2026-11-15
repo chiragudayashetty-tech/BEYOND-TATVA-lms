@@ -818,7 +818,7 @@ select 'Z18 old-style save (no parts) adds no %' t, (select watched_pct = 0 from
 select 'Z18b first real parts replace the estimate' t, public.save_progress(pg_temp.lesson(0), 30, null, 30, 600, '{0,1,2}') = 5 as pass;
 select 'Z18c stored too' t, (select watched_pct = 5 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 reset role;
--- Faked video length (20261115000006)
+-- Faked video length (20261115000008)
 insert into auth.users (id, email) values ('abababab-0000-0000-0000-000000000004', 'len@x.in');
 set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000004');
 select public.complete_onboarding('student', 'Short Claim', null, 9::smallint, 'Mum', '9811122266', null, p_consent => true);
@@ -1084,4 +1084,16 @@ exception when insufficient_privilege then raise notice 'W28 pass: students cann
 do $$ begin perform public.tracker_snapshot(null); raise exception 'W29 FAIL';
 exception when insufficient_privilege then raise notice 'W29 pass: students cannot read the tracker'; end $$;
 select 'W30 students cannot read sync health' t, count(*) = 0 as pass from public.sheet_sync_health;
+reset role;
+
+-- ── Sibling phones (20261115000004) ──────────────────────────────────────────
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_mark_siblings('9811100001');
+select 'Q63 admin marks a sibling phone' t, exists (select 1 from public.sibling_phones where phone_key = '9811100001') as pass;
+do $$ begin perform public.admin_mark_siblings('12ab'); raise exception 'Q64 FAIL';
+exception when others then if sqlerrm like 'Q64%' then raise; end if; raise notice 'Q64 pass: %', sqlerrm; end $$;
+select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+do $$ begin perform public.admin_mark_siblings('9811100002'); raise exception 'Q65 FAIL';
+exception when others then if sqlerrm like 'Q65%' then raise; end if; raise notice 'Q65 pass: students cannot mark siblings (%)', sqlerrm; end $$;
+select 'Q66 students cannot read sibling phones' t, count(*) = 0 as pass from public.sibling_phones;
 reset role;
