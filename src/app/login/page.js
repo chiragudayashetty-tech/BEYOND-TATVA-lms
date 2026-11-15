@@ -1,7 +1,7 @@
 "use client";
 
 import SocialLinks from "@/components/SocialLinks";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
 import { safeNext } from "@/lib/safe-next";
@@ -39,6 +39,9 @@ function LoginForm() {
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState(params.get("error") ? "That sign-in link has expired. Send a new code." : "");
+  const errorRef = useRef(null);
+  // The error box sits below the form; on a phone it is off screen, so bring it into view (tester, 2026-11-15).
+  useEffect(() => { if (error) errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }, [error]);
   const [inAppBrowser, setInAppBrowser] = useState(null);
   const [copied, setCopied] = useState(false);
 
@@ -270,6 +273,7 @@ function LoginForm() {
           </div>}
           {/* Bots fill every field; people never see this one. */}
           <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
+          {error && <p ref={errorRef} role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
           <button disabled={busy} className="btn-primary min-h-12 w-full py-3">
             {busy ? (mode === "signup" ? "Creating account…" : "Signing in…") : mode === "signup" ? "Create account" : "Sign in"}
           </button>
@@ -314,7 +318,7 @@ function LoginForm() {
         </form>
       )}
 
-      {error && <p role="alert" className="mt-4 rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
+      {error && mode !== "login" && mode !== "signup" && <p ref={errorRef} role="alert" className="mt-4 rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
     </div>
     </>
   );
