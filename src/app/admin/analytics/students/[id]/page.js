@@ -9,7 +9,6 @@ export const metadata = { title: "Student activity · Analytics · Beyond Tatva"
 
 const pct = (n, d) => d > 0 ? Math.round(n / d * 100) : null;
 const date = (value) => value ? new Date(value).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" }) : "–";
-const weights = ["Lessons · 35", "Quizzes · 25", "Checkpoints · 10", "Assignments · 10", "PDFs and resources · 5", "Active days · 15"];
 
 export default async function StudentActivityPage({ params }) {
   const { id } = await params;
@@ -31,14 +30,9 @@ export default async function StudentActivityPage({ params }) {
   const assignmentScore = summary.assignments_total ? Math.min(summary.assignments_submitted / summary.assignments_total, 1) * 10 : null;
   const resourceScore = summary.resources_total ? Math.min(summary.resources_opened / summary.resources_total, 1) * 5 : null;
   const activeScore = Math.min((summary.active_days_30 ?? 0) / 10, 1) * 15;
-  const earned = [lessonScore, quizScore, checkScore, assignmentScore, resourceScore, activeScore].map((x) => x ?? 0);
-  const dayMap = new Map((data.days ?? []).map((row) => [String(row.day).slice(0, 10), row.minutes ?? 0]));
-  const today = new Date();
-  const days = Array.from({ length: 60 }, (_, index) => {
-    const day = new Date(today); day.setDate(day.getDate() - (59 - index));
-    const key = day.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-    return { key, minutes: dayMap.get(key) ?? 0 };
-  });
+  // Only the parts this course has (null = nothing to score yet, e.g. no assignments published).
+  const parts = [["Lessons", lessonScore, 35], ["Quizzes", quizScore, 25], ["Checkpoints", checkScore, 10], ["Assignments", assignmentScore, 10], ["PDFs and resources", resourceScore, 5], ["Active days", activeScore, 15]]
+    .filter(([, value]) => value != null);
   const timeline = [...(data.timeline ?? [])].sort((a, b) => new Date(b.at) - new Date(a.at));
   const kindLabel = { lesson_completed: "Finished lesson", quiz_passed: "Passed quiz", quiz_failed: "Tried quiz", assignment_submitted: "Handed in assignment", resource_opened: "Opened a resource", course_access: "Course access added", signed_up: "Created an account" };
 
@@ -61,18 +55,9 @@ export default async function StudentActivityPage({ params }) {
       </dl>
     </Card>
     <div className="grid gap-5 xl:grid-cols-2">
-      <Card title="Learning score breakdown" action={<details className="relative text-xs text-muted"><summary className="min-h-11 cursor-pointer list-none py-3">How the score works ⓘ</summary><div className="absolute right-0 z-10 mt-1 w-72 rounded-xl border border-border bg-surface p-3 shadow-lg"><p>Each part is capped at its points:</p><ul className="mt-2 list-disc space-y-1 pl-4"><li>Lessons completed: 35</li><li>Quiz scores: 25 (average of the student&apos;s tries, 2 per quiz)</li><li>Checkpoints: 10</li><li>Assignments submitted: 10</li><li>PDFs and resources opened: 5</li><li>Active days in the last 30: 15 (full at 10 days)</li></ul></div></details>}>
-        <div className="space-y-4">{weights.map((label, index) => {
-          const values = [lessonScore, quizScore, checkScore, assignmentScore, resourceScore, activeScore];
-          const maxima = [35, 25, 10, 10, 5, 15];
-          const unknown = values[index] == null;
-          return <div key={label}><div className="mb-1 flex justify-between gap-2 text-sm"><span>{label}</span><span>{unknown ? <span title="No eligible activities are available for this category">–</span> : `${Math.round(values[index])}/${maxima[index]}`}</span></div><Progress value={unknown ? 0 : values[index] / maxima[index] * 100} tone={index % 2 ? "success" : "primary"} /></div>;
-        })}</div>
-      </Card>
-      <Card title="Daily learning · last 60 days">
-        <div className="grid grid-cols-10 gap-1.5 sm:grid-cols-12" role="list" aria-label="Minutes of activity by day">
-          {days.map(({ key, minutes }) => <span key={key} role="listitem" title={`${key}: ${minutes} minutes`} className={`aspect-square rounded-sm ${minutes >= 30 ? "bg-primary" : minutes > 0 ? "bg-primary/50" : "bg-surface-2"}`} />)}
-        </div><p className="mt-3 text-xs text-muted">Each square is one day. Darker means more tracked learning time.</p>
+      <Card title="Learning score breakdown">
+        <div className="space-y-3">{parts.map(([label, value, max]) => <div key={label}><div className="mb-1 flex justify-between gap-2 text-sm"><span>{label}</span><span className="text-muted">{Math.round(value)}/{max}</span></div><Progress value={value / max * 100} /></div>)}</div>
+        <p className="mt-4 text-xs text-muted">Points out of 100. Active days are full at 10 days in the last 30.</p>
       </Card>
       <Card title="Lesson progress">
         {data.lessons?.length ? <div className="max-h-[28rem] space-y-2 overflow-y-auto">{data.lessons.map((lesson, index) => <div key={`${lesson.module}-${lesson.position}-${index}`} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface-2 p-3"><div className="min-w-0"><div className="font-medium">Module {lesson.module} · {lesson.lesson}</div><div className="text-xs text-muted">{lesson.minutes_watched} minutes watched</div></div><Badge tone={lesson.completed_at ? "success" : "neutral"}>{lesson.completed_at ? `Finished ${date(lesson.completed_at)}` : "Not finished"}</Badge></div>)}</div> : <Empty title="No lessons yet" body="Lesson progress will show here." />}
