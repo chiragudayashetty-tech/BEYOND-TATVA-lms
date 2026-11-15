@@ -128,7 +128,7 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - Incident: `RAZORPAY_KEY_SECRET` was overwritten by mistake in Vercel and redeployed; Chirag fixed it the same day
   (payment tested). `SHEETS_SYNC_SECRET` rotated; both sheets re-keyed. Lesson: check the variable *name* before pasting.
 
-## Done 2026-11-15 (PRs #158–#162, migrations 20261115000001–02, both applied after "apply")
+## Done 2026-11-15 (PRs #158–#171, all migrations applied to live, production deploy = `main` 42bb9b2, READY)
 - Studio tabs prefetch the whole page on hover / focus / touch (faster switching; cold starts on Vercel Hobby remain).
 - Pipeline Open / Closed tabs grouped by school → status; analytics trimmed.
 - Leads: 30-day trash + restore, merge duplicates. Payments stay void-only (revoke keeps the row); students keep delete-with-name (no undo yet).
@@ -136,7 +136,18 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - Real watch tracking (parts played) + analytics rebuild + score without active days.
 - Watch-tracking audit: 4 ways to fake completion (no-parts save, fake short length, idle-then-dump, inflated learning minutes) closed in `20261115000008` (tests M2d, Z13, Z17d/g, Z18, Z19/b). Next.js upgraded to 16.4.6 (PR #168). `20261115000004_sibling_phones.sql` added: it was applied to live without a file; the SQL was recovered from the live migration history.
 - Found: a sheet row needs School, Student name and a **10-digit** parent phone before it syncs (note on the name cell otherwise).
+- Live DB caught up: 14 Nov security hardening (`20261114000001`), workshop removal (`…02`), full leaderboard (`…07`), test-account marking (`20261115000006–07`) applied 15 Nov.
+- Studio analytics fix (PR #171): "Module watching" always showed 0 started (fetchAll rows read wrongly).
 - To check on a phone: play a module 2 min → % rises; drag to the end → not complete.
+
+## Left to deploy / switch on (end of 2026-11-15)
+Code: nothing pending. `main` = production, every migration file is applied, no open PRs. Remaining items are settings only Chirag can do:
+- **Razorpay:** add the `refund.processed` event to the webhook (otherwise full refunds don't end access).
+- **Supabase Auth:** paste the "Reset Password" template + raise email rate limit (~100/hour); optional Phone provider + `SEND_SMS_HOOK_SECRET` for mobile sign-in.
+- **Backups:** add the 2 GitHub secrets (`docs/BACKUPS.md`) so nightly backups run.
+- **Launch plan upgrades:** Vercel Pro, Supabase Pro.
+- **Content:** real Module 0 videos; Module 2–5 videos by the Batch 1 dates; set each module's week in Studio → Content.
+- **Phone check** of watch tracking (above) and Phase D family testing.
 
 ## Waiting on Chirag (2026-11-14)
 - Old archived sheet ("Workshop Leads v2 … Srvk closed"): delete its two timers (it now fails every 5 min with the old key).
