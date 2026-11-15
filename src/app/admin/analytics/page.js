@@ -3,21 +3,16 @@ import { ChartLine } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle, StatCard } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { funnelCounts } from "@/lib/analytics";
+import { funnelCounts, moduleWatch, needsNudge } from "@/lib/analytics";
+import PersonLink from "../PersonLink";
 import { COURSE_ID } from "@/lib/catalog";
-import { BarChart, FunnelCard } from "./AnalyticsCharts";
+import { FunnelCard } from "./AnalyticsCharts";
 
 export const metadata = { title: "Analytics · Studio · Beyond Tatva" };
 
 const money = (paise) => `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 const nowIst = () => new Date(Date.now() + 330 * 60_000);
 const utcBoundaryForIstDate = (date) => new Date(date.getTime() - 330 * 60_000).toISOString();
-const grouped = (rows, keyOf) => {
-  const map = new Map();
-  for (const row of rows) { const key = keyOf(row); const item = map.get(key) ?? { label: key, count: 0, bought: 0 }; item.count++; if (row.paid) item.bought++; map.set(key, item); }
-  return [...map.values()].sort((a, b) => a.label.localeCompare(b.label));
-};
-const labels = (rows) => rows.map((row) => ({ label: row.label, value: row.count }));
 
 export default async function AnalyticsPage({ searchParams }) {
   const params = await searchParams;
@@ -34,8 +29,8 @@ export default async function AnalyticsPage({ searchParams }) {
     supabase.rpc("admin_schools"),
     supabase.from("profiles").select("id, grade, school_id, created_at").eq("role", "student").is("duplicate_of", null).gte("created_at", startAt).lt("created_at", endAt),
     supabase.from("chapters").select("id, position, is_free").eq("course_id", COURSE_ID),
-    supabase.from("lessons").select("id, chapter_id, position, title").eq("course_id", COURSE_ID),
-    fetchAll((a, b) => supabase.from("lesson_progress").select("student_id, lesson_id, completed_at").range(a, b)),
+    supabase.from("lessons").select("id, chapter_id, position, title, minutes").eq("course_id", COURSE_ID),
+    fetchAll((a, b) => supabase.from("lesson_progress").select("student_id, lesson_id, completed_at, updated_at, seen, watched_pct, video_seconds").range(a, b)),
     fetchAll((a, b) => supabase.from("course_access").select("student_id, granted_at").eq("course_id", COURSE_ID).range(a, b)),
     supabase.from("quizzes").select("id, chapter_id, pass_percent").eq("published", true),
     fetchAll((a, b) => supabase.from("quiz_attempts").select("student_id, quiz_id, score, total, passed, created_at").range(a, b)),
@@ -46,7 +41,6 @@ export default async function AnalyticsPage({ searchParams }) {
 
   const students = scoreResult.data ?? [];
   const scoreById = new Map(students.map((student) => [student.student_id, student]));
-  const schoolNames = new Map((schoolsResult.data ?? []).map((school) => [school.id, school.name]));
   const profiles = (profileResult.data ?? []).filter((profile) => !schoolId || (schoolId === "none" ? !profile.school_id : profile.school_id === schoolId));
   const cohortIds = new Set(profiles.map((profile) => profile.id));
   const chapters = chapterResult.data ?? [];
@@ -61,14 +55,16 @@ export default async function AnalyticsPage({ searchParams }) {
   const resources = resourceResult.data?.data ?? [];
   const funnel = funnelCounts({ leads: [], profiles, progress, lessonIds, accesses, quizzes, attempts, resources });
 
-  const schoolRows = grouped(profiles.map((profile) => ({ label: schoolNames.get(profile.school_id) ?? "No school", paid: Boolean(scoreById.get(profile.id)?.paid) })), (row) => row.label);
   const purchased = profiles.filter((profile) => scoreById.get(profile.id)?.paid).length;
-  const conversionBars = (rows) => rows.map((row) => ({ label: row.label, value: row.count ? Math.round(row.bought / row.count * 100) : 0 }));
 
-  const lessonDropoff = lessons.slice().sort((a, b) => a.position - b.position).map((lesson, index) => {
-    const rows = progress.filter((row) => row.lesson_id === lesson.id && cohortIds.has(row.student_id));
-    return { label: `${index + 1}. ${lesson.title}`, value: rows.filter((row) => row.completed_at).length, started: rows.length };
-  });
+  const chapterPos = new Map(chapters.map((chapter) => [chapter.id, chapter.position]));
+  const allLessons = (lessonResult.data ?? []).slice().sort((a, b) => (chapterPos.get(a.chapter_id) ?? 0) - (chapterPos.get(b.chapter_id) ?? 0) || a.position - b.position);
+  const studentIds = new Set(students.map((student) => student.student_id));
+  const modules = moduleWatch(allLessons, progress.filter((row) => studentIds.has(row.student_id)));
+  const nudge = needsNudge(students, progress, allLessons.length);
+  const pctByStudent = new Map();
+  for (const row of progress) pctByStudent.set(`${row.student_id}:${row.lesson_id}`, row.completed_at ? 100 : row.watched_pct ?? 0);
+
 
 
   const totalRevenue = (purchaseResult.data ?? []).filter((row) => row.status !== "revoked").reduce((sum, row) => sum + (row.amount_paise ?? 0), 0);
@@ -83,10 +79,24 @@ export default async function AnalyticsPage({ searchParams }) {
     {overallError && <p role="alert" className="mb-4 rounded-xl bg-warning-soft p-3 text-sm text-warning">Some activity data could not load. Numbers that depend on missing data may be incomplete.</p>}
     <div className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-3"><StatCard label="Sign-ups" value={profiles.length} hint={`In the last ${days} days`} icon={ChartLine} /><StatCard label="Bought" value={`${purchased}`} hint="Students in this sign-up cohort" /><StatCard label="Revenue recorded" value={money(totalRevenue)} hint={`Purchases in the last ${days} days`} /></div>
     <div className="grid gap-5 xl:grid-cols-2"><FunnelCard stages={funnel} />
-      <BarChart title="Lesson drop-off · completed" data={lessonDropoff} format={(value) => `${value}`} />
-      <BarChart title="Sign-ups by school" data={labels(schoolRows)} />
-      <BarChart title="Bought by school · conversion %" data={conversionBars(schoolRows)} format={(value) => `${value}%`} colors={["bg-success", "bg-primary", "bg-warning"]} />
+      <Card title="Module watching" action={<span className="text-xs text-muted">Parts really played, skips don&apos;t count</span>}>
+        {modules.length ? <div className="space-y-5">{modules.map((m) => <div key={m.id}>
+          <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm"><span className="font-medium">{m.title}</span>
+            <span className="text-muted">{m.started} started · {m.avgPct == null ? "–" : `${m.avgPct}% watched on average`} · {m.completed} finished</span></div>
+          <div className="mt-2 flex h-16 items-end gap-1" role="img" aria-label={`${m.title}: share of starters still watching at each tenth of the video: ${m.curve.join("%, ")}%`}>
+            {m.curve.map((v, i) => <div key={i} className="flex-1 rounded-t bg-primary/80" style={{ height: `${Math.max(v, 2)}%` }} title={`${i * 10}–${i * 10 + 10}% of the video: ${v}% of starters`} />)}
+          </div>
+          <div className="mt-1 flex justify-between text-[11px] text-subtle"><span>Start</span><span>Bars = % of starters who watched each tenth</span><span>End</span></div>
+        </div>)}</div> : <Empty title="No modules yet" body="Add lessons in Content." />}
+      </Card>
     </div>
+    <Card title={`Needs a nudge (${nudge.length})`} className="mt-5" action={<span className="text-xs text-muted">No learning for 7+ days</span>} pad={false}>
+      {nudge.length ? <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead className="bg-surface-2 text-xs text-muted"><tr><th className="px-4 py-3">Student</th><th className="px-4 py-3">School</th>{allLessons.map((l) => <th key={l.id} className="px-4 py-3">{l.title}</th>)}<th className="px-4 py-3">Last learned</th><th className="px-4 py-3">Why</th></tr></thead>
+        <tbody className="divide-y divide-border">{nudge.slice(0, 50).map((n) => <tr key={n.student_id}><td className="px-4 py-3"><PersonLink studentId={n.student_id} className="font-medium">{n.full_name || "Student"}</PersonLink>{n.paid && <Badge tone="success">Paid</Badge>}</td><td className="px-4 py-3 text-muted">{n.school ?? "–"}</td>
+          {allLessons.map((l) => <td key={l.id} className="px-4 py-3 tabular-nums">{pctByStudent.has(`${n.student_id}:${l.id}`) ? `${pctByStudent.get(`${n.student_id}:${l.id}`)}%` : "–"}</td>)}
+          <td className="px-4 py-3 text-muted">{n.last ? new Date(n.last).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" }) : "Never"}</td><td className="px-4 py-3"><Badge tone={n.reason === "Never started" ? "warning" : "danger"}>{n.reason}</Badge></td></tr>)}</tbody></table></div>
+        : <div className="p-5"><Empty title="Nobody needs a nudge" body="Every student has learned in the last 7 days or finished the course." /></div>}
+    </Card>
     <section className="mt-8"><Card title="Schools at a glance" action={<Link href={`/admin/analytics/schools?days=${days}`} className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">Open school analytics</Link>}>
       {(schoolScoresResult.data ?? []).length ? <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead className="bg-surface-2 text-xs text-muted"><tr><th className="px-3 py-3">School</th><th className="px-3 py-3">Students</th><th className="px-3 py-3">Paid</th><th className="px-3 py-3">Finished M0</th><th className="px-3 py-3">Avg score</th></tr></thead><tbody className="divide-y divide-border">{(schoolScoresResult.data ?? []).slice(0, 8).map((school) => <tr key={school.school_id ?? "none"}><td className="px-3 py-3">{school.school}</td><td className="px-3 py-3">{school.students}</td><td className="px-3 py-3">{school.paid}</td><td className="px-3 py-3">{school.finished_module0}</td><td className="px-3 py-3">{school.avg_score == null ? <span title="Not enough student activity to calculate">–</span> : <Badge tone={school.avg_score >= 70 ? "success" : school.avg_score >= 40 ? "warning" : "danger"}>{school.avg_score}</Badge>}</td></tr>)}</tbody></table></div> : <Empty title="No school data yet" body="School comparisons will appear here." />}
     </Card></section>

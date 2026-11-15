@@ -16,25 +16,30 @@ export default async function StudentActivityPage({ params }) {
   await requireRole(["admin"]);
   const supabase = await createClient();
   const details = await studentDetails(supabase, id);
-  const [{ data, error }, { data: duplicateGroups }, { data: leads }] = await Promise.all([
+  const [{ data, error }, { data: duplicateGroups }, { data: leads }, { data: watchRows }, { data: lessonRows }] = await Promise.all([
     supabase.rpc("admin_student_activity", { p_student_id: id }),
     supabase.rpc("admin_duplicate_candidates"),
     supabase.from("leads").select("*").eq("student_id", id).order("updated_at", { ascending: false }),
+    supabase.from("lesson_progress").select("lesson_id, watched_pct, completed_at").eq("student_id", id),
+    supabase.from("lessons").select("id, title, position, chapters(position)"),
   ]);
   if (error && /Student not found/i.test(error.message)) notFound();
   if (!data) return <Shell roles={["admin"]}><Empty title="Student activity unavailable" body="We couldn't load this student's activity. Please try again." /></Shell>;
   const summary = data.summary;
   if (!summary) notFound();
   const extraLogin = (duplicateGroups ?? []).flatMap((group) => group.accounts ?? []).find((account) => account.duplicate_of === id);
-  const lessonScore = summary.lessons_total ? Math.min(summary.lessons_completed / summary.lessons_total, 1) * 35 : null;
-  const quizScore = summary.quizzes_total ? Math.min((summary.quiz_avg_best_pct ?? 0) / 100, 1) * 25 : null;
-  const checkScore = summary.checkpoints_answered ? summary.checkpoints_correct / summary.checkpoints_answered * Math.min(summary.checkpoints_answered / Math.max(summary.lessons_total, 1), 1) * 10 : null;
-  const assignmentScore = summary.assignments_total ? Math.min(summary.assignments_submitted / summary.assignments_total, 1) * 10 : null;
-  const resourceScore = summary.resources_total ? Math.min(summary.resources_opened / summary.resources_total, 1) * 5 : null;
-  const activeScore = Math.min((summary.active_days_30 ?? 0) / 10, 1) * 15;
-  // Only the parts this course has (null = nothing to score yet, e.g. no assignments published).
-  const parts = [["Lessons", lessonScore, 35], ["Quizzes", quizScore, 25], ["Checkpoints", checkScore, 10], ["Assignments", assignmentScore, 10], ["PDFs and resources", resourceScore, 5], ["Active days", activeScore, 15]]
-    .filter(([, value]) => value != null);
+  // What the student actually did, in plain counts. Bars fill by %; points only in the total score.
+  const watched = new Map((watchRows ?? []).map((row) => [row.lesson_id, row.completed_at ? 100 : row.watched_pct ?? 0]));
+  const modules = (lessonRows ?? []).slice().sort((a, b) => (a.chapters?.position ?? 0) - (b.chapters?.position ?? 0) || a.position - b.position)
+    .map((lesson) => [lesson.title, watched.has(lesson.id) ? `${watched.get(lesson.id)}% watched` : "Not started", watched.get(lesson.id) ?? 0]);
+  const pctOf = (n, d) => (d > 0 ? Math.round((n / d) * 100) : 0);
+  const parts = [
+    ...modules,
+    summary.quizzes_total > 0 && ["Quizzes", summary.quiz_attempts ? `${summary.quizzes_passed} of ${summary.quizzes_total} passed · average ${summary.quiz_avg_best_pct ?? 0}%` : "Not tried yet", summary.quiz_avg_best_pct ?? 0],
+    summary.checkpoints_answered > 0 && ["Questions in videos", `${summary.checkpoints_correct} of ${summary.checkpoints_answered} right`, pctOf(summary.checkpoints_correct, summary.checkpoints_answered)],
+    summary.assignments_total > 0 && ["Assignments", `${summary.assignments_submitted} of ${summary.assignments_total} handed in`, pctOf(summary.assignments_submitted, summary.assignments_total)],
+    summary.resources_total > 0 && ["PDFs and resources", `${summary.resources_opened} of ${summary.resources_total} opened`, pctOf(summary.resources_opened, summary.resources_total)],
+  ].filter(Boolean);
   const timeline = [...(data.timeline ?? [])].sort((a, b) => new Date(b.at) - new Date(a.at));
   const kindLabel = { lesson_completed: "Finished lesson", quiz_passed: "Passed quiz", quiz_failed: "Tried quiz", assignment_submitted: "Handed in assignment", resource_opened: "Opened a resource", course_access: "Course access added", signed_up: "Created an account" };
 
@@ -44,7 +49,7 @@ export default async function StudentActivityPage({ params }) {
     </PageTitle>
     {extraLogin?.email && <p className="mb-5 rounded-xl border border-primary/20 bg-primary-soft p-3 text-sm"><span className="font-semibold">Also logs in with:</span> <span className="break-all">{extraLogin.email}</span></p>}
     <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-      <StatCard label="Learning score" value={`${summary.score ?? 0}/100`} hint="Across six learning areas" />
+      <StatCard label="Learning score" value={`${summary.score ?? 0}/100`} hint="Watching, quizzes, assignments, resources" />
       <StatCard label="Lessons finished" value={`${summary.lessons_completed}/${summary.lessons_total}`} hint={`${summary.watch_minutes ?? 0} minutes watched`} />
       <StatCard label="Quizzes passed" value={`${summary.quizzes_passed}/${summary.quizzes_total}`} hint={summary.quiz_avg_best_pct == null ? "No published quizzes" : `Average score ${summary.quiz_avg_best_pct}% (all tries)`} />
       <StatCard label="Assignments" value={`${summary.assignments_submitted}/${summary.assignments_total}`} hint={`${summary.assignments_graded} marked`} />
@@ -58,9 +63,9 @@ export default async function StudentActivityPage({ params }) {
     </Card>
     {(leads ?? []).length > 0 && <div className="mb-5 space-y-5">{leads.map((lead) => <LeadDetails key={lead.id} lead={lead} />)}</div>}
     <div className="grid gap-5 xl:grid-cols-2">
-      <Card title="Learning score breakdown">
-        <div className="space-y-3">{parts.map(([label, value, max]) => <div key={label}><div className="mb-1 flex justify-between gap-2 text-sm"><span>{label}</span><span className="text-muted">{Math.round(value)}/{max}</span></div><Progress value={value / max * 100} /></div>)}</div>
-        <p className="mt-4 text-xs text-muted">Points out of 100. Active days are full at 10 days in the last 30.</p>
+      <Card title={`Learning score · ${summary.score ?? 0}/100`}>
+        <div className="space-y-3">{parts.map(([label, text, pct]) => <div key={label}><div className="mb-1 flex justify-between gap-2 text-sm"><span>{label}</span><span className="text-right text-muted">{text}</span></div><Progress value={pct} /></div>)}</div>
+        <p className="mt-4 text-xs text-muted">The score mixes how much of each module was really watched (half the score), quiz results, questions in videos, assignments and resources.</p>
       </Card>
       <Card title="Lesson progress">
         {data.lessons?.length ? <div className="max-h-[28rem] space-y-2 overflow-y-auto">{data.lessons.map((lesson, index) => <div key={`${lesson.module}-${lesson.position}-${index}`} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface-2 p-3"><div className="min-w-0"><div className="font-medium">Module {lesson.module} · {lesson.lesson}</div><div className="text-xs text-muted">{lesson.minutes_watched} minutes watched</div></div><Badge tone={lesson.completed_at ? "success" : "neutral"}>{lesson.completed_at ? `Finished ${date(lesson.completed_at)}` : "Not finished"}</Badge></div>)}</div> : <Empty title="No lessons yet" body="Lesson progress will show here." />}

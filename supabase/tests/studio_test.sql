@@ -784,6 +784,25 @@ select public.save_progress(pg_temp.lesson(0), 545, null, p_position => 100, p_d
 select 'Z14 resume position follows the player, furthest point stays' t,
   (select last_position_seconds = 100 and seconds_watched = 545 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 reset role;
+-- Parts really played (20261115000002): skipping doesn't count, parts can't arrive faster than real time.
+insert into auth.users (id, email) values ('abababab-0000-0000-0000-000000000002', 'seen@x.in');
+set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000002');
+select public.complete_onboarding('student', 'Seer', null, 9::smallint, 'Mum', '9811122244', null, p_consent => true);
+select 'Z17 first save: 9 parts of 60 = 15%' t, public.save_progress(pg_temp.lesson(0), 90, null, 90, 600, array(select generate_series(0, 8))) = 15 as pass;
+select 'Z17b skipping to the end with no parts played does not complete' t,
+  public.save_progress(pg_temp.lesson(0), 590, null, 590, 600, '{}') = 15
+  and (select completed_at is null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select 'Z17c a forged list of every part is capped (+3 parts right after a save)' t,
+  public.save_progress(pg_temp.lesson(0), 590, null, 590, 600, array(select generate_series(0, 59))) = 20 as pass;
+reset role;
+update public.lesson_progress set updated_at = now() - interval '20 minutes' where student_id = 'abababab-0000-0000-0000-000000000002';
+set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000002');
+select 'Z17d after real time passes, 90% of parts played' t,
+  public.save_progress(pg_temp.lesson(0), 560, null, 560, 600, array(select generate_series(0, 54))) >= 90 as pass;
+select 'Z17f ...completes it, with the real length and real seconds' t, (select completed_at is not null and video_seconds = 600 and seconds_watched = 550 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+reset role;
+select 'Z17e score has watched % and no active-days part' t,
+  (select watched_pct is not null and score > 0 from public.student_score_rows(null, 30) where student_id = 'abababab-0000-0000-0000-000000000002') as pass;
 select 'Z15 typed school name is used' t, (select school = 'Typed School' from public.student_score_rows(null, 30) where student_id = 'abababab-0000-0000-0000-000000000001') as pass;
 select 'Z16 a student with no activity scores 0' t,
   (select bool_and(score = 0) from public.student_score_rows(null, 30) r where lessons_started = 0 and quiz_attempts = 0

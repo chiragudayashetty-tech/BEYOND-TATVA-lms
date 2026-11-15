@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CircleCheck, Download, Pause, Play, Trash2, TriangleAlert, WifiOff } from "lucide-react";
 import VideoPlayer from "@/components/VideoPlayer";
+import { trackSeen } from "@/lib/watch";
 import { OFFLINE_ERRORS } from "@/components/OfflineDownload";
 import { Empty } from "@/components/ui";
 import { useIsClient } from "@/lib/hooks";
@@ -42,10 +43,12 @@ export default function DownloadsView({ userId }) {
 
   // Watch time is kept on the device first (works offline), then sent every 15 s when there is internet.
   const latest = useRef(null);
+  const track = useRef({ last: null, seen: new Set() });
   const onProgress = useCallback((seconds, duration) => {
     if (!playing || !userId) return;
     const max = Math.max(latest.current?.seconds ?? 0, seconds);
-    latest.current = { seconds: max, position: seconds, duration };
+    const added = trackSeen(track.current, seconds);   // parts really played (src/lib/watch.js)
+    latest.current = { seconds: max, position: seconds, duration, seen: added };
     keepProgress(userId, playing.id, latest.current);
   }, [playing, userId]);
   useEffect(() => {
@@ -59,7 +62,7 @@ export default function DownloadsView({ userId }) {
     const url = await localVideoUrl(e.id);
     setOpening(null);
     latest.current = null;
-    if (url) { setPlaying({ id: e.id, url }); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    if (url) { track.current = { last: null, seen: new Set() }; latest.current = null; setPlaying({ id: e.id, url }); window.scrollTo({ top: 0, behavior: "smooth" }); }
   }
 
   if (!ready) return null;

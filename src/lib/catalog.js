@@ -21,13 +21,14 @@ export function buildCourse(courseRow, chapterRows, lessonRows, done = new Set()
         .sort((a, b) => a.position - b.position)
         .map((l, i) => {
           const progress = progressByLesson.get(l.id);
-          const durationSeconds = (l.minutes ?? 0) * 60;
+          const durationSeconds = progress?.video_seconds || (l.minutes ?? 0) * 60;   // real length once the player reported it
           const secondsWatched = progress?.seconds_watched ?? 0;
           return {
             id: l.id, n: l.position, idx: i + 1, title: l.title, description: l.description,
             mins: l.minutes ?? 0, module: ch.position, done: done.has(l.id), secondsWatched,
             lastPositionSeconds: progress?.last_position_seconds ?? 0, durationSeconds,
-            progressPct: durationSeconds ? Math.min(100, Math.round(secondsWatched / durationSeconds * 100)) : null,
+            // % of the video really played (database, 20261115000002); older rows fall back to time / length.
+            progressPct: progress?.watched_pct ?? (durationSeconds ? Math.min(100, Math.round(secondsWatched / durationSeconds * 100)) : null),
             progressUpdatedAt: progress?.updated_at ?? null,
           };
         });

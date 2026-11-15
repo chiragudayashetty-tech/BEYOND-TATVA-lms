@@ -12,6 +12,7 @@ import { canWatch, isComingSoon, isReleased, quizOpen } from "@/lib/catalog";
 import { parseVideo, tracksProgress } from "@/lib/video";
 import { createClient } from "@/lib/supabase/client";
 import { localVideoUrl, useOffline } from "@/lib/offline";
+import { trackSeen } from "@/lib/watch";
 
 const tabs = ["Overview", "Notes"];
 export default function LessonView({ course, lesson, hasAccess, video, activities, canSave, userId }) {
@@ -23,7 +24,8 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
   const [watchSeconds, setWatchSeconds] = useState(lesson.secondsWatched ?? 0);
   const [startAt, setStartAt] = useState(() => lesson.lastPositionSeconds > 10 && lesson.durationSeconds > 0 && lesson.lastPositionSeconds < lesson.durationSeconds * 0.95
     ? lesson.lastPositionSeconds : 0);
-  const playerRef = useRef({ max: lesson.secondsWatched ?? 0, position: startAt, duration: lesson.durationSeconds || lesson.mins * 60 });
+  // seen/unsent: 10-second parts really played (src/lib/watch.js); unsent ones go with the next save.
+  const playerRef = useRef({ max: lesson.secondsWatched ?? 0, position: startAt, duration: lesson.durationSeconds || lesson.mins * 60, track: { last: null, seen: new Set() }, unsent: new Set() });
 
   const resumeNote = startAt > 0 ? `Resumed from ${Math.floor(startAt / 60)}:${String(startAt % 60).padStart(2, "0")}` : "";
   // Visited pages are kept in the browser for 30 s (next.config.mjs). When this lesson becomes complete,
@@ -42,15 +44,19 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
 
   // Progress and answers go through checked database functions (save_progress / save_answer):
   // the database confirms the lesson is open for this student and caps watch time.
-  const saveProgress = useCallback(async ({ seconds, position, duration } = {}) => {
+  const saveProgress = useCallback(async ({ seconds, position, duration, seen } = {}) => {
     if (!canSave || !userId) return { error: null };
-    const { error } = await createClient().rpc("save_progress", {
+    const { data, error } = await createClient().rpc("save_progress", {
       p_lesson: lesson.id,
       p_seconds: seconds ?? null,
       p_position: position ?? null,
       p_duration: duration ?? null,
+      p_seen: seen ?? [],
     });
-    if (!error) await refreshDone();
+    if (!error) {
+      if (typeof data === "number") setWatchedPct((pct) => Math.max(pct ?? 0, data));
+      await refreshDone();
+    }
     return { error };
   }, [canSave, userId, lesson.id, refreshDone]);
 
@@ -58,7 +64,9 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
     const w = playerRef.current;
     if (!w.max && !w.position) return;
     setSaveError("");
-    const { error } = await saveProgress({ seconds: Math.floor(w.max), position: Math.floor(w.position), duration: Math.floor(w.duration) || null });
+    const seen = [...w.unsent];
+    const { error } = await saveProgress({ seconds: Math.floor(w.max), position: Math.floor(w.position), duration: Math.floor(w.duration) || null, seen });
+    if (!error) seen.forEach((p) => w.unsent.delete(p));
     if (error) setSaveError("Couldn't save your progress. Check your connection and try again.");
   }, [saveProgress]);
 
@@ -77,9 +85,9 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
     setWatchSeconds(w.max);
     w.position = Math.floor(seconds);
     w.duration = Math.floor(duration);
-    const total = duration || lesson.mins * 60;
-    setWatchedPct(total > 0 ? Math.min(100, Math.round(w.max / total * 100)) : null);
-  }, [lesson.mins]);
+    trackSeen(w.track, seconds).forEach((p) => w.unsent.add(p));
+    // The % shown comes back from the database on each save (parts really played, not the furthest point).
+  }, []);
   const onPauseProgress = useCallback((seconds, duration) => {
     onProgress(seconds, duration);
     void saveLatest();

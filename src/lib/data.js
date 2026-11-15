@@ -41,7 +41,7 @@ export const getCourse = cache(async (courseId = COURSE_ID) => {
   const { user, profile } = await getSession();
   const live = user?.id === "preview" || profile?.role === "admin";
   const progress = user && user.id !== "preview"
-    ? supabase.from("lesson_progress").select("lesson_id, seconds_watched, last_position_seconds, completed_at, updated_at").eq("student_id", user.id)
+    ? supabase.from("lesson_progress").select("lesson_id, seconds_watched, last_position_seconds, completed_at, updated_at, watched_pct, video_seconds").eq("student_id", user.id)
     : Promise.resolve({ data: [] });
   const catalogP = live ? loadCatalog(supabase, courseId) : cachedCatalog(courseId).catch(() => loadCatalog(supabase, courseId));
   // Weekly batches: each student's own module dates (their batch decides when a module opens).
