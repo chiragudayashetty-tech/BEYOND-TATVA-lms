@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NotesButton } from "./CrmNotes";
 import { ClearLeadsButton, DeleteLeadButton } from "./LeadActions";
 import AddLeads from "./AddLeads";
+import PersonLink from "../PersonLink";
 
 export const metadata = { title: "Pipeline · Studio · Beyond Tatva" };
 
@@ -195,7 +196,7 @@ export default async function PipelinePage({ searchParams }) {
                 {list.map((r) => (
                   <li key={r.student_id ?? r.lead_id} className="flex flex-wrap items-start gap-3 px-5 py-3 text-sm">
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium">{r.name}</div>
+                      <PersonLink studentId={r.student_id} leadId={r.lead_id} className="font-medium">{r.name}</PersonLink>
                       <div className="truncate text-xs text-muted">
                         {[r.parent_name && `Parent: ${r.parent_name}`, r.phone, r.grade && `Class ${r.grade}${r.section ? ` ${r.section}` : ""}`, r.school].filter(Boolean).join(" · ")}
                       </div>

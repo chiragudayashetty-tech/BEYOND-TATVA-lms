@@ -1,4 +1,5 @@
 import { AlertTriangle, CalendarClock, IndianRupee, School, Users } from "lucide-react";
+import PersonLink from "../PersonLink";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle, StatCard } from "@/components/ui";
 import { COURSE_ID } from "@/lib/catalog";
@@ -125,7 +126,7 @@ export default async function TodayPage({ searchParams }) {
                     <li key={l.id} className="py-4 first:pt-0">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="font-semibold">{l.student || "No name"}{l.grade ? <span className="font-normal text-muted"> · Class {l.grade}</span> : null}</p>
+                          <p className="font-semibold"><PersonLink leadId={l.id}>{l.student || "No name"}</PersonLink>{l.grade ? <span className="font-normal text-muted"> · Class {l.grade}</span> : null}</p>
                           <p className="text-sm text-muted">{[l.school, l.phone && `+91 ${l.phone}`].filter(Boolean).join(" · ")}</p>
                         </div>
                         <div className="flex flex-wrap gap-1.5">

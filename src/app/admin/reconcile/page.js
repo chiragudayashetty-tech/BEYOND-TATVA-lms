@@ -1,4 +1,5 @@
 import { ReceiptText } from "lucide-react";
+import PersonLink from "../PersonLink";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle, StatCard } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
@@ -64,7 +65,7 @@ export default async function ReconcilePage({ searchParams }) {
             <ul className="divide-y divide-border">
               {needsAttention.map((row) => <li key={row.id} className="py-3 first:pt-0 last:pb-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-medium">{row.student_name || row.email || row.phone || "Unnamed payment"}</span>
+                  <PersonLink studentId={row.claimed_by} className="font-medium">{row.student_name || row.email || row.phone || "Unnamed payment"}</PersonLink>
                   <Badge tone={statusTone[row.status]}>{statusLabel[row.status]}</Badge>
                 </div>
                 <p className="mt-1 text-xs text-muted">{row.source === "manual" ? "Manual" : "Website"} · {date(row.created_at)}{row.amount_paise != null ? ` · ${money(row.amount_paise)}` : " · No amount recorded"}</p>
@@ -79,7 +80,7 @@ export default async function ReconcilePage({ searchParams }) {
         {rows.length === 0 ? <div className="p-5"><Empty icon={ReceiptText} title="No payments this month" body="Payments recorded in this month will appear here." /></div> : (
           <ul className="divide-y divide-border border-t border-border">
             {rows.map((row) => <li key={row.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
-              <div className="min-w-0 flex-1"><p className="truncate font-medium">{row.student_name || row.email || row.phone || "Unnamed payment"}</p><p className="text-xs text-muted">{row.source === "manual" ? "Manual" : "Website"} · {date(row.created_at)}{row.amount_paise != null ? ` · ${money(row.amount_paise)}` : " · Amount missing"}</p><p className="truncate font-mono text-[11px] text-subtle">{row.reference}</p></div>
+              <div className="min-w-0 flex-1"><p className="truncate font-medium"><PersonLink studentId={row.claimed_by}>{row.student_name || row.email || row.phone || "Unnamed payment"}</PersonLink></p><p className="text-xs text-muted">{row.source === "manual" ? "Manual" : "Website"} · {date(row.created_at)}{row.amount_paise != null ? ` · ${money(row.amount_paise)}` : " · Amount missing"}</p><p className="truncate font-mono text-[11px] text-subtle">{row.reference}</p></div>
               <Badge tone={statusTone[row.status]}>{statusLabel[row.status] ?? row.status}</Badge>
             </li>)}
           </ul>

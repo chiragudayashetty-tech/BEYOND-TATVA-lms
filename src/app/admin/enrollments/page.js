@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PersonLink from "../PersonLink";
 import { UserCheck } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle } from "@/components/ui";
@@ -44,7 +45,7 @@ export default async function EnrollmentsPage({ searchParams }) {
               {list.map((r) => (
                 <li key={r.id} className="flex flex-wrap items-start gap-3 px-5 py-3 text-sm">
                   <div className="min-w-0 flex-1">
-                    <div className="font-medium">{r.student_name ?? r.email ?? r.phone}</div>
+                    <PersonLink studentId={r.claimed_by} className="font-medium">{(r.claimed_by && name[r.claimed_by]) || r.student_name || r.email || r.phone}</PersonLink>
                     <div className="truncate text-xs text-muted">
                       {[r.email, r.phone].filter(Boolean).join(" · ")} · {date(r.created_at)} · {r.source === "manual" ? "added by you" : "website"}
                       {r.amount_paise != null && ` · ₹${(r.amount_paise / 100).toLocaleString("en-IN")}`}
