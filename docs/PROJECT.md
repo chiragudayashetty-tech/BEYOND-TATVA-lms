@@ -140,16 +140,12 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - Studio analytics fix (PR #171): "Module watching" always showed 0 started (fetchAll rows read wrongly).
 - To check on a phone: play a module 2 min → % rises; drag to the end → not complete.
 
-## Left to deploy / switch on (end of 2026-11-15)
-Code: nothing pending. `main` = production, every migration file is applied, no open PRs. Remaining items are settings only Chirag can do:
-- **Razorpay:** add the `refund.processed` event to the webhook (otherwise full refunds don't end access).
-- **Supabase Auth:** paste the "Reset Password" template + raise email rate limit (~100/hour); optional Phone provider + `SEND_SMS_HOOK_SECRET` for mobile sign-in.
-- **Backups:** add the 2 GitHub secrets (`docs/BACKUPS.md`) so nightly backups run.
-- **Launch plan upgrades:** Vercel Pro, Supabase Pro.
-- **Content:** real Module 0 videos; Module 2–5 videos by the Batch 1 dates; set each module's week in Studio → Content.
-- **Phone check** of watch tracking (above) and Phase D family testing.
+## Left to deploy / switch on (end of 2026-11-15): ALL DONE (Chirag confirmed 2026-11-15)
+- [x] Razorpay `refund.processed` webhook event  - [x] Supabase reset template + email limit (+ phone sign-in)
+- [x] Backup GitHub secrets  - [x] Vercel Pro / Supabase Pro  - [x] Module videos + weeks in Studio  - [x] Phone check + family test
+Full feature audit, flaws and next fixes: **`docs/AUDIT-2026-11-15.md`**.
 
-## Waiting on Chirag (2026-11-14)
+## Waiting on Chirag (2026-11-14) — superseded: Chirag confirmed all done 2026-11-15
 - Old archived sheet ("Workshop Leads v2 … Srvk closed"): delete its two timers (it now fails every 5 min with the old key).
 - Clean-up: delete test accounts "Test 1" and the school "lokis school"; merge Poorvi Hegde's duplicate account
   (Studio → People → Duplicates); decide if admin accounts should be left out of Pipeline (Claude: 1-line change).
