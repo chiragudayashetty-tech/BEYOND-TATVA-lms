@@ -3,7 +3,7 @@ import Link from "next/link";
 import Shell from "@/components/shell/Shell";
 import { Avatar, Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { GrantButton, MoveAccess, NewClass, NewSchool, SignupSchoolToggle, StudentDataButtons, TeacherRevoke } from "./PeopleForms";
+import { GrantButton, MoveAccess, NewClass, NewSchool, SignupSchoolToggle, StudentDataButtons, TeacherRevoke, TestPaidToggle } from "./PeopleForms";
 
 export const metadata = { title: "Schools and people · Admin · Beyond Tatva" };
 
@@ -14,7 +14,7 @@ export default async function PeoplePage() {
     supabase.rpc("signup_schools"),
     supabase.rpc("admin_duplicate_candidates"),
     supabase.from("classes").select("id, name, grade, school_id, teacher_id"),
-    supabase.from("profiles").select("id, role, full_name, grade, school_id, school_name, guardian_phone, guardian_consent_at, consent_by, teacher_terms_at, teacher_revoked_at, signed_up_by, student_phone, created_at").order("created_at", { ascending: false }),
+    supabase.from("profiles").select("id, role, full_name, grade, school_id, school_name, guardian_phone, guardian_consent_at, consent_by, teacher_terms_at, teacher_revoked_at, signed_up_by, student_phone, is_test, created_at").order("created_at", { ascending: false }),
     supabase.from("course_access").select("student_id, source"),
   ]);
   const schoolName = Object.fromEntries((schools ?? []).map((s) => [s.id, s.name]));
@@ -81,7 +81,7 @@ export default async function PeoplePage() {
                     <td className="px-5 py-3"><div className="flex items-center gap-3"><Avatar name={s.full_name} size="h-8 w-8 text-xs" /><div><Link href={`/admin/analytics/students/${s.id}`} className="font-medium hover:text-primary hover:underline">{s.full_name}</Link><div className="text-xs text-muted">Grade {s.grade}</div></div></div></td>
                     <td className="px-5 py-3 text-muted">{schoolName[s.school_id] ?? s.school_name ?? "–"}{!s.school_id && <div className="text-xs">Individual</div>}</td>
                     <td className="px-5 py-3"><div className="text-xs text-muted">{s.guardian_phone ?? "–"}</div>{s.guardian_consent_at ? <Badge tone="success">Consent ({s.consent_by ?? "parent"})</Badge> : <Badge tone="warning">No consent</Badge>}{s.signed_up_by === "parent" && <div className="text-[11px] text-subtle">Set up by parent</div>}</td>
-                    <td className="px-5 py-3">{accessBy[s.id] ? <Badge tone="success">Full · {accessBy[s.id]}</Badge> : <GrantButton studentId={s.id} />}</td>
+                    <td className="px-5 py-3">{s.is_test ? <TestPaidToggle studentId={s.id} paid={!!accessBy[s.id]} /> : accessBy[s.id] ? <Badge tone="success">Full · {accessBy[s.id]}</Badge> : <GrantButton studentId={s.id} />}</td>
                     <td className="px-5 py-3"><StudentDataButtons studentId={s.id} name={s.full_name} /></td>
                   </tr>
                 ))}

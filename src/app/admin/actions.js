@@ -119,6 +119,11 @@ export async function grantAccess(studentId) {
   return run((s) => s.from("course_access").upsert({ student_id: studentId, course_id: COURSE_ID, source: "admin" }));
 }
 
+// Test accounts only: switch between paid (full course) and free, to test both versions of the app.
+export async function setTestPaid(studentId, paid) {
+  return run((s) => s.rpc("admin_set_test_paid", { p_student: studentId, p_paid: paid }));
+}
+
 // Moves every course a duplicate account has (paid, key or admin) to the student's real account.
 export async function moveAccess(_, fd) {
   const from = str(fd, "from");

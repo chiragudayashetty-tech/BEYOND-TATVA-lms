@@ -3,7 +3,8 @@
 import { useActionState, useState, useTransition } from "react";
 import { ArrowRight, CircleCheck, KeyRound, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { createClass, createSchool, deleteStudent, resetStudentPassword, exportStudent, grantAccess, moveAccess, setTeacherRevoked } from "../actions";
+import { Badge } from "@/components/ui";
+import { createClass, createSchool, deleteStudent, resetStudentPassword, exportStudent, grantAccess, moveAccess, setTeacherRevoked, setTestPaid } from "../actions";
 
 function Status({ state }) {
   if (!state) return null;
@@ -144,6 +145,20 @@ export function GrantButton({ studentId }) {
     <button disabled={pending} onClick={() => start(() => grantAccess(studentId))} className="btn-secondary px-3 py-1.5 text-xs">
       <KeyRound className="h-3.5 w-3.5" /> {pending ? "Granting…" : "Give access"}
     </button>
+  );
+}
+
+export function TestPaidToggle({ studentId, paid }) {
+  const [pending, start] = useTransition();
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Badge tone="warning">Test</Badge>
+      <button disabled={pending} onClick={() => start(() => setTestPaid(studentId, !paid))}
+        className={paid ? "btn-primary px-3 py-1.5 text-xs" : "btn-secondary px-3 py-1.5 text-xs"}
+        title={paid ? "Switch to free (Module 0 only)" : "Switch to paid (full course)"}>
+        {pending ? "Switching…" : paid ? "Paid · switch to free" : "Free · switch to paid"}
+      </button>
+    </div>
   );
 }
 

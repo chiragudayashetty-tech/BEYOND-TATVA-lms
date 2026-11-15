@@ -1085,3 +1085,22 @@ do $$ begin perform public.tracker_snapshot(null); raise exception 'W29 FAIL';
 exception when insufficient_privilege then raise notice 'W29 pass: students cannot read the tracker'; end $$;
 select 'W30 students cannot read sync health' t, count(*) = 0 as pass from public.sheet_sync_health;
 reset role;
+
+-- Test accounts: paid/free switch (20261115000006)
+reset role;
+update public.profiles set is_test = true where id = 'f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0';
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_set_test_paid('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', true);
+reset role;
+select 'Z1 test account switched to paid' t, exists (select 1 from public.course_access where student_id = 'f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0') as pass;
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_set_test_paid('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', false);
+reset role;
+select 'Z2 test account switched to free' t, not exists (select 1 from public.course_access where student_id = 'f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0') as pass;
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+do $$ begin perform public.admin_set_test_paid((select id from public.profiles where not is_test and role = 'student' limit 1), true); raise exception 'Z3 FAIL';
+exception when others then if sqlerrm like 'Z3 FAIL' then raise; end if; raise notice 'Z3 pass: real students cannot be switched'; end $$;
+select pg_temp.as_user('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0');
+do $$ begin perform public.admin_set_test_paid('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', true); raise exception 'Z4 FAIL';
+exception when insufficient_privilege then raise notice 'Z4 pass: students cannot switch'; end $$;
+reset role;
