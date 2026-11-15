@@ -140,6 +140,15 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - Studio analytics fix (PR #171): "Module watching" always showed 0 started (fetchAll rows read wrongly).
 - To check on a phone: play a module 2 min → % rises; drag to the end → not complete.
 
+## Certificates + locked videos (2026-11-15, branch `claude/wizardly-faraday-fng2g6`)
+- **Certificates:** premium ivory/gold design (`src/components/Certificate.js`). Unlocks only when every lesson of every module is watched
+  (`issue_my_certificate`, migration `20261115000009`, tests K9–K19). A "Coming soon" module or a module with no lessons blocks it.
+  ID like `BT-7F3A-C91E`; public check at `/verify/<ID>` shows first name + last initial only. Download = Save as PDF (A4 landscape).
+  **Needs "apply" for `20261115000009` before merge.**
+- **Locked paid videos (code already on main, switched off):** Chirag: Bunny → Stream library → Security → turn on
+  *Embed view token authentication*, copy the token key, add it in Vercel as `BUNNY_EMBED_TOKEN_KEY` (Production + Preview), redeploy.
+  Do the Vercel key + redeploy **first**, then switch Bunny on, or videos stop playing in between.
+
 ## Left to deploy / switch on (end of 2026-11-15): ALL DONE (Chirag confirmed 2026-11-15)
 - [x] Razorpay `refund.processed` webhook event  - [x] Supabase reset template + email limit (+ phone sign-in)
 - [x] Backup GitHub secrets  - [x] Vercel Pro / Supabase Pro  - [x] Module videos + weeks in Studio  - [x] Phone check + family test
