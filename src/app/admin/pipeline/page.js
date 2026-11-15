@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CopyCheck, Download, Filter } from "lucide-react";
+import { CopyCheck, Download, Filter, Trash2 } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { COURSE_ID } from "@/lib/catalog";
@@ -76,6 +76,7 @@ export default async function PipelinePage({ searchParams }) {
       <PageTitle title="Pipeline" subtitle="Everyone from lead to paid, one row per student (siblings separate). Filter by school, class, section or status, or group by school.">
         <a href={`/admin/pipeline/export?view=${view}${stage ? `&stage=${stage}` : ""}${filterQuery(f) ? `&${filterQuery(f)}` : ""}`} className="btn-secondary"><Download size={16} /> Export CSV</a>
         <Link href="/admin/pipeline/duplicates" className="btn-secondary"><CopyCheck size={16} /> Duplicates</Link>
+        <Link href="/admin/pipeline/trash" className="btn-secondary"><Trash2 size={16} /> Trash</Link>
         <ClearLeadsButton source={view === "schools" ? "schools" : null} label={view === "schools" ? "Clear school enquiries" : "Clear all leads"} />
       </PageTitle>
 

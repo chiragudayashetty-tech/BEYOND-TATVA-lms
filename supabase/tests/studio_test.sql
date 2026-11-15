@@ -554,6 +554,22 @@ select 'Y6 delete lead by id' t, public.admin_delete_leads(array(select id from 
 do $$ begin perform public.admin_clear_leads('yes'); raise exception 'Y7 FAIL'; exception when others then if sqlerrm like 'Y7%' then raise; end if; raise notice 'Y7 pass: %', sqlerrm; end $$;
 select 'Y8 clear all leads' t, public.admin_clear_leads('DELETE ALL LEADS') >= 0 as pass;
 select 'Y8b no leads left' t, count(*) = 0 as pass from public.leads where course_id = 'ai-for-students';
+select 'Y9 cleared leads are in the trash, not gone' t, count(*) >= 1 as pass from public.admin_lead_trash() where phone like '%9111111111';
+select 'Y10 restore puts the lead back' t, public.admin_restore_lead((select id from public.admin_lead_trash() where phone like '%9111111111' limit 1)) is not null as pass;
+select 'Y10b restored lead is a normal lead again' t, count(*) = 1 as pass from public.leads where public.phone_key(phone) = '9111111111';
+reset role;
+insert into public.leads (reference, phone, source, student_name, school_name) values ('m-1', '+919222222222', 'manual', 'Asha', null);
+insert into public.leads (reference, phone, source, student_name, school_name, status, sheet) values ('m-2', '+919222222299', 'manual', null, 'Durga', 'Call back', '{"Enjoyed":"Yes"}');
+insert into public.crm_notes (lead_id, body) select id, 'merge me' from public.leads where reference = 'm-2';
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'Y11 merge keeps one lead' t, public.admin_merge_leads((select id from public.leads where reference = 'm-1'), (select id from public.leads where reference = 'm-2')) is not null as pass;
+select 'Y11b kept lead filled from the other' t, student_name = 'Asha' and school_name = 'Durga' and status = 'Call back' and sheet ->> 'Enjoyed' = 'Yes' as pass from public.leads where reference = 'm-1';
+select 'Y11c notes moved, merged lead in trash' t, (select count(*) from public.crm_notes c join public.leads l on l.id = c.lead_id where l.reference = 'm-1') = 1
+  and not exists (select 1 from public.leads where reference = 'm-2') and exists (select 1 from public.admin_lead_trash() where reason like 'merged into Asha') as pass;
+do $$ begin perform public.admin_merge_leads(gen_random_uuid(), gen_random_uuid()); raise exception 'Y30 FAIL'; exception when others then if sqlerrm like 'Y30%' then raise; end if; raise notice 'Y30 pass: %', sqlerrm; end $$;
+set role authenticated; select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+do $$ begin perform public.admin_lead_trash(); raise exception 'Y31 FAIL'; exception when others then if sqlerrm like 'Y31%' then raise; end if; raise notice 'Y31 pass: %', sqlerrm; end $$;
+select 'Y32 students cannot read the trash table' t, count(*) = 0 as pass from public.leads_trash;
 reset role;
 
 -- ── Course price and original price ──────────────────────────────────────────

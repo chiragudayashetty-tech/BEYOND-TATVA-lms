@@ -4,7 +4,7 @@ import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { COURSE_ID } from "@/lib/catalog";
 import { createClient } from "@/lib/supabase/server";
-import { DedupeButton, DeleteLeadButton } from "../LeadActions";
+import { DedupeButton, DeleteLeadButton, MergeIntoButton } from "../LeadActions";
 
 export const metadata = { title: "Duplicates · Studio · Beyond Tatva" };
 
@@ -29,7 +29,7 @@ export default async function DuplicatesPage() {
 
       <div className="mb-4 flex flex-wrap items-start gap-3">
         <DedupeButton count={leadCopies} />
-        <p className="max-w-md text-xs text-muted">Keeps the oldest lead for each phone and deletes {leadCopies} extra lead cop{leadCopies === 1 ? "y" : "ies"}. Student accounts are never deleted here; use People for that.</p>
+        <p className="max-w-md text-xs text-muted">Keeps the oldest lead for each phone and moves {leadCopies} extra lead cop{leadCopies === 1 ? "y" : "ies"} to the trash. To combine details and notes instead, use “Keep this, merge others” on a lead. Student accounts are never deleted here; use People for that.</p>
       </div>
 
       {groups.size === 0 ? (
@@ -47,6 +47,7 @@ export default async function DuplicatesPage() {
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <Badge tone={r.kind === "lead" ? "neutral" : "primary"}>{r.kind === "lead" ? "Website lead" : "Student account"}</Badge>
+                      {r.kind === "lead" && <MergeIntoButton keepId={r.id} name={r.name || r.phone} mergeIds={rows.filter((x) => x.kind === "lead" && x.id !== r.id).map((x) => x.id)} />}
                       {r.kind === "lead" && <DeleteLeadButton leadId={r.id} name={r.name || r.phone} />}
                     </div>
                   </li>
