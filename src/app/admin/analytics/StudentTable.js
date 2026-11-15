@@ -7,7 +7,7 @@ import { Badge, Empty } from "@/components/ui";
 const fields = [
   ["full_name", "Student"], ["school", "School"], ["grade", "Grade"], ["score", "Score"],
   ["lessons_completed", "Lessons"], ["quiz_avg_best_pct", "Quiz avg"], ["quizzes_passed", "Quizzes passed"],
-  ["resources_opened", "PDFs opened"], ["assignments_submitted", "Assignments"], ["active_days_30", "Active days (30d)"], ["last_active", "Last active"], ["paid", "Paid"],
+  ["resources_opened", "PDFs opened"], ["assignments_submitted", "Assignments"], ["watched_pct", "Watched"], ["last_active", "Last active"], ["paid", "Paid"],
 ];
 
 export function downloadCsv(filename, rows) {
@@ -43,7 +43,7 @@ export default function StudentTable({ students, schoolOptions = [], initialScho
 
   const csvRows = rows.map((student) => [student.full_name, student.school, student.grade, student.score,
     `${student.lessons_completed}/${student.lessons_total}`, student.quiz_avg_best_pct, student.quizzes_passed,
-    student.resources_opened, `${student.assignments_submitted}/${student.assignments_total}`, student.active_days_30,
+    student.resources_opened, `${student.assignments_submitted}/${student.assignments_total}`, student.watched_pct,
     student.last_active, student.paid ? "Paid" : "Unpaid"]);
 
   return <>
@@ -53,7 +53,7 @@ export default function StudentTable({ students, schoolOptions = [], initialScho
       <select className="input" aria-label="Filter by grade" value={grade} onChange={(e) => setGrade(e.target.value)}><option value="">All grades</option>{[8, 9, 10].map((value) => <option key={value}>{value}</option>)}</select>
       <select className="input" aria-label="Filter by payment" value={paid} onChange={(e) => setPaid(e.target.value)}><option value="">Paid + unpaid</option><option value="paid">Paid</option><option value="unpaid">Unpaid</option></select>
       <label className="flex min-h-11 items-center gap-2 rounded-xl border border-border px-3 text-sm"><input type="checkbox" checked={inactive} onChange={(e) => setInactive(e.target.checked)} />Inactive 14+ days</label>
-      <button className="btn-secondary sm:col-span-2 xl:col-span-5" type="button" onClick={() => downloadCsv("student-analytics.csv", [["Name", "School", "Grade", "Score", "Lessons", "Quiz avg %", "Quizzes passed", "PDFs opened", "Assignments", "Active days 30d", "Last active", "Paid"], ...csvRows])}>Download CSV ({rows.length})</button>
+      <button className="btn-secondary sm:col-span-2 xl:col-span-5" type="button" onClick={() => downloadCsv("student-analytics.csv", [["Name", "School", "Grade", "Score", "Lessons", "Quiz avg %", "Quizzes passed", "PDFs opened", "Assignments", "Watched %", "Last active", "Paid"], ...csvRows])}>Download CSV ({rows.length})</button>
     </div>
     {rows.length === 0 ? <Empty title="No students match" body="Try changing or clearing your filters." /> : <div className="overflow-x-auto rounded-xl border border-border"><table className="w-full min-w-[1100px] text-left text-sm">
       <thead className="bg-surface-2 text-xs text-muted"><tr>{fields.map(([key, label]) => <th key={key} className="whitespace-nowrap px-3 py-3"><button type="button" onClick={() => setSort(([current, direction]) => [key, current === key && direction === "asc" ? "desc" : "asc"])}>{label}{sort[0] === key ? (sort[1] === "asc" ? " ↑" : " ↓") : ""}</button></th>)}</tr></thead>
@@ -63,7 +63,7 @@ export default function StudentTable({ students, schoolOptions = [], initialScho
         <td className="px-3 py-3"><Badge tone={student.score >= 70 ? "success" : student.score >= 40 ? "warning" : "danger"}>{student.score ?? "–"}</Badge></td>
         <td className="px-3 py-3">{student.lessons_completed ?? 0}/{student.lessons_total ?? 0}</td><td className="px-3 py-3">{student.quiz_avg_best_pct == null ? <span title="No published quizzes are available">–</span> : `${student.quiz_avg_best_pct}%`}</td>
         <td className="px-3 py-3">{student.quizzes_passed ?? 0}</td><td className="px-3 py-3">{student.resources_opened ?? 0}</td><td className="px-3 py-3">{student.assignments_submitted ?? 0}/{student.assignments_total ?? 0}</td>
-        <td className="px-3 py-3">{student.active_days_30 ?? 0}</td><td className="px-3 py-3">{student.last_active || <span title="No tracked learning activity yet">–</span>}</td><td className="px-3 py-3"><Badge tone={student.paid ? "success" : "neutral"}>{student.paid ? "Paid" : "Unpaid"}</Badge></td>
+        <td className="px-3 py-3">{student.watched_pct == null ? "–" : `${student.watched_pct}%`}</td><td className="px-3 py-3">{student.last_active || <span title="No tracked learning activity yet">–</span>}</td><td className="px-3 py-3"><Badge tone={student.paid ? "success" : "neutral"}>{student.paid ? "Paid" : "Unpaid"}</Badge></td>
       </tr>)}</tbody>
     </table></div>}
   </>;

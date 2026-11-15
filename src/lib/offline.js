@@ -264,10 +264,11 @@ export const needsInternet = (e) => Date.now() - (e.checkedAt ?? e.savedAt ?? 0)
 function pending() {
   try { return JSON.parse(localStorage.getItem(PENDING) ?? "{}") ?? {}; } catch { return {}; }
 }
-export function keepProgress(userId, lessonId, { seconds, position, duration }) {
+export function keepProgress(userId, lessonId, { seconds, position, duration, seen = [] }) {
   const all = pending();
   const key = `${userId}:${lessonId}`;
-  all[key] = { seconds: Math.max(Math.floor(seconds), all[key]?.seconds ?? 0), position: Math.floor(position), duration: Math.floor(duration) || null };
+  const parts = [...new Set([...(all[key]?.seen ?? []), ...seen])].sort((a, b) => a - b);
+  all[key] = { seconds: Math.max(Math.floor(seconds), all[key]?.seconds ?? 0), position: Math.floor(position), duration: Math.floor(duration) || null, seen: parts };
   try { localStorage.setItem(PENDING, JSON.stringify(all)); } catch {}
 }
 // Sends kept watch time for this student. Returns how many lessons were saved.
@@ -278,11 +279,11 @@ export async function sendProgress(supabase, userId) {
   for (const [key, p] of Object.entries(all)) {
     const [uid, lessonId] = key.split(":");
     if (uid !== userId) continue;
-    const { error } = await supabase.rpc("save_progress", { p_lesson: lessonId, p_seconds: p.seconds, p_position: p.position, p_duration: p.duration });
+    const { error } = await supabase.rpc("save_progress", { p_lesson: lessonId, p_seconds: p.seconds, p_position: p.position, p_duration: p.duration, p_seen: p.seen ?? [] });
     // "not open for you" will never succeed later: drop it. Anything else (network): keep and retry.
     if (error && !/open for you/i.test(error.message ?? "")) continue;
     const now = pending();
-    if (now[key]?.seconds === p.seconds && now[key]?.position === p.position) { delete now[key]; try { localStorage.setItem(PENDING, JSON.stringify(now)); } catch {} }
+    if (now[key]?.seconds === p.seconds && now[key]?.position === p.position && (now[key]?.seen ?? []).length === (p.seen ?? []).length) { delete now[key]; try { localStorage.setItem(PENDING, JSON.stringify(now)); } catch {} }
     if (!error) sent += 1;
   }
   return sent;

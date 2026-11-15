@@ -65,3 +65,33 @@ test("funnel stages after sign-up only count the sign-up cohort", () => {
   });
   assert.deepEqual(funnel.map((s) => s.count), [1, 0, 0, 0, 0, 0, 0]);
 });
+
+import { moduleWatch, needsNudge, tenthsSeen } from "../src/lib/analytics.js";
+
+test("tenthsSeen uses real parts, else watched %", () => {
+  assert.deepEqual(tenthsSeen({ seen: [0, 1, 59], video_seconds: 600 }, 0), [true, false, false, false, false, false, false, false, false, true]);
+  assert.equal(tenthsSeen({ watched_pct: 35 }, 600).filter(Boolean).length, 3);
+  assert.equal(tenthsSeen({ completed_at: "x" }, 600).filter(Boolean).length, 10);
+});
+
+test("moduleWatch: started, average %, finished, drop-off curve", () => {
+  const [m] = moduleWatch([{ id: "L", title: "M0", minutes: 10 }], [
+    { lesson_id: "L", watched_pct: 100, completed_at: "x" },
+    { lesson_id: "L", watched_pct: 20 },
+  ]);
+  assert.equal(m.started, 2); assert.equal(m.completed, 1); assert.equal(m.avgPct, 60);
+  assert.equal(m.curve[0], 100); assert.equal(m.curve[9], 50);
+});
+
+test("needsNudge: idle starters and never-started, not finishers or recent", () => {
+  const now = Date.parse("2026-11-15T00:00:00Z");
+  const old = "2026-11-01T00:00:00Z", recent = "2026-11-14T00:00:00Z";
+  const list = needsNudge([
+    { student_id: "a", signed_up_at: old }, { student_id: "b", signed_up_at: old },
+    { student_id: "c", signed_up_at: old }, { student_id: "d", signed_up_at: recent },
+  ], [
+    { student_id: "a", lesson_id: "L", updated_at: old },
+    { student_id: "b", lesson_id: "L", updated_at: recent },
+  ], 1, now);
+  assert.deepEqual(list.map((x) => [x.student_id, x.reason]), [["c", "Never started"], ["a", "Stopped watching"]]);
+});
