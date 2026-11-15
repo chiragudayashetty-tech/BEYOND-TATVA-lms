@@ -4,7 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 import { ArrowRight, CircleCheck, KeyRound, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui";
-import { createClass, createSchool, deleteStudent, resetStudentPassword, exportStudent, grantAccess, moveAccess, setTeacherRevoked, setTestPaid } from "../actions";
+import { createClass, createSchool, deleteStudent, resetStudentPassword, exportStudent, grantAccess, moveAccess, setTeacherRevoked, setTestAccount, setTestPaid } from "../actions";
 
 function Status({ state }) {
   if (!state) return null;
@@ -159,6 +159,15 @@ export function TestPaidToggle({ studentId, paid }) {
         {pending ? "Switching…" : paid ? "Paid · switch to free" : "Free · switch to paid"}
       </button>
     </div>
+  );
+}
+
+export function TestMark({ studentId, isTest }) {
+  const [pending, start] = useTransition();
+  return (
+    <button disabled={pending} onClick={() => start(() => setTestAccount(studentId, !isTest))} className="btn-ghost px-3 py-1 text-xs">
+      {pending ? "Saving…" : isTest ? "Not a test" : "Mark as test"}
+    </button>
   );
 }
 

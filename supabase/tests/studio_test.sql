@@ -1022,7 +1022,7 @@ do $$ begin perform public.password_signup_allowed('9.9.9.9'); raise exception '
 exception when insufficient_privilege then raise notice 'W4 pass: students cannot call the sign-up limit'; end $$;
 select 'W5 sign-up log is unreadable' t, count(*) = 0 as pass from public.signup_attempts;
 reset role;
-insert into auth.users (id, email, phone) values ('e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1', 'reset@example.com', '919845066666');
+insert into auth.users (id, email, phone) values ('e7e7e7e7-e7e7-e7e7-e7e7-e7e7e7e7e7e7', 'reset@example.com', '919845066666');
 select 'W6 phone finds its account email' t, public.email_for_phone('98450 66666') = 'reset@example.com' as pass;
 select 'W7 unknown phone finds nothing' t, public.email_for_phone('9845000000') is null as pass;
 set role authenticated; select pg_temp.as_user('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0');
@@ -1103,4 +1103,21 @@ exception when others then if sqlerrm like 'Z3 FAIL' then raise; end if; raise n
 select pg_temp.as_user('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0');
 do $$ begin perform public.admin_set_test_paid('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', true); raise exception 'Z4 FAIL';
 exception when insufficient_privilege then raise notice 'Z4 pass: students cannot switch'; end $$;
+reset role;
+
+-- Mark as test (20261115000007)
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_set_test('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', false);
+reset role;
+select 'Z5 unmarked' t, not is_test as pass from public.profiles where id = 'f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0';
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_set_test('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', true);
+reset role;
+select 'Z6 marked and off the leaderboard' t, is_test and leaderboard_hidden as pass from public.profiles where id = 'f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0';
+insert into auth.users (id, email, raw_app_meta_data) values ('a9b8c7d6-0000-4000-8000-000000000123', 'play@x.in', '{"is_test": true}');
+insert into public.profiles (id, role, full_name) values ('a9b8c7d6-0000-4000-8000-000000000123', 'admin', 'Play Tester');
+select 'Z7 flagged sign-up becomes a test profile' t, is_test as pass from public.profiles where id = 'a9b8c7d6-0000-4000-8000-000000000123';
+set role authenticated; select pg_temp.as_user('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0');
+do $$ begin perform public.admin_set_test('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', false); raise exception 'Z8 FAIL';
+exception when insufficient_privilege then raise notice 'Z8 pass: students cannot mark tests'; end $$;
 reset role;

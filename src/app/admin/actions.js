@@ -124,6 +124,11 @@ export async function setTestPaid(studentId, paid) {
   return run((s) => s.rpc("admin_set_test_paid", { p_student: studentId, p_paid: paid }));
 }
 
+// Mark or unmark any student account as a test account (e.g. Google Play testers).
+export async function setTestAccount(studentId, test) {
+  return run((s) => s.rpc("admin_set_test", { p_student: studentId, p_test: test }));
+}
+
 // Moves every course a duplicate account has (paid, key or admin) to the student's real account.
 export async function moveAccess(_, fd) {
   const from = str(fd, "from");
