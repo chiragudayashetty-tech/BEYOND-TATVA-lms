@@ -286,12 +286,13 @@ export async function gradeSubmission(_, fd) {
 }
 
 // Leads. Deleting a lead also removes every other lead with the same phone and its CRM notes.
+// Deleted leads go to a trash for 30 days (Pipeline → Trash) and can be restored with their notes.
 async function leadRpc(fn, args, label) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc(fn, args);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/pipeline", "layout");
-  return { ok: true, message: `${label}: ${data ?? 0} lead${data === 1 ? "" : "s"} removed.` };
+  return { ok: true, message: `${label}: ${data ?? 0} lead${data === 1 ? "" : "s"} moved to the trash (restore within 30 days).` };
 }
 export async function deleteLeads(ids) {
   if (!Array.isArray(ids) || ids.length === 0) return { ok: false, error: "Nothing selected." };
@@ -302,6 +303,26 @@ export async function clearLeads(confirm, source = null) {
 }
 export async function dedupeLeads() {
   return leadRpc("admin_dedupe_leads", { p_course: COURSE_ID }, "Duplicates removed");
+}
+
+// Merge other leads into one: the kept lead fills its empty fields from them and takes their notes.
+export async function mergeLeads(keepId, mergeIds) {
+  if (!keepId || !Array.isArray(mergeIds) || mergeIds.length === 0) return { ok: false, error: "Nothing to merge." };
+  const supabase = await createClient();
+  for (const id of mergeIds) {
+    const { error } = await supabase.rpc("admin_merge_leads", { p_keep: keepId, p_merge: id });
+    if (error) return { ok: false, error: error.message };
+  }
+  revalidatePath("/admin/pipeline", "layout");
+  return { ok: true, message: `Merged ${mergeIds.length} lead${mergeIds.length === 1 ? "" : "s"} into this one.` };
+}
+
+export async function restoreLead(id) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_restore_lead", { p_id: id });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/pipeline", "layout");
+  return { ok: true, message: "Restored." };
 }
 
 // Offline leads (typed in or pasted).
