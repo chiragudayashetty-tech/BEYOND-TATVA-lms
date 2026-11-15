@@ -4,6 +4,7 @@ import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { COURSE_ID } from "@/lib/catalog";
 import { createClient } from "@/lib/supabase/server";
+import PersonLink from "../../PersonLink";
 import { DedupeButton, DeleteLeadButton, MergeIntoButton } from "../LeadActions";
 
 export const metadata = { title: "Duplicates · Studio · Beyond Tatva" };
@@ -42,7 +43,7 @@ export default async function DuplicatesPage() {
                 {rows.map((r) => (
                   <li key={`${r.kind}-${r.id}`} className="flex flex-wrap items-start gap-3 px-5 py-3 text-sm">
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium">{r.name || r.phone || r.email || "No name"}</div>
+                      <PersonLink studentId={r.kind === "lead" ? null : r.id} leadId={r.kind === "lead" ? r.id : null} className="font-medium">{r.name || r.phone || r.email || "No name"}</PersonLink>
                       <div className="truncate text-xs text-muted">{[r.phone, r.email, r.source && `from ${r.source}`, date(r.created_at)].filter(Boolean).join(" · ")}</div>
                     </div>
                     <div className="flex flex-col items-end gap-1">

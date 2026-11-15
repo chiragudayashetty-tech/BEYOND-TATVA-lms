@@ -4,6 +4,7 @@ import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle, Progress, StatCard } from "@/components/ui";
 import { createClient, requireRole } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import LeadDetails from "../../../LeadDetails";
 
 export const metadata = { title: "Student activity · Analytics · Beyond Tatva" };
 
@@ -15,9 +16,10 @@ export default async function StudentActivityPage({ params }) {
   await requireRole(["admin"]);
   const supabase = await createClient();
   const details = await studentDetails(supabase, id);
-  const [{ data, error }, { data: duplicateGroups }] = await Promise.all([
+  const [{ data, error }, { data: duplicateGroups }, { data: leads }] = await Promise.all([
     supabase.rpc("admin_student_activity", { p_student_id: id }),
     supabase.rpc("admin_duplicate_candidates"),
+    supabase.from("leads").select("*").eq("student_id", id).order("updated_at", { ascending: false }),
   ]);
   if (error && /Student not found/i.test(error.message)) notFound();
   if (!data) return <Shell roles={["admin"]}><Empty title="Student activity unavailable" body="We couldn't load this student's activity. Please try again." /></Shell>;
@@ -54,6 +56,7 @@ export default async function StudentActivityPage({ params }) {
         {details.map(([k, v]) => <div key={k} className="min-w-0"><dt className="text-xs text-muted">{k}</dt><dd className="break-words font-medium">{v || "–"}</dd></div>)}
       </dl>
     </Card>
+    {(leads ?? []).length > 0 && <div className="mb-5 space-y-5">{leads.map((lead) => <LeadDetails key={lead.id} lead={lead} />)}</div>}
     <div className="grid gap-5 xl:grid-cols-2">
       <Card title="Learning score breakdown">
         <div className="space-y-3">{parts.map(([label, value, max]) => <div key={label}><div className="mb-1 flex justify-between gap-2 text-sm"><span>{label}</span><span className="text-muted">{Math.round(value)}/{max}</span></div><Progress value={value / max * 100} /></div>)}</div>

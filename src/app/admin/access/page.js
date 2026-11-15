@@ -1,4 +1,5 @@
 import { KeyRound } from "lucide-react";
+import PersonLink from "../PersonLink";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { COURSE_ID } from "@/lib/catalog";
@@ -46,7 +47,7 @@ export default async function AccessPage() {
                           <td className="px-5 py-2.5 font-mono">{k.code}</td>
                           <td className="px-5 py-2.5 text-right">
                             {k.redeemed_by
-                              ? <span className="text-muted">{names[k.redeemed_by] ?? "Student"} · {new Date(k.redeemed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                              ? <span className="text-muted"><PersonLink studentId={k.redeemed_by}>{names[k.redeemed_by] ?? "Student"}</PersonLink> · {new Date(k.redeemed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
                               : <Badge>Unused</Badge>}
                           </td>
                         </tr>
