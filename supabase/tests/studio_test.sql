@@ -801,6 +801,15 @@ select 'Z17d after real time passes, 90% of parts played' t,
   public.save_progress(pg_temp.lesson(0), 560, null, 560, 600, array(select generate_series(0, 54))) >= 90 as pass;
 select 'Z17f ...completes it, with the real length and real seconds' t, (select completed_at is not null and video_seconds = 600 and seconds_watched = 550 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 reset role;
+reset role;
+insert into auth.users (id, email) values ('abababab-0000-0000-0000-000000000003', 'old@x.in');
+set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000003');
+select public.complete_onboarding('student', 'Old Row', null, 9::smallint, 'Mum', '9811122255', null, p_consent => true);
+select public.save_progress(pg_temp.lesson(0), 400, null, 400, 600);
+select 'Z18 old-style save keeps the furthest-point estimate' t, (select watched_pct = 67 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select 'Z18b first real parts replace the estimate' t, public.save_progress(pg_temp.lesson(0), 30, null, 30, 600, '{0,1,2}') = 5 as pass;
+select 'Z18c stored too' t, (select watched_pct = 5 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+reset role;
 select 'Z17e score has watched % and no active-days part' t,
   (select watched_pct is not null and score > 0 from public.student_score_rows(null, 30) where student_id = 'abababab-0000-0000-0000-000000000002') as pass;
 select 'Z15 typed school name is used' t, (select school = 'Typed School' from public.student_score_rows(null, 30) where student_id = 'abababab-0000-0000-0000-000000000001') as pass;
