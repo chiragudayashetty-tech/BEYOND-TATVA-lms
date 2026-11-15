@@ -54,8 +54,12 @@ async function inspectPage(path, width, cookies = []) {
       const inlineTextLink = el.tagName === "A" && ["inline", "inline-block"].includes(style.display);
       const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
       const top = document.elementFromPoint(x, y);
+      // A ::before with negative left/right insets widens the tap area (e.g. .planner-day-hit).
+      const before = getComputedStyle(el, "::before");
+      const extra = before.content !== "none" && before.position === "absolute"
+        ? Math.max(0, -parseFloat(before.left) || 0) + Math.max(0, -parseFloat(before.right) || 0) : 0;
       return { label: el.getAttribute("aria-label") || el.innerText || el.textContent, width: rect.width, height: rect.height,
-        tooSmall: !inlineTextLink && (rect.width < 44 || rect.height < 44), covered: !top || !(top === el || el.contains(top) || top.closest("[data-preview-switcher]")) }; // the dev-only switcher floats over pages
+        tooSmall: !inlineTextLink && (rect.width + extra < 44 || rect.height < 44), covered: !top || !(top === el || el.contains(top) || top.closest("[data-preview-switcher], nextjs-portal")) }; // dev-only switcher and Next.js dev tools float over pages
     });
     return { sideways, targets };
   });

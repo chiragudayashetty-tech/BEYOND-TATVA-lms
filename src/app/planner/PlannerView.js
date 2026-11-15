@@ -63,7 +63,7 @@ export default function PlannerView({ serverPlan = {}, userId = null }) {
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
       <div className="min-w-0 space-y-6">
-        <div className="card p-4">
+        <div className="card p-3 sm:p-4">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm font-semibold">{week[0].toLocaleDateString("en-IN", { day: "numeric", month: "short" })} – {week[6].toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
             <div className="flex gap-1">
@@ -71,7 +71,7 @@ export default function PlannerView({ serverPlan = {}, userId = null }) {
               <button onClick={() => setSelected(addDays(selected, 7))} aria-label="Next week" className="btn-ghost h-11 w-11 p-0"><ChevronRight className="h-4 w-4" /></button>
             </div>
           </div>
-          <div className="grid grid-cols-7 gap-1.5">
+          <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
             {week.map((d) => {
               const k = key(d);
               const on = k === dayKey;
@@ -137,7 +137,7 @@ export default function PlannerView({ serverPlan = {}, userId = null }) {
         </div>
       </div>
 
-      <div className="card h-fit p-5">
+      <div className="card h-fit p-3 sm:p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-semibold">{month.toLocaleDateString("en-IN", { month: "long", year: "numeric" })}</h2>
           <div className="flex gap-1">
@@ -152,7 +152,7 @@ export default function PlannerView({ serverPlan = {}, userId = null }) {
             const k = key(d);
             return (
               <button key={k} onClick={() => setSelected(d)}
-                className={`planner-day-hit relative grid aspect-square place-items-center rounded-lg text-sm transition ${k === dayKey ? "bg-primary font-semibold text-primary-fg" : k === key(today) ? "font-semibold text-primary ring-1 ring-primary" : "hover:bg-surface-2"}`}>
+                className={`planner-day-hit relative grid min-h-11 place-items-center sm:aspect-square rounded-lg text-sm transition ${k === dayKey ? "bg-primary font-semibold text-primary-fg" : k === key(today) ? "font-semibold text-primary ring-1 ring-primary" : "hover:bg-surface-2"}`}>
                 {d.getDate()}
                 {plan[k]?.length > 0 && k !== dayKey && <span className="absolute bottom-1 h-1 w-1 rounded-full bg-primary" />}
               </button>

@@ -14,6 +14,8 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
+  // Dev server only: the smoke tests open pages at 127.0.0.1; Next 16.4 blocks other dev hostnames by default.
+  allowedDevOrigins: ["127.0.0.1"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
