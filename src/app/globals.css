@@ -200,3 +200,12 @@ html:not(.in-app) .app-only { display: none !important; }
 @keyframes bt-save-glow { 0%, 100% { box-shadow: 0 0 0 0 rgb(34 197 94 / .45); } 50% { box-shadow: 0 0 0 6px rgb(34 197 94 / 0); } }
 @keyframes bt-price-bump { 50% { transform: scale(1.08); } }
 @media (prefers-reduced-motion: reduce) { .bt-price-save { opacity: 1; transform: none; animation: none !important; } .bt-price-was::after { transition: none; } }
+
+/* Certificate: Download PDF prints only the certificate, full colour, A4 landscape. */
+@media print {
+  @page { size: A4 landscape; margin: 0; }
+  html, body { background: #fbf7ec !important; }
+  body * { visibility: hidden; }
+  .cert-sheet, .cert-sheet * { visibility: visible; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cert-sheet { position: fixed; inset: 0; width: 100vw; }
+}

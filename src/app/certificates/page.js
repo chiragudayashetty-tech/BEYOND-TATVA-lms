@@ -1,57 +1,51 @@
-import { Check, Download, Lock, Share2 } from "lucide-react";
+import { Check, Lock } from "lucide-react";
 import Shell from "@/components/shell/Shell";
+import Certificate from "@/components/Certificate";
 import { PageTitle, Progress } from "@/components/ui";
 import { getCourse } from "@/lib/data";
-import { getSession } from "@/lib/supabase/server";
+import { COURSE_ID } from "@/lib/catalog";
+import { createClient, getSession, isPreview } from "@/lib/supabase/server";
+import CertificateActions from "./CertificateActions";
 
-export const metadata = { title: "Certificates · Beyond Tatva" };
+export const metadata = { title: "Certificate · Beyond Tatva" };
 
-/* eslint-disable @next/next/no-img-element */
-function Certificate({ name, course }) {
-  return (
-    <div className="relative overflow-hidden rounded-xl border border-[#e7e2d3] bg-[#fdfcf7] p-6 text-center text-[#0f172a] sm:p-10">
-      <div className="pointer-events-none absolute inset-3 rounded-lg border border-[#d9cfae]" />
-      <img src="/brand/mark-trim.png" alt="" className="mx-auto h-10 w-auto" />
-      <img src="/brand/wordmark-black.png" alt="Beyond Tatva" className="mx-auto mt-2 h-3" />
-      <div className="mt-6 font-display text-xl font-semibold sm:text-2xl">Certificate of Completion</div>
-      <div className="mt-4 text-xs uppercase tracking-[0.2em] text-[#64748b]">This certifies that</div>
-      <div className="mt-2 font-display text-2xl font-semibold sm:text-3xl">{name}</div>
-      <div className="mt-3 text-sm text-[#64748b]">has successfully completed</div>
-      <div className="mt-1 text-lg font-semibold text-[#4f46e5]">{course.title}</div>
-      <div className="mt-8 flex items-end justify-between text-left text-xs text-[#64748b]">
-        <div>
-          <div className="font-display text-base italic text-[#0f172a]">Chirag Shetty</div>
-          <div className="mt-1 border-t border-[#cbd5e1] pt-1">Founder, Beyond Tatva</div>
-        </div>
-        <div className="text-right">
-          <div>Preview</div>
-          <div className="mt-1">Certificate ID on issue</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
+// The certificate unlocks only when the database agrees every lesson of every module is watched
+// (issue_my_certificate, 20261115000009). Until then it shows blurred, with what's left.
 export default async function CertificatesPage() {
-  const [{ profile }, course] = await Promise.all([getSession(), getCourse()]);
-  const earned = course.progress === 100;
+  const [{ user, profile }, course] = await Promise.all([getSession(), getCourse()]);
+  let cert = null;
+  if (!isPreview && user && profile?.role === "student" && course.progress === 100) {
+    const supabase = await createClient();
+    const { data: code } = await supabase.rpc("issue_my_certificate", { p_course: COURSE_ID });
+    if (code) {
+      const { data } = await supabase.from("certificates").select("code, full_name, issued_at").eq("code", code).maybeSingle();
+      cert = data;
+    }
+  }
+  const modules = course.modules.map((m) => m.title);
+  const left = course.modules.filter((m) => m.progress < 100);
+
   return (
     <Shell roles={["student"]}>
-      <PageTitle title="Certificate" subtitle="Finish every module to earn your certificate. This is a preview; downloading, sharing and school verification are coming before the course ends." />
-
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <div className="card p-4 sm:p-5">
-          <div className={earned ? "" : "pointer-events-none select-none opacity-50 blur-[1px]"}>
-            <Certificate name={profile?.full_name ?? "Student"} course={course} />
-          </div>
-          {/* Not wired up yet: issuing, PDF and verification come with the certificates feature. */}
-          <div className="mt-4 flex gap-2">
-            <button disabled title="Coming soon" className="btn-primary flex-1"><Download className="h-4 w-4" /> PDF coming soon</button>
-            <button disabled title="Coming soon" className="btn-secondary flex-1"><Share2 className="h-4 w-4" /> Sharing coming soon</button>
-          </div>
+      <div className="print:hidden">
+        <PageTitle title="Certificate" subtitle={cert ? "You did it! Download it or share it with family and your school." : "Watch every lesson of every module to unlock your certificate."} />
+      </div>
+      <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+        <div className="card relative p-3 sm:p-4 print:border-0 print:p-0 print:shadow-none">
+          <Certificate name={cert?.full_name ?? profile?.full_name ?? "Your name"} courseTitle={course.title} modules={modules}
+            code={cert?.code} issuedAt={cert?.issued_at} locked={!cert} />
+          {cert ? <CertificateActions code={cert.code} /> : (
+            <div className="absolute inset-0 grid place-items-center p-6 text-center">
+              <div className="rounded-2xl bg-[#1b2140]/85 px-5 py-4 text-white backdrop-blur">
+                <Lock className="mx-auto h-6 w-6" />
+                <div className="mt-2 font-semibold">Locked</div>
+                <div className="text-sm text-white/80">{course.progress}% watched · {left.length} {left.length === 1 ? "module" : "modules"} to go</div>
+              </div>
+            </div>
+          )}
         </div>
-        <div className="space-y-3">
-          <h2 className="font-semibold">{earned ? "All lessons done! Your certificate will be issued soon." : `${course.progress}% of lessons done`}</h2>
+        <div className="space-y-3 print:hidden">
+          <h2 className="font-semibold">{cert ? "All modules watched 🎉" : "Your path to the certificate"}</h2>
           {course.modules.map((m) => (
             <div key={m.id} className="card flex items-center gap-4 p-4">
               <span className={`grid h-10 w-10 place-items-center rounded-xl ${m.progress === 100 ? "bg-success-soft text-success" : "bg-surface-2 text-subtle"}`}>
@@ -64,6 +58,9 @@ export default async function CertificatesPage() {
               <span className="text-sm font-semibold">{m.progress}%</span>
             </div>
           ))}
+          {!cert && course.progress === 100 && (
+            <p className="text-sm text-muted">Every open lesson is done. Your certificate unlocks when the last modules are released and watched.</p>
+          )}
         </div>
       </div>
     </Shell>

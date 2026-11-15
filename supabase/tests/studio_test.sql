@@ -1097,3 +1097,41 @@ do $$ begin perform public.admin_mark_siblings('9811100002'); raise exception 'Q
 exception when others then if sqlerrm like 'Q65%' then raise; end if; raise notice 'Q65 pass: students cannot mark siblings (%)', sqlerrm; end $$;
 select 'Q66 students cannot read sibling phones' t, count(*) = 0 as pass from public.sibling_phones;
 reset role;
+
+-- ── Certificates (20261115000009) ────────────────────────────────────────────
+reset role;
+insert into public.courses (id, title) values ('cert-test', 'Kert Course');
+insert into public.chapters (course_id, title, position, release_at) values ('cert-test', 'A', 0, now() - interval '1 day'), ('cert-test', 'B', 1, now() - interval '1 day');
+insert into public.lessons (course_id, chapter_id, title, position) select 'cert-test', id, 'L' || position, position from public.chapters where course_id = 'cert-test';
+insert into public.course_access (student_id, course_id, source) values ('11111111-1111-1111-1111-111111111111', 'cert-test', 'admin');
+insert into public.lesson_progress (student_id, lesson_id, completed_at)
+  select '11111111-1111-1111-1111-111111111111', id, now() from public.lessons where course_id = 'cert-test' and position = 0;
+set role authenticated; select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+do $$ begin perform public.issue_my_certificate('cert-test'); raise exception 'K9 FAIL';
+exception when others then if sqlerrm like 'K9%' then raise; end if; raise notice 'K9 pass: half watched = no certificate (%)', sqlerrm; end $$;
+reset role;
+insert into public.lesson_progress (student_id, lesson_id, completed_at)
+  select '11111111-1111-1111-1111-111111111111', id, now() from public.lessons where course_id = 'cert-test' and position = 1;
+insert into public.chapters (course_id, title, position, release_at) values ('cert-test', 'Soon', 2, '2099-01-01');
+set role authenticated;
+do $$ begin perform public.issue_my_certificate('cert-test'); raise exception 'K10 FAIL';
+exception when others then if sqlerrm like 'K10%' then raise; end if; raise notice 'K10 pass: a coming-soon module blocks it (%)', sqlerrm; end $$;
+reset role; update public.chapters set release_at = now() - interval '1 day' where course_id = 'cert-test' and position = 2; set role authenticated;
+do $$ begin perform public.issue_my_certificate('cert-test'); raise exception 'K11 FAIL';
+exception when others then if sqlerrm like 'K11%' then raise; end if; raise notice 'K11 pass: a module with no lessons blocks it (%)', sqlerrm; end $$;
+reset role; delete from public.chapters where course_id = 'cert-test' and position = 2; set role authenticated;
+select 'K12 every lesson watched = certificate' t, public.issue_my_certificate('cert-test') ~ '^BT-[0-9A-F]{4}-[0-9A-F]{4}$' as pass;
+select 'K13 same code the second time' t, public.issue_my_certificate('cert-test') = (select code from public.certificates where student_id = auth.uid()) as pass;
+select 'K14 public check: first name + initial only' t, v.name = 'Solo S.' and v.course_title = 'Kert Course' as pass
+  from public.certificates c, public.verify_certificate(lower(c.code)) v where c.course_id = 'cert-test';
+select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
+select 'K15 other students cannot see the certificate row' t, count(*) = 0 as pass from public.certificates;
+do $$ begin perform public.issue_my_certificate('cert-test'); raise exception 'K16 FAIL';
+exception when others then if sqlerrm like 'K16%' then raise; end if; raise notice 'K16 pass: no access = no certificate (%)', sqlerrm; end $$;
+do $$ begin insert into public.certificates (code, student_id, course_id, full_name) values ('BT-0000-0000', auth.uid(), 'cert-test', 'x'); raise exception 'K17 FAIL';
+exception when insufficient_privilege then raise notice 'K17 pass: students cannot write certificates'; end $$;
+do $$ begin perform public.course_finished(auth.uid(), 'cert-test'); raise exception 'K18 FAIL';
+exception when insufficient_privilege then raise notice 'K18 pass: course_finished is internal'; end $$;
+reset role; set role anon;
+select 'K19 anon verifies, wrong code finds nothing' t, (select count(*) from public.verify_certificate('BT-FFFF-FFFF')) = 0 as pass;
+reset role;
