@@ -300,11 +300,13 @@ do $$ begin insert into public.checkpoint_answers (student_id, lesson_id, questi
 exception when insufficient_privilege then raise notice 'M2b pass: no direct answer writes'; end $$;
 do $$ begin perform public.save_progress(pg_temp.lesson(1), 100, true); raise exception 'M2c FAIL';
 exception when others then if sqlerrm like 'M2c%' then raise; end if; raise notice 'M2c pass: locked lesson refused (%)', sqlerrm; end $$;
-select public.save_progress(pg_temp.lesson(0), 120);
+select public.save_progress(pg_temp.lesson(0), 90, null, 90, 360, array(select generate_series(0, 8)));
 select public.save_progress(pg_temp.lesson(0), 60);
 select public.save_progress(pg_temp.lesson(0), 99999999, true, p_duration => 600);
-select 'M2d free lesson saved, watch time never goes down and is capped' t,
-  (select seconds_watched between 120 and 14400 and completed_at is not null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select 'M2d a claimed furthest point (no parts played) saves the position but completes nothing' t,
+  (select seconds_watched = 90 and watched_pct = 25 and completed_at is null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select public.save_progress(pg_temp.lesson(0), null, false);
+reset role; update public.lesson_progress set completed_at = now() where student_id = auth.uid() and lesson_id = pg_temp.lesson(0); set role authenticated;
 select public.save_progress(pg_temp.lesson(0), null, false);
 select 'M2e students cannot un-mark a finished lesson' t, (select completed_at is not null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 select 'M2f first answer counts' t, public.save_answer(pg_temp.lesson(0), 'Which tool?', true) and not public.save_answer(pg_temp.lesson(0), 'Which tool?', true) as pass;
@@ -778,11 +780,11 @@ select public.save_progress(pg_temp.lesson(0), 30, true, p_position => 30, p_dur
 select 'Z12 "complete" from the client is ignored before 90%' t,
   (select completed_at is null and last_position_seconds = 30 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 select public.save_progress(pg_temp.lesson(0), 545, null, p_position => 545, p_duration => 600);
-select 'Z13 reaching 90% completes it automatically' t,
-  (select completed_at is not null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select 'Z13 a claimed 90% without parts played does not complete' t,
+  (select completed_at is null from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 select public.save_progress(pg_temp.lesson(0), 545, null, p_position => 100, p_duration => 600);
 select 'Z14 resume position follows the player, furthest point stays' t,
-  (select last_position_seconds = 100 and seconds_watched = 545 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+  (select last_position_seconds = 100 and seconds_watched = 0 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 reset role;
 -- Parts really played (20261115000002): skipping doesn't count, parts can't arrive faster than real time.
 insert into auth.users (id, email) values ('abababab-0000-0000-0000-000000000002', 'seen@x.in');
@@ -797,7 +799,13 @@ select 'Z17c a forged list of every part is capped (+3 parts right after a save)
 reset role;
 update public.lesson_progress set updated_at = now() - interval '20 minutes' where student_id = 'abababab-0000-0000-0000-000000000002';
 set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000002');
-select 'Z17d after real time passes, 90% of parts played' t,
+select 'Z17d waiting 20 minutes adds at most 60 s worth of parts (15), not the whole video' t,
+  public.save_progress(pg_temp.lesson(0), 560, null, 560, 600, array(select generate_series(0, 54))) = 45 as pass;
+reset role;
+update public.lesson_progress set updated_at = now() - interval '60 seconds', seen = array(select generate_series(0, 49))
+  where student_id = 'abababab-0000-0000-0000-000000000002';
+set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000002');
+select 'Z17g honest watching reaches 90%' t,
   public.save_progress(pg_temp.lesson(0), 560, null, 560, 600, array(select generate_series(0, 54))) >= 90 as pass;
 select 'Z17f ...completes it, with the real length and real seconds' t, (select completed_at is not null and video_seconds = 600 and seconds_watched = 550 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 reset role;
@@ -806,9 +814,21 @@ insert into auth.users (id, email) values ('abababab-0000-0000-0000-000000000003
 set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000003');
 select public.complete_onboarding('student', 'Old Row', null, 9::smallint, 'Mum', '9811122255', null, p_consent => true);
 select public.save_progress(pg_temp.lesson(0), 400, null, 400, 600);
-select 'Z18 old-style save keeps the furthest-point estimate' t, (select watched_pct = 67 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select 'Z18 old-style save (no parts) adds no %' t, (select watched_pct = 0 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 select 'Z18b first real parts replace the estimate' t, public.save_progress(pg_temp.lesson(0), 30, null, 30, 600, '{0,1,2}') = 5 as pass;
 select 'Z18c stored too' t, (select watched_pct = 5 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+reset role;
+-- Faked video length (20261115000006)
+insert into auth.users (id, email) values ('abababab-0000-0000-0000-000000000004', 'len@x.in');
+set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000004');
+select public.complete_onboarding('student', 'Short Claim', null, 9::smallint, 'Mum', '9811122266', null, p_consent => true);
+select public.save_progress(pg_temp.lesson(0), 30, null, 30, 30, '{0,1,2}');
+select 'Z19 a 30-second length claim for a longer lesson is ignored (3 parts of a 6-min lesson = 8%)' t,
+  (select watched_pct = 8 and completed_at is null and video_seconds is distinct from 30 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
+select public.save_progress(pg_temp.lesson(0), 30, null, 30, 600, '{0}');
+select 'Z19b once stored, the length cannot be shrunk' t,
+  (select public.save_progress(pg_temp.lesson(0), 30, null, 30, 60, '{1}')) is not null
+  and (select video_seconds = 600 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 reset role;
 select 'Z17e score has watched % and no active-days part' t,
   (select watched_pct is not null and score > 0 from public.student_score_rows(null, 30) where student_id = 'abababab-0000-0000-0000-000000000002') as pass;
