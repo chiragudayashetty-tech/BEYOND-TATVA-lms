@@ -47,12 +47,12 @@ export default async function AnalyticsPage({ searchParams }) {
   const freeChapterIds = new Set(chapters.filter((chapter) => chapter.is_free || chapter.position === 0).map((chapter) => chapter.id));
   const lessons = (lessonResult.data ?? []).filter((lesson) => freeChapterIds.has(lesson.chapter_id));
   const lessonIds = new Set(lessons.map((lesson) => lesson.id));
-  const progress = progressResult.data?.data ?? [];
-  const accesses = (accessResult.data?.data ?? []).filter((access) => cohortIds.has(access.student_id));
+  const progress = progressResult.data ?? [];
+  const accesses = (accessResult.data ?? []).filter((access) => cohortIds.has(access.student_id));
   const quizzes = (quizResult.data ?? []).filter((quiz) => freeChapterIds.has(quiz.chapter_id)).map((quiz) => ({ ...quiz, is_module0: true }));
   const quizIds = new Set(quizzes.map((quiz) => quiz.id));
-  const attempts = attemptResult.data?.data ?? [];
-  const resources = resourceResult.data?.data ?? [];
+  const attempts = attemptResult.data ?? [];
+  const resources = resourceResult.data ?? [];
   const funnel = funnelCounts({ leads: [], profiles, progress, lessonIds, accesses, quizzes, attempts, resources });
 
   const purchased = profiles.filter((profile) => scoreById.get(profile.id)?.paid).length;
