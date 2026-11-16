@@ -1135,3 +1135,41 @@ exception when insufficient_privilege then raise notice 'K18 pass: course_finish
 reset role; set role anon;
 select 'K19 anon verifies, wrong code finds nothing' t, (select count(*) from public.verify_certificate('BT-FFFF-FFFF')) = 0 as pass;
 reset role;
+
+-- ── Automations (AiSensy WhatsApp queue) M1xx ───────────────────────────────
+reset role;
+select 'M101 phone formats' t, public.automation_phone('98450 12345') = '+919845012345' and public.automation_phone('+91 98450-12345') = '+919845012345'
+  and public.automation_phone('12345') is null as pass;
+insert into public.leads (reference, phone, parent_name, student_name, source) values ('auto-off', '+919845000001', 'Asha', 'Ravi', 'sheet');
+select 'M102 rule off = nothing queued' t, count(*) = 0 as pass from public.message_queue;
+update public.automation_rules set campaign = 'welcome_v1', enabled = true where key in ('lead_welcome', 'payment_link');
+insert into public.leads (reference, phone, parent_name, student_name, source) values ('auto-on', '+919845000002', 'Meena', 'Kiran', 'sheet');
+select 'M103 new lead queued with params' t, params = '["Meena","Kiran"]' and status = 'queued' as pass
+  from public.message_queue where rule_key = 'lead_welcome' and phone = '+919845000002';
+insert into public.leads (reference, phone, source, do_not_contact) values ('auto-dnc', '+919845000003', 'sheet', true);
+select 'M104 do-not-contact is skipped' t, status = 'skipped' as pass from public.message_queue where phone = '+919845000003';
+update public.leads set status = 'Send payment link' where reference = 'auto-on';
+update public.leads set status = 'send PAYMENT link again' where reference = 'auto-on';
+select 'M105 payment link queued once' t, count(*) = 1 as pass from public.message_queue where rule_key = 'payment_link';
+insert into public.leads (reference, phone, source, book) values ('auto-v2', '+919845000004', 'sheet', 'v2');
+select 'M106 archived sheet never sends' t, count(*) = 0 as pass from public.message_queue where phone = '+919845000004';
+set role authenticated;
+select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
+select 'M107 students see no messages' t, count(*) = 0 as pass from public.message_queue;
+do $$ begin perform public.automation_claim(10); raise exception 'M108 FAIL';
+exception when insufficient_privilege then raise notice 'M108 pass: students cannot run the sender'; end $$;
+do $$ begin perform public.admin_set_automation('lead_welcome', 'x', false); raise exception 'M109 FAIL';
+exception when insufficient_privilege then raise notice 'M109 pass: students cannot change rules'; end $$;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'M110 admin sees the log' t, count(*) >= 3 as pass from public.message_queue;
+select public.admin_set_automation('student_welcome', ' ', false);
+do $$ begin perform public.admin_set_automation('student_welcome', '', true); raise exception 'M111 FAIL';
+exception when check_violation then raise notice 'M111 pass: cannot switch on without a campaign'; end $$;
+reset role;
+select 'M112 claim gives campaign and marks sending' t, count(*) = 2 and bool_and(campaign = 'welcome_v1') as pass from public.automation_claim(10);
+select 'M113 second claim gets nothing' t, count(*) = 0 as pass from public.automation_claim(10);
+select 'M114 sent' t, public.automation_done(id, true) = 'sent' as pass from public.message_queue where rule_key = 'lead_welcome' and phone = '+919845000002';
+select 'M115 failure is retried' t, public.automation_done(id, false, 'boom') = 'queued' as pass from public.message_queue where rule_key = 'payment_link';
+update public.leads set do_not_contact = true where reference = 'auto-on';
+select 'M116 do-not-contact set later stops the retry' t, count(*) = 0 as pass from public.automation_claim(10);
+select 'M117 log lists finished messages' t, count(*) >= 3 as pass from public.automation_log(now() - interval '1 hour');
