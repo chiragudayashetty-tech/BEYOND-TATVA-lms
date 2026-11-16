@@ -1173,3 +1173,24 @@ select 'M115 failure is retried' t, public.automation_done(id, false, 'boom') = 
 update public.leads set do_not_contact = true where reference = 'auto-on';
 select 'M116 do-not-contact set later stops the retry' t, count(*) = 0 as pass from public.automation_claim(10);
 select 'M117 log lists finished messages' t, count(*) >= 3 as pass from public.automation_log(now() - interval '1 hour');
+
+-- ── WhatsApp CRM: templates + manual sends M5xx ─────────────────────────────
+reset role;
+insert into public.leads (reference, phone, parent_name, student_name, school_name, source) values ('crm-1', '+919845000010', 'Lata', 'Arun Rao', 'SRVK', 'sheet');
+set role authenticated;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_save_template('{"key":"a1_kn","title":"Workshop thanks","campaign":"A1_kn","params":["{parent_name}","{school}","{student_first}","hi"],"media_url":"https://x.in/a.mp4"}');
+select 'M501 manual send queues one' t, queued = 1 as pass
+  from public.admin_send_template('a1_kn', (select jsonb_agg(jsonb_build_object('lead_id', id)) from public.leads where reference = 'crm-1'));
+select 'M502 params filled from the LMS, tags for AiSensy' t, params = '["Lata","SRVK","Arun","hi"]' and 'SRVK' = any(tags) and media_url like 'https://%'
+  and attributes ->> 'school' = 'SRVK' and sent_by is not null as pass from public.message_queue where template_key = 'a1_kn';
+select 'M503 same day again = duplicate' t, duplicate = 1 and queued = 0 as pass
+  from public.admin_send_template('a1_kn', (select jsonb_agg(jsonb_build_object('lead_id', id)) from public.leads where reference = 'crm-1'));
+select 'M504 do-not-contact skipped' t, skipped = 1 as pass
+  from public.admin_send_template('a1_kn', (select jsonb_agg(jsonb_build_object('lead_id', id)) from public.leads where reference = 'auto-dnc'));
+select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
+do $$ begin perform public.admin_send_template('a1_kn', '[]'); raise exception 'M505 FAIL';
+exception when insufficient_privilege then raise notice 'M505 pass: students cannot send'; end $$;
+select 'M506 students cannot read templates' t, count(*) = 0 as pass from public.wa_templates;
+reset role;
+select 'M507 claim returns template campaign + media' t, bool_or(campaign = 'A1_kn' and media_url is not null) as pass from public.automation_claim(50);

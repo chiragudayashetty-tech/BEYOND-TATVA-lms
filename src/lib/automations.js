@@ -23,6 +23,10 @@ export function aisensyBody(msg, apiKey) {
     userName: String(msg.name || "Parent").slice(0, 60),
     templateParams: (Array.isArray(msg.params) ? msg.params : []).map((p) => String(p ?? "").slice(0, 200)),
     source: "lms",
+    // AiSensy creates/updates the contact from these, so every LMS lead lands in AiSensy with its school and stage.
+    tags: (Array.isArray(msg.tags) ? msg.tags : []).map((t) => String(t).slice(0, 50)).slice(0, 10),
+    attributes: Object.fromEntries(Object.entries(msg.attributes ?? {}).map(([k, v]) => [k, String(v ?? "").slice(0, 100)])),
+    ...(msg.media_url ? { media: { url: msg.media_url, filename: msg.media_url.split("/").pop().split("?")[0] || "media" } } : {}),
   };
 }
 

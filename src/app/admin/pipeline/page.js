@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NotesButton } from "./CrmNotes";
 import { ClearLeadsButton, DeleteLeadButton } from "./LeadActions";
 import AddLeads from "./AddLeads";
+import SendWhatsApp from "@/components/whatsapp/SendWhatsApp";
 import PersonLink from "../PersonLink";
 
 export const metadata = { title: "Pipeline · Studio · Beyond Tatva" };
@@ -40,9 +41,10 @@ export default async function PipelinePage({ searchParams }) {
   const view = viewParam === "schools" ? "schools" : "parents";
   const stage = STAGES.find((s) => String(s.id) === stageParam)?.id ?? null;
   const supabase = await createClient();
-  const [{ data, error }, { data: notes }] = await Promise.all([
+  const [{ data, error }, { data: notes }, { data: templates }] = await Promise.all([
     supabase.rpc("admin_pipeline", { p_course: COURSE_ID, p_stall_hours: STALL_HOURS }),
     supabase.from("crm_notes").select("*").order("created_at", { ascending: false }),
+    supabase.from("wa_templates").select("key, title, language, category, params, body, active").order("key"),
   ]);
   const byPerson = new Map();
   // A note may carry a student id, a lead id or both; index it under each so it follows the person after sign-up.
@@ -128,6 +130,13 @@ export default async function PipelinePage({ searchParams }) {
         <Link href={href(followups ? "" : "followups=1")} className="btn-secondary min-h-11">Follow-ups due ({dueCount}){followups ? " · Show all" : ""}</Link>
         <Link href={href("", { group: f.group ? null : "school", school: null })} className={`${f.group ? "btn-primary" : "btn-secondary"} min-h-11`}>Group by school</Link>
       </div>
+      {/* WhatsApp everyone in the current filter (do-not-contact rows are left out; max 500 per send). */}
+      {(() => {
+        const targets = rows.filter((r) => !r.do_not_contact && r.outcome !== "do_not_contact").slice(0, 500).map((r) => ({ lead_id: r.lead_id, student_id: r.student_id }));
+        return targets.length > 0 && (
+          <div className="mb-4"><SendWhatsApp templates={templates ?? []} targets={targets} label={`WhatsApp these ${targets.length}`} /></div>
+        );
+      })()}
 
       {bySchool && (
         <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

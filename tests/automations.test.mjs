@@ -12,7 +12,7 @@ test("send window is 9:00–20:59 IST", () => {
 test("AiSensy body", () => {
   assert.equal(aisensyDestination("+919845012345"), "919845012345");
   const b = aisensyBody({ campaign: "lms_welcome", phone: "+919845012345", name: "", params: ["Meena", 5] }, "k");
-  assert.deepEqual(b, { apiKey: "k", campaignName: "lms_welcome", destination: "919845012345", userName: "Parent", templateParams: ["Meena", "5"], source: "lms" });
+  assert.deepEqual(b, { apiKey: "k", campaignName: "lms_welcome", destination: "919845012345", userName: "Parent", templateParams: ["Meena", "5"], source: "lms", tags: [], attributes: {} });
 });
 
 test("send reports AiSensy errors and missing key", async () => {
@@ -31,4 +31,11 @@ test("run claims, sends and records each result", async () => {
   assert.deepEqual(r, { sent: 1, failed: 1 });
   assert.deepEqual(calls.slice(1).map((c) => c[1].p_ok), [true, false]);
   assert.deepEqual(await runAutomations(db, { now: new Date("2026-11-16T20:00:00Z") }), { waiting: true, sent: 0, failed: 0 });
+});
+
+test("AiSensy body carries contact tags, attributes and media", () => {
+  const b = aisensyBody({ campaign: "A1_kn", phone: "+919845012345", name: "Lata", params: [], tags: ["SRVK", "Lead"], attributes: { grade: 9 }, media_url: "https://x.in/v/w.mp4?x=1" }, "k");
+  assert.deepEqual(b.tags, ["SRVK", "Lead"]);
+  assert.deepEqual(b.attributes, { grade: "9" });
+  assert.deepEqual(b.media, { url: "https://x.in/v/w.mp4?x=1", filename: "w.mp4" });
 });
