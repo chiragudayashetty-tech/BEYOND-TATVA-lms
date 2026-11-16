@@ -445,7 +445,7 @@ set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeee
 do $$ begin perform public.student_xp(auth.uid()); raise exception 'K2 FAIL';
 exception when others then if sqlerrm like 'K2%' then raise; end if; raise notice 'K2 pass: XP helper is internal'; end $$;
 select 'K3 dashboard XP matches the shared XP' t, (public.my_learning_stats() ->> 'xp')::int >= 10 as pass;
-select 'K3b new students start off the leaderboard' t, (public.xp_leaderboard() -> 'me' ->> 'hidden')::boolean as pass;
+select 'K3b new students are shown on the leaderboard by default' t, not (public.xp_leaderboard() -> 'me' ->> 'hidden')::boolean as pass;
 select public.set_leaderboard_hidden(false);
 select 'K4 leaderboard: top list, my rank, short names only' t,
   jsonb_array_length(b -> 'top') between 1 and 10 and (b -> 'me' ->> 'rank')::int >= 1
@@ -453,6 +453,9 @@ select 'K4 leaderboard: top list, my rank, short names only' t,
   from (select public.xp_leaderboard() b) x;
 select 'K4b full leaderboard: longer list allowed, capped at 200' t,
   jsonb_array_length(public.xp_leaderboard(500) -> 'top') between 1 and 200 as pass;
+select 'K4c batch leaderboard: only my batch, scope reported' t,
+  b ->> 'scope' = 'batch' and jsonb_array_length(b -> 'top') <= jsonb_array_length(public.xp_leaderboard(200) -> 'top') as pass
+  from (select public.xp_leaderboard(200, 'batch') b) x;
 select public.set_leaderboard_hidden(true);
 select 'K5 hidden: not in the list, still sees own rank' t,
   not exists (select 1 from jsonb_array_elements(b -> 'top') e where (e ->> 'me')::boolean) and (b -> 'me' ->> 'hidden')::boolean as pass
@@ -983,7 +986,7 @@ select 'X7 no other student''s guardians, sessions or purchases' t,
 select 'X8 no paid video links without access' t, count(*) = 0 as pass
   from public.lesson_media m join public.lessons l on l.id = m.lesson_id join public.chapters c on c.id = l.chapter_id where not c.is_free;
 select 'X9 only own consent records' t, count(*) = 1 and bool_and(student_id = auth.uid()) as pass from public.consent_records;
-select 'X10 new student starts off the leaderboard' t, hidden as pass from (select leaderboard_hidden hidden from public.profiles where id = auth.uid()) x;
+select 'X10 new student is shown on the leaderboard by default' t, not hidden as pass from (select leaderboard_hidden hidden from public.profiles where id = auth.uid()) x;
 
 -- Parent confirmation by WhatsApp code.
 do $$ begin perform public.parent_consent_issue(auth.uid(), repeat('a', 64)); raise exception 'X11 FAIL';

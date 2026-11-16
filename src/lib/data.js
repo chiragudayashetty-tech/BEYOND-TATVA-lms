@@ -83,15 +83,16 @@ export const getLearningStats = cache(async () => {
   return error ? null : data;
 });
 
-// XP leaderboard (migration 10): { top: [{ rank, name: "Asha R.", xp, me }], me: { rank, xp, hidden } | null, players }.
-export const getLeaderboard = cache(async (limit = 10) => {
+// XP leaderboard: { scope, batch, top: [{ rank, name: "Asha R.", xp, me }], me: { rank, xp, hidden } | null, players }.
+// scope "batch" = only the viewer's weekly batch (batch is null when they have none); "all" = every student.
+export const getLeaderboard = cache(async (limit = 10, scope = "all") => {
   const { user } = await getSession();
   if (!user) return null;
   if (user.id === "preview") return PREVIEW_BOARD;
   const supabase = await createClient();
-  let { data, error } = await supabase.rpc("xp_leaderboard", { p_limit: limit });
-  // Until migration 20261114000001 is live the function takes no argument: fall back to the top 10.
-  if (error) ({ data, error } = await supabase.rpc("xp_leaderboard"));
+  let { data, error } = await supabase.rpc("xp_leaderboard", { p_limit: limit, p_scope: scope });
+  // Until migration 20261116000003 is live there is no scope: fall back to the whole list.
+  if (error) ({ data, error } = await supabase.rpc("xp_leaderboard", { p_limit: limit }));
   return error ? null : data;
 });
 
