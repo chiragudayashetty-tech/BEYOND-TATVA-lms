@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { whatsappCodesReady } from "@/lib/whatsapp-code";
 import { Bell, ChevronRight, CircleHelp, Headset, LogOut, MessageCircleQuestion, Moon, ShieldCheck } from "lucide-react";
 import SocialLinks from "@/components/SocialLinks";
 import { supportWhatsApp } from "@/lib/social";
@@ -75,7 +76,7 @@ export default async function ProfilePage({ searchParams }) {
                   ? <><ShieldCheck className="h-3.5 w-3.5 text-success" /><span className="text-success">Parent consent given</span></>
                   : <span className="text-warning">Parent consent not recorded yet.</span>}
               </div>
-              {parent && process.env.WHATSAPP_TOKEN && <ParentConfirm verified={parent.verified} wording={parent.wording} />}
+              {parent && whatsappCodesReady() && <ParentConfirm verified={parent.verified} wording={parent.wording} />}
               <p className="mt-2 text-xs text-muted">This account opens only with {loginWith}. Course updates go to the parent&apos;s WhatsApp (coming soon).</p>
             </div>
           )}

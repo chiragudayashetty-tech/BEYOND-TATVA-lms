@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { otpTemplateMessage, verifyHookSignature, whatsappNumber } from "@/lib/whatsapp-otp";
+import { verifyHookSignature, whatsappNumber } from "@/lib/whatsapp-otp";
+import { sendWhatsappCode } from "@/lib/whatsapp-code";
 
-// Supabase Auth "Send SMS" hook: Supabase makes the code, we deliver it on WhatsApp (Meta Cloud API).
+// Supabase Auth "Send SMS" hook: Supabase makes the code, we deliver it on WhatsApp (AiSensy, or Meta Cloud API).
 // Supabase → Authentication → Hooks → Send SMS → HTTPS → https://learn.beyondtatva.in/api/auth/send-otp
-// Env (Vercel, server only): SEND_SMS_HOOK_SECRET (v1,whsec_… from that screen), WHATSAPP_TOKEN,
-// WHATSAPP_PHONE_NUMBER_ID, optional WHATSAPP_OTP_TEMPLATE (default login_code) and WHATSAPP_OTP_LANG (default en).
+// Env (Vercel, server only): SEND_SMS_HOOK_SECRET (v1,whsec_… from that screen) + either AISENSY_API_KEY and
+// AISENSY_OTP_CAMPAIGN, or WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID (src/lib/whatsapp-code.js).
 const fail = (status, message) => NextResponse.json({ error: { http_code: status, message } }, { status });
 
 export async function POST(request) {
@@ -31,24 +32,9 @@ export async function POST(request) {
   else if (allowed === "cooldown") return fail(429, "Please wait a minute before asking for another code.");
   else if (allowed === "hourly_limit") return fail(429, "Too many codes for this number. Try again in an hour, or use Google or email.");
 
-  const token = process.env.WHATSAPP_TOKEN;
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  if (!token || !phoneId) return fail(500, "WhatsApp login isn't set up yet. Use Google or email.");
-
-  try {
-    const r = await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(phoneId)}/messages`, {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-      body: JSON.stringify(otpTemplateMessage(to, otp, process.env.WHATSAPP_OTP_TEMPLATE || "login_code", process.env.WHATSAPP_OTP_LANG || "en")),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!r.ok) {
-      const data = await r.json().catch(() => ({}));
-      console.error("whatsapp otp failed", r.status, data?.error?.code, data?.error?.message);
-      return fail(502, "Couldn't send the code on WhatsApp. Check the number, or use Google or email.");
-    }
-    return NextResponse.json({});
-  } catch {
-    return fail(502, "Couldn't reach WhatsApp. Please try again.");
-  }
+  const sent = await sendWhatsappCode(to, otp, "login");
+  if (sent.ok) return NextResponse.json({});
+  if (sent.error === "not_configured") return fail(500, "WhatsApp login isn't set up yet. Use Google or email.");
+  if (sent.error === "unreachable") return fail(502, "Couldn't reach WhatsApp. Please try again.");
+  return fail(502, "Couldn't send the code on WhatsApp. Check the number, or use Google or email.");
 }

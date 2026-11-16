@@ -202,7 +202,37 @@ function onEditSync(e) {
 function pull() {
   locked_(function () {
     try { pull_(false); state_(null); } catch (err) { state_(err); throw err; }
+    automations_();   // after the sync, never instead of it
   });
+}
+
+// ── Automations: start the LMS WhatsApp sender (AiSensy) and log results in the "Automations" tab ──
+// A failure here only shows in that tab's A1 note; it never breaks the lead sync.
+var AUTOMATIONS_API = 'https://learn.beyondtatva.in/api/automations/run';
+var LOG_TAB = 'Automations';
+var LOG_HEAD = ['When (IST)', 'Message', 'Name', 'Phone', 'Result', 'Reason', 'ID'];
+function automations_() {
+  var ss = SpreadsheetApp.getActive(), sh = ss.getSheetByName(LOG_TAB);
+  if (!sh) { sh = ss.insertSheet(LOG_TAB); sh.getRange(1, 1, 1, LOG_HEAD.length).setValues([LOG_HEAD]).setFontWeight('bold'); sh.setFrozenRows(1); sh.hideColumns(LOG_HEAD.length); }
+  var props = PropertiesService.getDocumentProperties();
+  try {
+    var since = props.getProperty('auto_since') || new Date(Date.now() - 86400000).toISOString();
+    var res = UrlFetchApp.fetch(AUTOMATIONS_API + '?since=' + encodeURIComponent(since),
+      { method: 'post', headers: { 'x-sheets-key': key_() }, muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) throw new Error('LMS error ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 150));
+    var data = JSON.parse(res.getContentText());
+    var last = sh.getLastRow(), seen = {};
+    if (last > 1) sh.getRange(Math.max(2, last - 600), LOG_HEAD.length, Math.min(last - 1, 601), 1).getValues().forEach(function (r) { seen[r[0]] = true; });
+    var rows = (data.log || []).filter(function (m) { return !seen[m.id]; }).map(function (m) {
+      return [Utilities.formatDate(new Date(m.at), 'Asia/Kolkata', 'dd MMM yyyy HH:mm'), m.rule, m.name || '', "'" + m.phone, m.status, m.error || '', m.id];
+    });
+    if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, LOG_HEAD.length).setValues(rows);
+    if (data.log && data.log.length) props.setProperty('auto_since', new Date(new Date(data.log[data.log.length - 1].at).getTime() - 60000).toISOString());
+    var note = data.off ? 'AiSensy key not set in the LMS yet: nothing is sent.' : data.waiting ? 'Outside 9am–9pm: messages wait.' : 'Sent ' + data.sent + ', failed ' + data.failed + '.';
+    sh.getRange(1, 1).setBackground(null).setNote('✅ ' + Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM HH:mm') + ' · ' + note);
+  } catch (err) {
+    sh.getRange(1, 1).setBackground('#f4cccc').setNote('❌ Automations: ' + String(err.message || err).slice(0, 300));
+  }
 }
 
 function pull_(forceFull) {
