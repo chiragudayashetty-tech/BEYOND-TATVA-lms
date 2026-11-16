@@ -26,6 +26,15 @@ const friendly = (msg = "") => {
   return msg || "Something went wrong. Try again.";
 };
 
+// Last line on the main and sign-up screens: for people who already made a password.
+function PasswordNote({ onClick }) {
+  return (
+    <p className="mt-4 border-t border-border pt-4 text-center text-sm text-muted">
+      Already have a password? <button type="button" onClick={onClick} className="min-h-11 font-medium text-primary">Log in with password</button>
+    </p>
+  );
+}
+
 function GoogleButton({ onClick, busy }) {
   return (
         <button onClick={onClick} disabled={busy} aria-live="polite" className="btn-secondary mt-6 min-h-12 w-full py-3">
@@ -221,7 +230,28 @@ function LoginForm() {
     }
     await fetch("/api/auth/settle", { method: "POST" }).catch(() => {});
     setBusy(false);
+    // WhatsApp accounts have no email yet: ask for one right away (needed for receipts and password resets).
+    if (byWhatsApp) {
+      const { data } = await supabase.auth.getUser();
+      if (!data?.user?.email) return go("addEmail");
+    }
     await finish();
+  }
+
+  // Adds the email to the signed-in WhatsApp account. Supabase emails a confirmation link; the email is
+  // attached once it's tapped (so nobody can claim someone else's address).
+  async function addEmail(e) {
+    e.preventDefault();
+    setError("");
+    const clean = cleanEmail(email);
+    if (!clean) return setError("Type a real email address (e.g. name@gmail.com).");
+    setBusy(true);
+    const { error } = await supabase.auth.updateUser({ email: clean }, { emailRedirectTo: callback });
+    setBusy(false);
+    if (error) return setError(/already|registered|exists/i.test(error.message)
+      ? "This email already has a Beyond Tatva account. Sign out and sign in with that email, or use another one."
+      : friendly(error.message));
+    setNotice("emailSent");
   }
 
   const id = parseLoginId(contact);
@@ -241,9 +271,10 @@ function LoginForm() {
       </button>
     </div>}
     <div className="card p-6 shadow-xl shadow-black/5 sm:p-8">
-      <h1 className="text-2xl font-semibold">{mode === "signup" ? "Create your account" : mode === "forgot" ? "Forgot password" : mode === "whatsapp" ? "Sign in or join" : "Sign in"}</h1>
+      <h1 className="text-2xl font-semibold">{mode === "addEmail" ? "Add your email" : mode === "signup" ? "Create your account" : mode === "forgot" ? "Forgot password" : mode === "whatsapp" ? "Sign in or join" : "Sign in"}</h1>
       <p className="mt-1 text-sm text-muted">
-        {mode === "signup" ? "Use the student's own email and mobile number. You can sign in with either."
+        {mode === "addEmail" ? "One last step: we send payment receipts and course updates here, and it lets you sign in with email too."
+          : mode === "signup" ? "Use the student's own email and mobile number. You can sign in with either."
           : mode === "forgot" ? "Type the number or email you signed up with."
           : mode === "whatsapp" ? "New or returning: get a code on WhatsApp, or use Google."
           : "Use Google, or your phone number / email and password."}
@@ -264,10 +295,8 @@ function LoginForm() {
           <div className="h-px flex-1 bg-border" /> or <div className="h-px flex-1 bg-border" />
         </div>
         <GoogleButton onClick={google} busy={googleBusy} />
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-sm">
-          <button type="button" onClick={() => go("password")} className="min-h-11 text-muted hover:text-fg">Sign in with email / password</button>
-          <button type="button" onClick={() => go("signup")} className="min-h-11 font-medium text-primary">Create account with email</button>
-        </div>
+        <button type="button" onClick={() => go("signup")} className="mt-4 min-h-11 w-full text-sm font-medium text-primary">Create account with email</button>
+        <PasswordNote onClick={() => go("password")} />
       </>}
 
       {(mode === "password" || mode === "signup") && <>
@@ -318,11 +347,27 @@ function LoginForm() {
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm">
           {mode === "password"
             ? <button type="button" onClick={() => go("signup")} className="min-h-11 font-medium text-primary">New here? Create account</button>
-            : <button type="button" onClick={() => go(HOME)} className="min-h-11 font-medium text-primary">Have an account? Sign in</button>}
+            : <button type="button" onClick={() => go(HOME)} className="min-h-11 font-medium text-primary">Have an account? Sign in with WhatsApp</button>}
           <button type="button" onClick={() => go("forgot")} className="min-h-11 text-muted hover:text-fg">Forgot password?</button>
         </div>
         <button type="button" onClick={() => go("code")} className="mt-1 min-h-11 w-full text-sm text-muted hover:text-fg">{WHATSAPP_CODES ? "Get a login code on WhatsApp or email" : "Email me a login code instead"}</button>
+        {mode === "signup" && <PasswordNote onClick={() => go("password")} />}
       </>}
+
+      {mode === "addEmail" && (notice === "emailSent" ? (
+        <div className="mt-6 space-y-3 text-sm">
+          <p className="rounded-xl bg-success-soft p-3 text-success">We sent a link to <b>{cleanEmail(email)}</b>. Tap it to confirm your email (check Spam too). You can carry on now.</p>
+          <button type="button" onClick={finish} className="btn-primary min-h-12 w-full py-3">Continue</button>
+        </div>
+      ) : (
+        <form onSubmit={addEmail} className="mt-6 space-y-3">
+          <label className="label" htmlFor="add-email">Email (student&apos;s or parent&apos;s)</label>
+          <input id="add-email" className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
+            autoComplete="email" autoCapitalize="none" spellCheck={false} required autoFocus />
+          <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? "Saving…" : "Save email"}</button>
+          <button type="button" onClick={finish} className="min-h-11 w-full text-sm text-muted hover:text-fg">Skip for now</button>
+        </form>
+      ))}
 
       {mode === "forgot" && (notice === "sent" ? (
         <div className="mt-6 space-y-3 text-sm">
