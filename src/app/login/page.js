@@ -231,10 +231,15 @@ function LoginForm() {
     }
     await fetch("/api/auth/settle", { method: "POST" }).catch(() => {});
     setBusy(false);
-    // WhatsApp accounts have no email yet: ask for one right away (needed for receipts and password resets).
+    // New WhatsApp accounts have no email yet: ask for one right away (needed for receipts and password resets).
+    // Returning students (already onboarded) go straight in; only brand-new numbers are asked.
     if (byWhatsApp) {
       const { data } = await supabase.auth.getUser();
-      if (!data?.user?.email) return go("addEmail");
+      const user = data?.user;
+      if (user && !user.email) {
+        const { data: profile } = await supabase.from("profiles").select("id").eq("id", user.id).maybeSingle();
+        if (!profile) return go("addEmail");
+      }
     }
     await finish();
   }
