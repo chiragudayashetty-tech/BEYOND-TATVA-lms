@@ -12,7 +12,9 @@ import { cleanEmail, indianMobile, parseLoginId, passwordProblem, showPhone } fr
 import { supportWhatsApp } from "@/lib/social";
 
 // Sign in: Google, phone or email + password (no code, Chirag 2026-11-14), or an email code.
-// WhatsApp codes (api/auth/send-otp) come back once Meta verification is done.
+// Login code by WhatsApp (mobile; Supabase phone OTP → /api/auth/send-otp → AiSensy) when NEXT_PUBLIC_PHONE_LOGIN=1,
+// or by email. Codes never create accounts (shouldCreateUser: false): sign-up stays on the form.
+const WHATSAPP_CODES = process.env.NEXT_PUBLIC_PHONE_LOGIN === "1";
 const friendly = (msg = "") => {
   if (/phone.*(disabled|not enabled)|Phone logins/i.test(msg)) return "Sign-in with mobile number isn't switched on yet. Use your email and the same password.";
   if (/Invalid login credentials/i.test(msg)) return "Wrong number/email or password. Try again, or tap Forgot password.";
@@ -168,19 +170,26 @@ function LoginForm() {
     }
   }
 
+  // Where the code goes: a mobile number → WhatsApp, an email → email.
+  const codeTo = parseLoginId(contact);
+  const byWhatsApp = WHATSAPP_CODES && codeTo?.kind === "phone";
+
   async function sendCode(e) {
     rememberNext();
     e.preventDefault();
-    setBusy(true);
     setError("");
-    const { error } = await supabase.auth.signInWithOtp({ email: contact.trim(), options: { emailRedirectTo: callback } });
+    if (!codeTo || (codeTo.kind === "phone" && !WHATSAPP_CODES)) return setError(WHATSAPP_CODES ? "Type your mobile number or email." : "Type your email.");
+    setBusy(true);
+    const { error } = byWhatsApp
+      ? await supabase.auth.signInWithOtp({ phone: `+${codeTo.phone}`, options: { shouldCreateUser: false, channel: "sms" } })
+      : await supabase.auth.signInWithOtp({ email: codeTo.email, options: { emailRedirectTo: callback } });
     setBusy(false);
-    if (error) setError(friendly(error.message));
-    else setMode("codeSent");
+    if (error) setError(/signups not allowed|user not found/i.test(error.message) ? "No account with this number. Create an account first, or use your email." : friendly(error.message));
+    else { setCode(""); setMode("codeSent"); }
   }
 
-  // Email codes are 8 digits (Supabase setting). Full code typed, pasted or autofilled → verify.
-  const codeLength = 8;
+  // Email codes are 8 digits, WhatsApp codes 6 (Supabase settings). Full code typed, pasted or autofilled → verify.
+  const codeLength = byWhatsApp ? 6 : 8;
   function onCode(value) {
     const digits = value.replace(/\D/g, "").slice(0, codeLength);
     setCode(digits);
@@ -192,7 +201,9 @@ function LoginForm() {
     const token = (typed ?? code).trim();
     setBusy(true);
     setError("");
-    const { error } = await supabase.auth.verifyOtp({ email: contact.trim(), token, type: "email" });
+    const { error } = byWhatsApp
+      ? await supabase.auth.verifyOtp({ phone: `+${codeTo.phone}`, token, type: "sms" })
+      : await supabase.auth.verifyOtp({ email: codeTo?.email ?? contact.trim(), token, type: "email" });
     if (error) {
       setBusy(false);
       return setError(friendly(error.message));
@@ -280,7 +291,7 @@ function LoginForm() {
             : <button type="button" onClick={() => go("login")} className="min-h-11 font-medium text-primary">Have an account? Sign in</button>}
           <button type="button" onClick={() => go("forgot")} className="min-h-11 text-muted hover:text-fg">Forgot password?</button>
         </div>
-        <button type="button" onClick={() => go("code")} className="mt-1 min-h-11 w-full text-sm text-muted hover:text-fg">Email me a login code instead</button>
+        <button type="button" onClick={() => go("code")} className="mt-1 min-h-11 w-full text-sm text-muted hover:text-fg">{WHATSAPP_CODES ? "Get a login code on WhatsApp or email" : "Email me a login code instead"}</button>
       </>}
 
       {mode === "forgot" && (notice === "sent" ? (
@@ -299,18 +310,22 @@ function LoginForm() {
 
       {mode === "code" && (
         <form onSubmit={sendCode} className="mt-6 space-y-3">
-          <input className="input" type="email" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="you@example.com" autoComplete="email" required />
-          <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : "Send code"}</button>
+          <label className="label" htmlFor="code-to">{WHATSAPP_CODES ? "Mobile number (WhatsApp) or email" : "Email"}</label>
+          <input id="code-to" className="input" type={WHATSAPP_CODES ? "text" : "email"} value={contact} onChange={(e) => setContact(e.target.value)}
+            placeholder={WHATSAPP_CODES ? "98765 43210 or you@example.com" : "you@example.com"} autoComplete="username" autoCapitalize="none" spellCheck={false} required />
+          <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : byWhatsApp ? "Send code on WhatsApp" : "Send code"}</button>
           <button type="button" onClick={() => go("login")} className="min-h-11 w-full text-sm text-muted hover:text-fg">Use a password instead</button>
         </form>
       )}
 
       {mode === "codeSent" && (
         <form onSubmit={verify} className="mt-6 space-y-3">
-          <p className="text-sm text-muted">We sent an {codeLength}-digit code to <b className="text-fg">{contact}</b>. You can also just tap the link in the email.</p>
+          <p className="text-sm text-muted">{byWhatsApp
+            ? <>We sent a {codeLength}-digit code on WhatsApp to <b className="text-fg">{showPhone(codeTo.phone)}</b>. It works for 10 minutes.</>
+            : <>We sent an {codeLength}-digit code to <b className="text-fg">{contact}</b>. You can also just tap the link in the email.</>}</p>
           <input className="input text-center text-2xl tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={codeLength} value={code} onChange={(e) => onCode(e.target.value)} onPaste={(e) => { e.preventDefault(); onCode(e.clipboardData.getData("text")); }} placeholder={"•".repeat(codeLength)} aria-label={`${codeLength}-digit code`} autoFocus required />
           <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? "Checking…" : "Verify and continue"}</button>
-          <button type="button" onClick={() => go("code")} className="min-h-11 w-full text-sm text-muted hover:text-fg">Use a different email</button>
+          <button type="button" onClick={() => go("code")} className="min-h-11 w-full text-sm text-muted hover:text-fg">{byWhatsApp ? "Use a different number" : "Use a different email"}</button>
         </form>
       )}
 
