@@ -26,7 +26,15 @@ export const metadata = {
   appleWebApp: { capable: true, title: "Beyond Tatva", statusBarStyle: "default" },
 };
 
-export const viewport = { themeColor: "#4f46e5" };
+// App-like viewport: no pinch/double-tap zoom inside the installed app (tester feedback, Play closed test).
+export const viewport = {
+  themeColor: "#4f46e5",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+};
 
 // Applies the saved theme before first paint so dark mode never flashes light.
 const themeScript = `try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}`;

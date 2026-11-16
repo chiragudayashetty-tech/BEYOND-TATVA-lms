@@ -67,6 +67,10 @@
   --font-display: var(--font-poppins);
 }
 
+/* Never let the page pan sideways: wide children scroll inside their own box (overflow-x-auto). */
+html, body { max-width: 100%; overflow-x: clip; overscroll-behavior-x: none; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
 body {
   background: var(--bg);
   color: var(--fg);
