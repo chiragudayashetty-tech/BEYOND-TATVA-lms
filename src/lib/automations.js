@@ -53,6 +53,9 @@ export async function sendAisensy(msg, { apiKey = process.env.AISENSY_API_KEY, f
   }
 }
 
+// AiSensy refuses API campaigns to opted-out contacts ("API Campaign Opt-out" switch). Its wording varies.
+export const isOptOutError = (e) => /opt(ed)?[\s_-]*out|unsubscrib/i.test(String(e ?? ""));
+
 // One sender run: claim a batch, send each, record the result. db = service-role client.
 export async function runAutomations(db, { now = new Date(), force = false, send = sendAisensy } = {}) {
   if (!force && !inSendWindow(now)) return { waiting: true, sent: 0, failed: 0 };
@@ -62,6 +65,11 @@ export async function runAutomations(db, { now = new Date(), force = false, send
   let sent = 0, failed = 0;
   for (const msg of batch ?? []) {
     const r = await send(msg);
+    if (!r.ok && isOptOutError(r.error)) {
+      // The parent opted out in AiSensy (STOP etc.): record it and mark them Do not contact. Not a failure.
+      await db.rpc("automation_opted_out", { p_id: msg.id, p_reason: "Opted out on WhatsApp" });
+      continue;
+    }
     await db.rpc("automation_done", { p_id: msg.id, p_ok: r.ok, p_error: r.ok ? null : r.error });
     if (r.ok) sent++;
     else {

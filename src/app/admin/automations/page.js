@@ -1,98 +1,144 @@
+import Link from "next/link";
 import { CheckCircle2, Clock, MessageCircle, XCircle } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle, StatCard } from "@/components/ui";
 import { createClient, isPreview, requireRole } from "@/lib/supabase/server";
-import { RuleForm, Retry, SendNow, TemplateForm } from "./AutomationControls";
+import { MessageForm, Retry, RuleSwitch, SendNow, blankLabel } from "./AutomationControls";
 
-export const metadata = { title: "Automations · Admin · Beyond Tatva" };
+// Studio → WhatsApp. Templates are written and approved in AiSensy; here: which AiSensy campaign is which
+// message, what is sent automatically, and what happened (sent / failed; delivered, read and replies stay in AiSensy).
+export const metadata = { title: "WhatsApp · Studio · Beyond Tatva" };
 export const dynamic = "force-dynamic";
 
-const TONE = { sent: "success", failed: "danger", skipped: "neutral", queued: "warning", sending: "primary" };
-const when = (iso) => (iso ? new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
-const hoursAgo = (h) => new Date(Date.now() - h * 3600_000).toISOString();
+const TABS = [["messages", "Messages"], ["auto", "Auto-send"], ["history", "History"]];
+const STATUS = { sent: ["success", "Sent"], failed: ["danger", "Failed"], skipped: ["neutral", "Not sent"], optout: ["warning", "Opted out"], queued: ["warning", "Waiting"], sending: ["primary", "Sending"] };
+const FILTERS = [["", "All"], ["sent", "Sent"], ["failed", "Failed"], ["optout", "Opted out"], ["waiting", "Waiting"], ["skipped", "Not sent"]];
+const TRIGGER = {
+  lead_welcome: "When a new lead is added (sheet, website, Loki chat)",
+  payment_link: "When a lead's Next step says \"payment link\"",
+  payment_received: "When a payment comes in",
+  student_welcome: "When a new student finishes sign-up (to the parent)",
+};
+const when = (iso) => (iso ? new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "");
+const daysAgo = (d) => new Date(Date.now() - d * 86400_000).toISOString();
 const maskPhone = (p) => (p ? `${p.slice(0, 3)} ••••• ${p.slice(-4)}` : "");
 
-export default async function AutomationsPage() {
+export default async function WhatsAppPage({ searchParams }) {
+  const sp = await searchParams;
+  const tab = TABS.some(([t]) => t === sp?.tab) ? sp.tab : "messages";
+  const filter = FILTERS.some(([f]) => f === sp?.status) ? sp.status : "";
   if (!isPreview) {
     const { profile } = await requireRole(["admin"]);
     if (profile?.role !== "admin") return null;
   }
   const supabase = await createClient();
-  const dayAgo = hoursAgo(24);
-  const [{ data: rules }, { data: recent }, { data: today }, { data: templates }] = await Promise.all([
-    supabase.from("automation_rules").select("key, title, description, campaign, enabled, template_key").order("position"),
-    supabase.from("message_queue").select("id, status, name, phone, error, created_at, sent_at, lead_id, automation_rules(title), wa_templates(title)")
-      .order("created_at", { ascending: false }).limit(50),
-    supabase.from("message_queue").select("status").gte("created_at", dayAgo).limit(2000),
-    supabase.from("wa_templates").select("*").order("key"),
+  let history = supabase.from("message_queue")
+    .select("id, status, name, phone, error, created_at, sent_at, lead_id, attributes, template_key, wa_templates(title), automation_rules(title)")
+    .order("created_at", { ascending: false }).limit(100);
+  if (filter === "waiting") history = history.in("status", ["queued", "sending"]);
+  else if (filter === "optout") history = history.eq("status", "skipped").like("error", "Opted out%");
+  else if (filter) history = history.eq("status", filter);
+  const [{ data: messages, error: setupError }, { data: rules }, { data: week }, { data: rows }, { data: optin }] = await Promise.all([
+    supabase.from("wa_templates").select("*").order("title"),
+    supabase.from("automation_rules").select("key, title, enabled, template_key").order("position"),
+    supabase.from("message_queue").select("status, template_key").gte("created_at", daysAgo(7)).limit(5000),
+    tab === "history" ? history : Promise.resolve({ data: [] }),
+    supabase.rpc("wa_optin_stats"),
   ]);
-  const count = (s) => (today ?? []).filter((m) => m.status === s).length;
-  const keySet = Boolean(process.env.AISENSY_API_KEY);
+  const opt = optin?.[0] ?? { opted_in: 0, opted_out: 0, opted_out_whatsapp: 0 };
+  const notReady = Boolean(setupError);
+  const count = (s, key) => (week ?? []).filter((m) => (Array.isArray(s) ? s.includes(m.status) : m.status === s) && (!key || m.template_key === key)).length;
+  const active = (messages ?? []).filter((m) => m.active);
 
   return (
     <Shell roles={["admin"]}>
-      <PageTitle title="Automations" subtitle="WhatsApp messages sent by AiSensy when something happens in the LMS or the Leads sheet.">
+      <PageTitle title="WhatsApp" subtitle="Messages go out through AiSensy. Write and approve templates in AiSensy; link them here.">
         <SendNow />
       </PageTitle>
-      {!keySet && (
-        <Card className="mb-4 border-warning">
-          <p className="text-sm"><strong>Not sending yet.</strong> Add <code>AISENSY_API_KEY</code> in Vercel (AiSensy → Manage → API key),
-            create one API campaign per rule in AiSensy, then paste its name below and switch the rule on.</p>
-        </Card>
-      )}
+
+      {notReady && <p role="alert" className="mb-4 rounded-xl bg-warning-soft p-3 text-sm text-warning">Not switched on yet: Claude still has to add the WhatsApp tables to the live database (you say &quot;apply automations&quot;).</p>}
+
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Sent (24 h)" value={count("sent")} icon={CheckCircle2} tone="success" />
-        <StatCard label="Waiting" value={count("queued") + count("sending")} icon={Clock} tone="warning" hint="Goes out 9am–9pm" />
+        <StatCard label="Sent (7 days)" value={count("sent")} icon={CheckCircle2} tone="success" />
         <StatCard label="Failed" value={count("failed")} icon={XCircle} tone="danger" />
-        <StatCard label="Skipped" value={count("skipped")} icon={MessageCircle} tone="neutral" hint="Do not contact / too old" />
+        <StatCard label="Waiting" value={count(["queued", "sending"])} icon={Clock} tone="warning" hint="Sends 9am–9pm" />
+        <StatCard label="Not sent" value={count("skipped")} icon={MessageCircle} tone="neutral" hint="Opted out / do not contact / too old" />
       </div>
-      <div className="mb-4 grid gap-3 md:grid-cols-2">
-        {(rules ?? []).map((r) => (
-          <Card key={r.key} title={r.title} action={<Badge tone={r.enabled ? "success" : "neutral"}>{r.enabled ? "On" : "Off"}</Badge>}>
-            <p className="mb-3 text-sm text-muted">{r.description}</p>
-            <RuleForm rule={r} templates={(templates ?? []).filter((t) => t.active)} />
-          </Card>
+
+      <Card className="mb-4" title="Opt-in / opt-out">
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div><p className="text-2xl font-semibold text-success">{opt.opted_in}</p><p className="text-xs text-muted">Can message</p></div>
+          <div><p className="text-2xl font-semibold text-danger">{opt.opted_out}</p><p className="text-xs text-muted">Do not contact</p></div>
+          <div><p className="text-2xl font-semibold text-warning">{opt.opted_out_whatsapp}</p><p className="text-xs text-muted">Said STOP on WhatsApp</p></div>
+        </div>
+        <p className="mt-3 text-xs text-muted">Do not contact = ticked in the sheet or Studio, or caught when AiSensy refused a message because the parent opted out. Those leads are marked automatically. Opted back in (START)? Untick Do not contact in the sheet.</p>
+      </Card>
+
+      <div className="mb-4 flex gap-2" role="tablist">
+        {TABS.map(([id, label]) => (
+          <Link key={id} href={`/admin/automations${id === "messages" ? "" : `?tab=${id}`}`} role="tab" aria-selected={tab === id}
+            className={`${tab === id ? "btn-primary" : "btn-secondary"} min-h-11`}>{label}</Link>
         ))}
       </div>
-      <div id="templates" className="mb-4">
-        <Card title={`WhatsApp templates (${templates?.length ?? 0})`}>
-          <p className="mb-3 text-sm text-muted">One row per AiSensy API campaign. Send any of them from Pipeline (one lead or a filtered group) or use them in the rules above.</p>
-          <ul className="mb-4 divide-y divide-border">
-            {(templates ?? []).map((t) => (
-              <li key={t.key} className="space-y-2 py-3">
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="font-medium">{t.title}</span>
-                  <Badge tone="neutral">{t.language === "kn" ? "ಕನ್ನಡ" : "English"}</Badge>
-                  <Badge tone={t.category === "utility" ? "primary" : "warning"}>{t.category}</Badge>
-                  {!t.active && <Badge tone="neutral">inactive</Badge>}
-                  <span className="text-xs text-muted">{t.campaign}</span>
-                </div>
-                <TemplateForm template={t} />
-              </li>
+
+      {tab === "messages" && (
+        <div className="space-y-3">
+          <Card>
+            <p className="text-sm text-muted">For each approved template in AiSensy: make an <b>API campaign</b>, set it <b>Live</b>, then add it here with the same campaign name.
+              Send messages by hand from <Link href="/admin/pipeline" className="text-primary underline">Pipeline</Link> (a whole filter) or a lead&apos;s page.</p>
+          </Card>
+          {(messages ?? []).map((m) => (
+            <Card key={m.key} title={m.title} action={<Badge tone={m.active ? "success" : "neutral"}>{m.active ? "Ready" : "Off"}</Badge>}>
+              <p className="text-sm">AiSensy campaign <code className="rounded bg-surface-2 px-1">{m.campaign}</code> · {m.language === "kn" ? "Kannada" : "English"} · {m.category}{m.media_url ? " · with photo/video" : ""}</p>
+              <p className="mt-1 text-sm text-muted">{m.params?.length ? m.params.map((p, i) => `{{${i + 1}}} ${blankLabel(p)}`).join(" · ") : "No blanks"}</p>
+              <p className="mt-1 text-xs text-muted">This week: {count("sent", m.key)} sent · {count("failed", m.key)} failed</p>
+              <div className="mt-2"><MessageForm message={m} /></div>
+            </Card>
+          ))}
+          {!notReady && <Card title="Add a message"><MessageForm /></Card>}
+        </div>
+      )}
+
+      {tab === "auto" && (
+        <div className="space-y-3">
+          {!active.length && !notReady && <Card><p className="text-sm text-muted">Add a message first (Messages tab).</p></Card>}
+          {(rules ?? []).map((r) => (
+            <Card key={r.key} title={TRIGGER[r.key] ?? r.title}>
+              <RuleSwitch rule={r} messages={active} />
+            </Card>
+          ))}
+          <p className="text-xs text-muted">Each person gets each automatic message once. Nothing goes to Do not contact numbers or between 9pm and 9am.</p>
+        </div>
+      )}
+
+      {tab === "history" && (
+        <Card pad={false} title="Last 100 messages">
+          <div className="flex flex-wrap gap-2 px-4 pb-3">
+            {FILTERS.map(([f, label]) => (
+              <Link key={f} href={`/admin/automations?tab=history${f ? `&status=${f}` : ""}`} className={`${filter === f ? "btn-primary" : "btn-secondary"} min-h-9 px-3 py-1 text-sm`}>{label}</Link>
             ))}
-          </ul>
-          <p className="mb-2 text-sm font-medium">Add a template</p>
-          <TemplateForm />
+          </div>
+          {!rows?.length ? <Empty icon={MessageCircle} title="Nothing here yet" body="Sent and failed messages show up here." /> : (
+            <ul className="divide-y divide-border">
+              {rows.map((m) => {
+                const [tone, label] = STATUS[m.status === "skipped" && m.error?.startsWith("Opted out") ? "optout" : m.status] ?? ["neutral", m.status];
+                return (
+                  <li key={m.id} className="flex flex-wrap items-center gap-2 px-4 py-3 text-sm">
+                    <Badge tone={tone}>{label}</Badge>
+                    <span className="font-medium">{m.wa_templates?.title ?? m.automation_rules?.title}</span>
+                    <span className="text-muted">→ {m.lead_id ? <Link className="underline" href={`/admin/pipeline/lead/${m.lead_id}`}>{m.name || "—"}</Link> : m.name || "—"}
+                      {m.attributes?.school ? ` (${m.attributes.school})` : ""} · {maskPhone(m.phone)}</span>
+                    <span className="ml-auto text-xs text-muted">{when(m.sent_at || m.created_at)}</span>
+                    {m.error && <span className="w-full text-xs text-danger">{m.error}</span>}
+                    {(m.status === "failed" || (m.status === "skipped" && m.error !== "Do not contact" && !m.error?.startsWith("Opted out"))) && <Retry id={m.id} />}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <p className="px-4 py-3 text-xs text-muted">Delivered, read and replies: AiSensy → Campaigns (report) and Chats.</p>
         </Card>
-      </div>
-      <Card title="Last 50 messages" pad={false}>
-        {!recent?.length ? (
-          <Empty icon={MessageCircle} title="No messages yet" body="Switch a rule on; new events after that are queued here." />
-        ) : (
-          <ul className="divide-y divide-border">
-            {recent.map((m) => (
-              <li key={m.id} className="flex flex-wrap items-center gap-2 px-4 py-3 text-sm">
-                <Badge tone={TONE[m.status]}>{m.status}</Badge>
-                <span className="font-medium">{m.wa_templates?.title ?? m.automation_rules?.title}</span>
-                <span className="text-muted">{m.lead_id ? <a className="underline" href={`/admin/pipeline/lead/${m.lead_id}`}>{m.name || "—"}</a> : m.name || "—"} · {maskPhone(m.phone)}</span>
-                <span className="ml-auto text-xs text-muted">{when(m.sent_at || m.created_at)}</span>
-                {m.error && <span className="w-full text-xs text-danger">{m.error}</span>}
-                {(m.status === "failed" || (m.status === "skipped" && m.error !== "Do not contact")) && <Retry id={m.id} />}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      )}
     </Shell>
   );
 }

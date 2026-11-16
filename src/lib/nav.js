@@ -47,7 +47,7 @@ export const nav = {
       { href: "/admin/pipeline", label: "Pipeline", icon: "Contact", group: "Grow" },
       { href: "/admin/outreach", label: "School outreach", icon: "School" },
       { href: "/admin/analytics", label: "Analytics", icon: "ChartLine" },
-      { href: "/admin/automations", label: "Automations", icon: "Workflow" },
+      { href: "/admin/automations", label: "WhatsApp", icon: "Workflow" },
     ],
     more: [
       { href: "/browse", label: "Student view", icon: "GraduationCap" },
