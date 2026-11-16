@@ -18,6 +18,7 @@ import { supportWhatsApp } from "@/lib/social";
 const WHATSAPP_CODES = process.env.NEXT_PUBLIC_PHONE_LOGIN === "1";
 const HOME = WHATSAPP_CODES ? "whatsapp" : "password";
 const friendly = (msg = "") => {
+  if (/hook/i.test(msg)) return "Couldn't send the WhatsApp code right now. Try again in a minute, or use Google.";
   if (/phone.*(disabled|not enabled)|Phone logins/i.test(msg)) return "Sign-in with mobile number isn't switched on yet. Use your email and the same password.";
   if (/Invalid login credentials/i.test(msg)) return "Wrong number/email or password. Try again, or tap Forgot password.";
   if (/provider is not enabled|Unsupported provider/i.test(msg)) return "Google sign-in isn't switched on yet. Use your phone or email.";
