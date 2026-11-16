@@ -69,6 +69,16 @@ Sign-in with the **mobile number** needs Supabase's phone provider on:
 3. Supabase → Authentication → Sign In / Providers → **Phone** → Enable → save. No SMS provider needed (the hook replaces it).
 Until WhatsApp is connected no codes are sent; password sign-in doesn't send any.
 
+## 7. WhatsApp login codes through AiSensy (2026-11-16)
+Codes go through AiSensy when `AISENSY_API_KEY` + `AISENSY_OTP_CAMPAIGN` are set (else Meta Cloud API, else off).
+1. AiSensy → Manage → Templates → New → Category **Authentication**, language English, "Copy code" button,
+   expiry 10 minutes. Name `login_otp`. Meta fixes the wording for authentication templates.
+2. After approval: Campaigns → API Campaign → New → `login_otp` → template `login_otp` → Live.
+3. Vercel (LMS, Production + Preview): `AISENSY_API_KEY`, `AISENSY_OTP_CAMPAIGN=login_otp`. Redeploy.
+4. Do step 6 (hook + secret + Phone provider on).
+5. Test: /login → mobile → "Send code on WhatsApp" with your number. Then Profile → parent confirmation.
+6. Turn on the WhatsApp tab: Vercel `NEXT_PUBLIC_PHONE_LOGIN=1`, redeploy.
+
 ## Test checklist
 1. Open the LMS in Chrome (not inside WhatsApp/Instagram) → Continue with Google → chiragudayashetty@gmail.com → you land in **Studio**.
 2. Log out → sign in with your email code (chiragshetty@beyondtatva.in) → Studio.

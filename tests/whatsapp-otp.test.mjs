@@ -39,3 +39,21 @@ test("builds an authentication template with the code in body and button", () =>
   assert.equal(m.template.components[0].parameters[0].text, "123456");
   assert.equal(m.template.components[1].parameters[0].text, "123456");
 });
+
+import { aisensyCodeBody, codeProvider, sendWhatsappCode } from "../src/lib/whatsapp-code.js";
+test("code provider: AiSensy first, then Meta, else off", () => {
+  assert.equal(codeProvider({ AISENSY_API_KEY: "k", AISENSY_OTP_CAMPAIGN: "c", WHATSAPP_TOKEN: "t", WHATSAPP_PHONE_NUMBER_ID: "p" }), "aisensy");
+  assert.equal(codeProvider({ AISENSY_API_KEY: "k", WHATSAPP_TOKEN: "t", WHATSAPP_PHONE_NUMBER_ID: "p" }), "meta");
+  assert.equal(codeProvider({ AISENSY_API_KEY: "k" }), null);
+});
+test("AiSensy code body fills the text and the copy-code button", async () => {
+  const b = aisensyCodeBody("919845012345", "123456", "login_otp", "k");
+  assert.deepEqual(b.templateParams, ["123456"]);
+  assert.equal(b.buttons[0].parameters[0].text, "123456");
+  let sent;
+  const env = { AISENSY_API_KEY: "k", AISENSY_OTP_CAMPAIGN: "login_otp", AISENSY_PARENT_CAMPAIGN: "parent_otp" };
+  const r = await sendWhatsappCode("919845012345", "654321", "parent", { env, fetchImpl: async (_u, o) => { sent = JSON.parse(o.body); return new Response("{}"); } });
+  assert.equal(r.ok, true);
+  assert.equal(sent.campaignName, "parent_otp");
+  assert.equal((await sendWhatsappCode("9", "1", "login", { env: {} })).error, "not_configured");
+});

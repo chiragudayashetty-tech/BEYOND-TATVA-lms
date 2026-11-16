@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { readJson } from "@/lib/body";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { otpTemplateMessage, whatsappNumber } from "@/lib/whatsapp-otp";
+import { whatsappNumber } from "@/lib/whatsapp-otp";
+import { sendWhatsappCode, whatsappCodesReady } from "@/lib/whatsapp-code";
 
 // Parent confirmation (DPDP: verifiable consent for a child's data).
 // POST /api/parent-consent { action: "send" }            → WhatsApp code to the parent's number on file
@@ -41,9 +42,7 @@ export async function POST(request) {
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", uid).maybeSingle();
   if (profile?.role !== "student") return json({ error: "Only student accounts need this." }, 403);
-  const token = process.env.WHATSAPP_TOKEN;
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  if (!token || !phoneId) return json({ error: "WhatsApp isn't set up yet. Please try later." }, 503);
+  if (!whatsappCodesReady()) return json({ error: "WhatsApp isn't set up yet. Please try later." }, 503);
 
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
   const hash = createHash("sha256").update(code).digest("hex");
@@ -56,20 +55,7 @@ export async function POST(request) {
 
   const to = whatsappNumber(data.phone);
   if (!to) return json({ error: MESSAGES.no_phone }, 400);
-  try {
-    const r = await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(phoneId)}/messages`, {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-      body: JSON.stringify(otpTemplateMessage(to, code, process.env.WHATSAPP_PARENT_TEMPLATE || process.env.WHATSAPP_OTP_TEMPLATE || "login_code", process.env.WHATSAPP_OTP_LANG || "en")),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!r.ok) {
-      const err = await r.json().catch(() => ({}));
-      console.error("parent consent whatsapp failed", r.status, err?.error?.code);
-      return json({ error: "Couldn't send the WhatsApp message. Please try again." }, 502);
-    }
-  } catch {
-    return json({ error: "Couldn't reach WhatsApp. Please try again." }, 502);
-  }
+  const sent = await sendWhatsappCode(to, code, "parent");
+  if (!sent.ok) return json({ error: sent.error === "unreachable" ? "Couldn't reach WhatsApp. Please try again." : "Couldn't send the WhatsApp message. Please try again." }, 502);
   return json({ ok: true, sent_to: maskPhone(data.phone) });
 }
