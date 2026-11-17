@@ -184,7 +184,7 @@ function push_(t, rowNums, touched) {
     var now = Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM HH:mm');
     rowNums.forEach(function (r) { t.sheet.getRange(r, t.col['Last synced'] + 1).setValue(now); });
   }
-  if (refresh) pull_();
+  if (refresh) pull_(true);
 }
 
 // One sync at a time: an edit push and the 5-minute pull used to run together and write IDs into rows
@@ -220,7 +220,7 @@ function onEditSync_(e) {
   var touched = t.head.slice(e.range.getColumn() - 1, e.range.getLastColumn());
   if (touched.every(function (h) { return HIDDEN.indexOf(h) >= 0; })) return;
   var owned = t.kind === 'leads' ? LEAD_SYSTEM : SCHOOL_SYSTEM;
-  if (touched.every(function (h) { return owned.indexOf(h) >= 0; })) return pull_();  // LMS-owned: put the value back
+  if (touched.every(function (h) { return owned.indexOf(h) >= 0; })) return pull_(true);  // LMS-owned: put the value back
   var rows = [], props = PropertiesService.getDocumentProperties(), now = String(Date.now());
   for (var r = r0; r <= r1; r++) { rows.push(r); props.setProperty('edit_' + t.name + '_' + r, now); }
   push_(t, rows, fieldsOf_(t, touched));
@@ -233,15 +233,18 @@ function pull() {
   });
 }
 
-function pull_() {
+function pull_(noPush) {
   var key = PropertiesService.getScriptProperties().getProperty('KEY');
   var ts = tables_();
   if (!key || !ts.length) return;
+  // School Outreach: rows edited here since the last pull go to the LMS first. Before 17 Nov 2026 an edit
+  // whose on-edit push never ran (trigger missing, or another sync held the lock) was overwritten here.
+  if (ts[0].kind === 'schools' && !noPush) { pushEditedSchools_(ts[0]); ts = tables_(); }
   var res = UrlFetchApp.fetch(API, { headers: { 'x-sheets-key': key }, muteHttpExceptions: true });
   if (res.getResponseCode() !== 200) throw new Error('Pull failed (' + res.getResponseCode() + ')');
   var data = JSON.parse(res.getContentText());
   PropertiesService.getDocumentProperties().setProperty('last_pull', Utilities.formatDate(new Date(), 'Asia/Kolkata', 'dd MMM HH:mm'));
-  if (ts[0].kind === 'schools') { if (data && Array.isArray(data.schools)) pullSchools_(ts[0], data.schools); return; }
+  if (ts[0].kind === 'schools') { if (data && Array.isArray(data.schools)) { pullSchools_(ts[0], data.schools); saveSchoolSigs_(table_(ts[0].sheet)); } return; }
   if (!data || !Array.isArray(data.leads)) return;
 
   // School tabs appear once a workshop is done.
@@ -317,6 +320,31 @@ function pull_() {
 }
 
 // School Outreach tab ← LMS. The LMS is the main record: rows are rewritten, added and removed to match it.
+// What a School Outreach row looked like after the last pull (editable columns only), per ID.
+function schoolSig_(t, v) {
+  return Object.keys(SCHOOL_FIELDS).filter(function (h) { return t.col[h] !== undefined; })
+    .map(function (h) { return cellText_(v[t.col[h]]); }).join('\u241F');
+}
+function saveSchoolSigs_(t) {
+  if (!t) return;
+  var sigs = {}, values = t.last > 1 ? t.sheet.getRange(2, 1, t.last - 1, t.head.length).getValues() : [];
+  values.forEach(function (v) { var id = cellText_(v[t.col['ID']]); if (id) sigs[id] = schoolSig_(t, v); });
+  PropertiesService.getDocumentProperties().setProperty('school_sigs', JSON.stringify(sigs));
+}
+function pushEditedSchools_(t) {
+  var saved = PropertiesService.getDocumentProperties().getProperty('school_sigs');
+  if (!saved || t.col['ID'] === undefined) return;          // first run: nothing to compare with yet
+  saved = JSON.parse(saved);
+  var rows = [], values = t.last > 1 ? t.sheet.getRange(2, 1, t.last - 1, t.head.length).getValues() : [];
+  values.forEach(function (v, i) {
+    var id = cellText_(v[t.col['ID']]);
+    if (!id || (saved[id] !== undefined && saved[id] === schoolSig_(t, v))) return;
+    rows.push(i + 2);                                       // changed here, or new row (with or without an ID)
+  });
+  values.forEach(function (v, i) { if (!cellText_(v[t.col['ID']]) && String(v[t.col['School']]).trim()) rows.push(i + 2); });
+  if (rows.length) push_(t, rows.filter(function (r, i, a) { return a.indexOf(r) === i; }));
+}
+
 function pullSchools_(t, schools) {
   // Missing link columns used to stop this sync silently (8–14 Nov 2026). Add them instead.
   ['ID', 'Version'].forEach(function (h) {
@@ -395,7 +423,7 @@ function syncAll() {
 // nothing, or when one pull would remove more than 10 rows and more than 20% of the linked rows.
 function safeToDelete_(gone, linked, received, what) {
   if (!gone) return true;
-  if (received === 0 || (gone > 10 && gone > linked * 0.2)) {
+  if ((received === 0 && linked > 3) || (gone > 10 && gone > linked * 0.2)) {
     console.warn('Sync: skipped removing ' + gone + ' ' + what + ' rows (LMS sent ' + received + ', sheet has ' + linked + '). Check the LMS, then delete by hand if intended.');
     return false;
   }

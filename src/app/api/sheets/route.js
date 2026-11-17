@@ -62,6 +62,7 @@ export async function POST(request) {
     console.error("sheet push failed", body.kind, error.message);
     return NextResponse.json({ error: /rows must/.test(error.message) ? error.message : "temporary failure" }, { status: /rows must/.test(error.message) ? 400 : 500 });
   }
+  await db.rpc("sheet_sync_seen", { p_book: "sheets", p_kind: "push", p_rows: body.rows.length });
   console.info("sheets sync: push ok", body.kind, body.rows.length);
   return NextResponse.json(data);
 }
