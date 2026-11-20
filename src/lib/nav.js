@@ -47,6 +47,7 @@ export const nav = {
       { href: "/admin/pipeline", label: "Pipeline", icon: "Contact", group: "Grow" },
       { href: "/admin/outreach", label: "School outreach", icon: "School" },
       { href: "/admin/analytics", label: "Analytics", icon: "ChartLine" },
+      { href: "/admin/analytics/live", label: "Live tracking", icon: "Activity" },
       { href: "/admin/automations", label: "WhatsApp", icon: "Workflow" },
     ],
     more: [
