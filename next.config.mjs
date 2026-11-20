@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
 // Sent with every response. These stop other sites from putting the LMS inside a hidden frame
 // (clickjacking: a child could be tricked into tapping "Pay" or "Delete"), stop browsers guessing file
 // types, and keep full page addresses from leaking to other sites. No script rules here on purpose:
@@ -30,4 +31,15 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+// Uploads source maps to Sentry at build time (only when SENTRY_AUTH_TOKEN is set in Vercel) so errors show real
+// file names and lines. The maps are deleted from the build afterwards, so the public site never serves them.
+export default withSentryConfig(nextConfig, {
+  org: "beyond-tatva",
+  project: "beyond-tatva",
+  sentryUrl: "https://de.sentry.io/",
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
+  telemetry: false,
+});
