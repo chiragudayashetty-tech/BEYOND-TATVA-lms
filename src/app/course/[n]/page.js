@@ -6,7 +6,7 @@ import Shell from "@/components/shell/Shell";
 import { Badge, Progress, RichText } from "@/components/ui";
 import { Thumb, firstLesson, moduleState } from "@/components/course";
 import Countdown from "@/components/Countdown";
-import ModuleResources from "@/components/ModuleResources";
+import StudyFiles from "@/components/StudyFiles";
 import OfflineDownload from "@/components/OfflineDownload";
 import { fmtPremiere, isComingSoon, quizOpen } from "@/lib/catalog";
 import { getActivities, getCourse, getModuleResources } from "@/lib/data";
@@ -39,7 +39,7 @@ export default async function ModulePage({ params }) {
   return (
     <Shell roles={["student", "teacher"]}>
       <Link href="/course" className="btn-ghost -ml-3 mb-2"><ArrowLeft className="h-4 w-4" /> All modules</Link>
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start">
         <div className="space-y-3 lg:sticky lg:top-20">
           <Thumb module={m} className="aspect-video rounded-2xl" dim={!playable}>
             {playable && m.lessons.length > 0 && (
@@ -108,7 +108,7 @@ export default async function ModulePage({ params }) {
             <OfflineDownload userId={user?.id} label={m.lessons.length > 1 ? `Download module (${m.lessons.length} videos)` : "Download for offline"}
               lessons={m.lessons.map((l) => ({ id: l.id, n: l.n, title: l.title, mins: l.mins, courseId: course.id, module: m.n, moduleTitle: m.title }))} />
           )}
-          {playable && <ModuleResources files={resources[m.id]} />}
+          {playable && resources[m.id]?.length > 0 && <div className="mt-4 min-w-0"><h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-subtle">Notes &amp; files</h3><StudyFiles files={resources[m.id]} /></div>}
         </div>
       </div>
 
