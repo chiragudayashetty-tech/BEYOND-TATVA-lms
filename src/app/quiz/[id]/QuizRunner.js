@@ -38,7 +38,7 @@ export default function QuizRunner({ quiz, questions, tries = [], limited = fals
     // Database messages are written for students ("Take a short break…"); a dropped connection is not.
     if (error) return setError(/fetch|network|load failed/i.test(error.message) ? "We couldn't send your answers. Check your internet and tap Submit again. Your answers are still here." : error.message);
     setResult(data);
-    track("quiz_submitted", { quiz_id: quiz.id, score: data?.score ?? null, total: data?.total ?? null, passed: data?.passed ?? null, attempt: data?.attempt ?? null });
+    track("quiz_submitted", { quiz_id: quiz.id, quiz_title: quiz.title ?? null, score: data?.score ?? null, total: data?.total ?? null, passed: data?.passed ?? null, attempt: data?.attempt ?? null });
     setUsed(data.attempt ?? used + 1);
     router.refresh(); // XP and module status
   }

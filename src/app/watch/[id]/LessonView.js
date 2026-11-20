@@ -34,17 +34,25 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
   // 15 s heartbeat: that would re-render the page for nothing.
   const router = useRouter();
   const wasDone = useRef(lesson.done);
+  // Analytics props: new modules and lessons show up in Studio → Live tracking by themselves (grouped by these).
+  const lessonProps = useCallback(() => {
+    const m = course.modules.find((x) => x.n === lesson.module);
+    return { course_id: course.id, module: lesson.module, module_title: m?.title ?? null, lesson_id: lesson.id, lesson_n: lesson.n, lesson_title: lesson.title, has_access: Boolean(hasAccess) };
+  }, [course, lesson, hasAccess]);
+  useEffect(() => {
+    if (canSave) track("lesson_viewed", lessonProps());
+  }, [canSave, lessonProps]);
   const refreshDone = useCallback(async () => {
     if (!canSave || !userId) return;
     const { data } = await createClient().from("lesson_progress").select("completed_at").eq("student_id", userId).eq("lesson_id", lesson.id).maybeSingle();
     const nowDone = Boolean(data?.completed_at);
     setDone(nowDone);
     if (nowDone && !wasDone.current) {
-      track("lesson_completed", { lesson_id: lesson.id });
+      track("lesson_completed", lessonProps());
       router.refresh();
     }
     wasDone.current = nowDone;
-  }, [canSave, userId, lesson.id, router]);
+  }, [canSave, userId, lesson.id, router, lessonProps]);
 
   // Progress and answers go through checked database functions (save_progress / save_answer):
   // the database confirms the lesson is open for this student and caps watch time.

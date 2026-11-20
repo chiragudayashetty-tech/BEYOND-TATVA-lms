@@ -64,6 +64,6 @@ export async function POST(request) {
     console.error("razorpay webhook: record_purchase failed", payment.id, error.message);
     return NextResponse.json({ error: "retry" }, { status: 500 }); // Razorpay retries
   }
-  if (status === "claimed" || status === "pending") await trackServer("payment_completed", user.id, { amount_inr: Number.isInteger(payment.amount) ? payment.amount / 100 : null, coupon: notes.coupon || null, via: "webhook" });
+  if (status === "claimed" || status === "pending") await trackServer("payment_completed", user.id, { amount_inr: Number.isInteger(payment.amount) ? payment.amount / 100 : null, coupon: notes.coupon || null, via: "webhook", $set: { paid: true } });
   return NextResponse.json({ ok: true, status });
 }
