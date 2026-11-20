@@ -421,6 +421,7 @@ function LoginForm() {
             ? <>We sent a {codeLength}-digit code on WhatsApp to <b className="text-fg">{showPhone(codeTo.phone)}</b>. It works for 10 minutes. It can take up to a minute to arrive, so please don&apos;t ask for another one straight away.</>
             : <>We sent an {codeLength}-digit code to <b className="text-fg">{contact}</b>. You can also just tap the link in the email.</>}</p>
           <input className="input text-center text-2xl tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={codeLength} value={code} onChange={(e) => onCode(e.target.value)} onPaste={(e) => { e.preventDefault(); onCode(e.clipboardData.getData("text")); }} placeholder={"•".repeat(codeLength)} aria-label={`${codeLength}-digit code`} autoFocus required />
+          {byWhatsApp && <p className="text-sm text-danger">Didn&apos;t get the code? Wait 30 seconds before asking for a new one.</p>}
           <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? "Checking…" : "Verify and continue"}</button>
           <button type="button" onClick={() => go(byWhatsApp && mode === "codeSent" ? HOME : "code")} className="min-h-11 w-full text-sm text-muted hover:text-fg">{byWhatsApp ? "Use a different number" : "Use a different email"}</button>
         </form>
