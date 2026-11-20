@@ -1,9 +1,11 @@
 "use client";
 
+import FactLoader from "@/components/FactLoader";
+import { startNavLoader } from "@/components/TopLoader";
 import { track } from "@/lib/track-client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GraduationCap, House, Info, Loader2, Users } from "lucide-react";
+import { GraduationCap, House, Info, Users } from "lucide-react";
 import Logo from "@/components/Logo";
 import { IconTile } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
@@ -24,6 +26,7 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
   const [schoolChoices, setSchoolChoices] = useState(null);
   const done = () => {
     const to = next ?? "/dashboard";
+    startNavLoader();
     router.replace(to);
     router.refresh();
     // If the page change stalls on a slow network, load it directly so the loading screen can't hang.
@@ -121,13 +124,7 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
   return (
     <>
     {busy && (
-      <div role="status" aria-live="polite" className="fixed inset-0 z-50 grid place-items-center bg-bg/95 px-6 text-center backdrop-blur-sm">
-        <div>
-          <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
-          <p className="mt-4 text-lg font-semibold">Setting up your course…</p>
-          <p className="mt-1 text-sm text-muted">Saving your details and unlocking your modules. This takes a few seconds, please don&apos;t close this page.</p>
-        </div>
-      </div>
+      <FactLoader title="Setting up your course… please don't close this page." />
     )}
     <div className="grid min-h-screen bg-bg place-items-center px-4 py-10">
       <div className="w-full max-w-lg">

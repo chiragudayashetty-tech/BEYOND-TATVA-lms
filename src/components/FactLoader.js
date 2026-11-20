@@ -21,21 +21,22 @@ const FACTS = [
   "⚡ Jobs that use AI are growing fast. Starting in Grade 8 puts you years ahead.",
 ];
 
-export default function FactLoader({ label = "page" }) {
+// inline: fills its box instead of covering the screen. title: replaces "Loading <label>…".
+export default function FactLoader({ label = "page", title, inline = false }) {
   const [i, setI] = useState(() => Math.floor(Math.random() * FACTS.length));
   useEffect(() => {
     const t = setInterval(() => setI((n) => (n + 1) % FACTS.length), 3500);
     return () => clearInterval(t);
   }, []);
   return (
-    <div role="status" aria-live="polite" className="fixed inset-0 z-40 grid place-items-center bg-bg/80 px-4 backdrop-blur-sm">
+    <div role="status" aria-live="polite" className={inline ? "grid min-h-80 place-items-center px-4 py-10" : "fixed inset-0 z-[55] grid place-items-center bg-bg/80 px-4 backdrop-blur-sm"}>
       <div className="flex w-full max-w-sm flex-col items-center gap-5 text-center">
         <div className="bt-orbit" aria-hidden="true">
           <span className="bt-ring"><i /></span><span className="bt-ring"><i /></span><span className="bt-ring"><i /></span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/mark-trim.png" alt="" />
         </div>
-        <p className="text-sm font-semibold">Loading {label}…</p>
+        <p className="text-sm font-semibold">{title ?? `Loading ${label}…`}</p>
         <p key={i} className="bt-fact min-h-16 rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-muted">{FACTS[i]}</p>
       </div>
     </div>

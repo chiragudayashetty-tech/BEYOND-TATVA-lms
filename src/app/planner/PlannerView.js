@@ -1,5 +1,6 @@
 "use client";
 
+import FactLoader from "@/components/FactLoader";
 import { useMemo, useState } from "react";
 import { useIsClient } from "@/lib/hooks";
 import { BookOpen, CalendarPlus, Check, ChevronLeft, ChevronRight, Plus, RotateCcw, Target, Trash2 } from "lucide-react";
@@ -47,7 +48,7 @@ export default function PlannerView({ serverPlan = {}, userId = null }) {
   };
   const week = useMemo(() => (selected ? Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(selected), i)) : []), [selected]);
 
-  if (!isClient) return <div className="card h-96 animate-pulse" />;
+  if (!isClient) return <div className="card"><FactLoader inline label="study planner" /></div>;
 
   const dayKey = key(selected);
   const items = plan[dayKey] ?? [];

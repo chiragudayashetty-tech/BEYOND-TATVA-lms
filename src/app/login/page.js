@@ -1,5 +1,7 @@
 "use client";
 
+import FactLoader from "@/components/FactLoader";
+import { startNavLoader } from "@/components/TopLoader";
 import SocialLinks from "@/components/SocialLinks";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -156,6 +158,7 @@ function LoginForm() {
   // Signed in on this device: claim website purchases, then continue (as auth/callback does).
   async function finish() {
     await supabase.rpc("claim_purchases");
+    startNavLoader();
     router.replace(next);
     router.refresh();
   }
@@ -501,7 +504,7 @@ export default function LoginPage() {
     <div className="grid min-h-screen bg-bg place-items-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-8 flex justify-center"><Logo /></div>
-        <Suspense fallback={<div className="card h-96" />}>
+        <Suspense fallback={<div className="card"><FactLoader inline label="sign in" /></div>}>
           <LoginForm />
         </Suspense>
         <p className="mt-6 text-center text-xs text-muted">Students under 18 need a parent or guardian&apos;s consent to join.</p>
