@@ -21,7 +21,16 @@ export function aisensyCodeBody(to, code, campaign, apiKey) {
   };
 }
 
+// True when the provider says the number has no WhatsApp account (Meta error 131026 "message undeliverable" /
+// 131030 "recipient not in allowed list" aside, AiSensy wording varies, so we match on the words as well).
+// The raw provider reply is logged on every failure so the wording can be tightened from Vercel logs.
+export function notOnWhatsapp(status, text = "") {
+  if (/"code"\s*:\s*131026\b/.test(text)) return true;
+  return /not\s+(a\s+)?(valid\s+)?(registered\s+)?(on|in|a)\s+whats\s?app|no\s+whats\s?app|whats\s?app\s+(account\s+)?(not\s+(found|registered|exist)|does\s?n[o']t\s+exist)|not\s+a\s+whats\s?app\s+user|invalid\s+whats\s?app/i.test(text);
+}
+
 // to: "91XXXXXXXXXX". kind: "login" | "parent". Returns { ok, error? } and never throws.
+// error: "not_configured" | "not_on_whatsapp" | "send_failed" | "unreachable".
 export async function sendWhatsappCode(to, code, kind = "login", { env = process.env, fetchImpl = fetch } = {}) {
   const provider = codeProvider(env);
   if (!provider) return { ok: false, error: "not_configured" };
@@ -43,7 +52,7 @@ export async function sendWhatsappCode(to, code, kind = "login", { env = process
     if (r.ok) return { ok: true };
     const text = await r.text().catch(() => "");
     console.error(`whatsapp code (${provider}) failed`, r.status, text.slice(0, 200));
-    return { ok: false, error: "send_failed" };
+    return { ok: false, error: notOnWhatsapp(r.status, text) ? "not_on_whatsapp" : "send_failed" };
   } catch (e) {
     console.error(`whatsapp code (${provider}) unreachable`, e.message);
     return { ok: false, error: "unreachable" };

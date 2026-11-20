@@ -40,7 +40,7 @@ test("builds an authentication template with the code in body and button", () =>
   assert.equal(m.template.components[1].parameters[0].text, "123456");
 });
 
-import { aisensyCodeBody, codeProvider, sendWhatsappCode } from "../src/lib/whatsapp-code.js";
+import { aisensyCodeBody, codeProvider, notOnWhatsapp, sendWhatsappCode } from "../src/lib/whatsapp-code.js";
 test("code provider: AiSensy first, then Meta, else off", () => {
   assert.equal(codeProvider({ AISENSY_API_KEY: "k", AISENSY_OTP_CAMPAIGN: "c", WHATSAPP_TOKEN: "t", WHATSAPP_PHONE_NUMBER_ID: "p" }), "aisensy");
   assert.equal(codeProvider({ AISENSY_API_KEY: "k", WHATSAPP_TOKEN: "t", WHATSAPP_PHONE_NUMBER_ID: "p" }), "meta");
@@ -56,4 +56,13 @@ test("AiSensy code body fills the text and the copy-code button", async () => {
   assert.equal(r.ok, true);
   assert.equal(sent.campaignName, "parent_otp");
   assert.equal((await sendWhatsappCode("9", "1", "login", { env: {} })).error, "not_configured");
+});
+
+test("a number that isn't on WhatsApp is reported as such", async () => {
+  assert.equal(notOnWhatsapp(400, '{"error":{"code":131026,"message":"Message undeliverable"}}'), true);
+  assert.equal(notOnWhatsapp(400, '{"message":"Destination is not on WhatsApp"}'), true);
+  assert.equal(notOnWhatsapp(500, "Internal error"), false);
+  const env = { AISENSY_API_KEY: "k", AISENSY_OTP_CAMPAIGN: "c" };
+  const r = await sendWhatsappCode("919845012345", "1", "login", { env, fetchImpl: async () => new Response('{"message":"number not on whatsapp"}', { status: 400 }) });
+  assert.deepEqual(r, { ok: false, error: "not_on_whatsapp" });
 });
