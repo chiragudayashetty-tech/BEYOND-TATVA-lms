@@ -91,7 +91,7 @@ export const getLeaderboard = cache(async (limit = 10, scope = "all") => {
   if (user.id === "preview") return PREVIEW_BOARD;
   const supabase = await createClient();
   let { data, error } = await supabase.rpc("xp_leaderboard", { p_limit: limit, p_scope: scope });
-  // Until migration 20261116000003 is live there is no scope: fall back to the whole list.
+  // Until migration 20261116000004 (live as 20261116000003_leaderboard_visible_and_batches) is live there is no scope: fall back to the whole list.
   if (error) ({ data, error } = await supabase.rpc("xp_leaderboard", { p_limit: limit }));
   return error ? null : data;
 });
