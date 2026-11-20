@@ -1211,3 +1211,10 @@ select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
 do $$ begin perform public.wa_optin_stats(); raise exception 'M603 FAIL';
 exception when insufficient_privilege then raise notice 'M603 pass: students cannot read opt-in stats'; end $$;
 reset role;
+
+-- ── Advisor clean-up M7xx ───────────────────────────────────────────────────
+reset role;
+select 'M701 students cannot call automation trigger functions' t,
+  not has_function_privilege('authenticated', 'public.automation_on_lead()', 'execute')
+  and not has_function_privilege('authenticated', 'public.automation_on_purchase()', 'execute')
+  and not has_function_privilege('authenticated', 'public.automation_on_student()', 'execute') as pass;
