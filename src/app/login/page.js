@@ -49,6 +49,10 @@ function GoogleButton({ onClick, busy }) {
   );
 }
 
+function saveNextCookie(next) {
+  document.cookie = `bt_next=${encodeURIComponent(next)}; path=/; max-age=1800; samesite=lax; secure`;
+}
+
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -68,6 +72,8 @@ function LoginForm() {
   const [error, setError] = useState(params.get("error") ? "That sign-in link has expired. Send a new code." : "");
   const [inAppBrowser, setInAppBrowser] = useState(null);
   const [copied, setCopied] = useState(false);
+  // Accounts linked to the WhatsApp number just verified (student's or parent's number), for "Which student?".
+  const [accounts, setAccounts] = useState([]);
   // Seconds until another WhatsApp code may be asked for (the server allows 1 per minute per number).
   const [wait, setWait] = useState(0);
   useEffect(() => {
@@ -126,7 +132,7 @@ function LoginForm() {
 
   // Backup of where to go after sign-in. If Supabase drops the ?next= from the return address
   // (not on its Redirect URLs allowlist), the callback and the front page still find it here.
-  const rememberNext = () => { document.cookie = `bt_next=${encodeURIComponent(next)}; path=/; max-age=1800; samesite=lax; secure`; };
+  const rememberNext = () => saveNextCookie(next);
 
   async function google() {
     rememberNext();
@@ -238,8 +244,12 @@ function LoginForm() {
     const token = (typed ?? code).trim();
     setBusy(true);
     setError("");
+    // WhatsApp codes are checked by our server, which then remembers the proved number for "Which student?".
     const { error } = byWhatsApp
-      ? await supabase.auth.verifyOtp({ phone: `+${codeTo.phone}`, token, type: "sms" })
+      ? await fetch("/api/auth/phone-accounts", { method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action: "verify", phone: codeTo.phone, token }) })
+          .then((x) => x.json()).then((x) => ({ error: x.error ? { message: x.error } : null }))
+          .catch(() => ({ error: { message: "Couldn't check the code. Try again." } }))
       : await supabase.auth.verifyOtp({ email: codeTo?.email ?? contact.trim(), token, type: "email" });
     if (error) {
       setBusy(false);
@@ -250,6 +260,12 @@ function LoginForm() {
     // New WhatsApp accounts have no email yet: ask for one right away (needed for receipts and password resets).
     // Returning students (already onboarded) go straight in; only brand-new numbers are asked.
     if (byWhatsApp) {
+      // One number can belong to several accounts (siblings, or a duplicate made by mistake): let them pick.
+      const res = await fetch("/api/auth/phone-accounts").then((x) => (x.ok ? x.json() : null)).catch(() => null);
+      if (res?.accounts?.length > 1) {
+        setAccounts(res.accounts);
+        return go("pick");
+      }
       const { data } = await supabase.auth.getUser();
       const user = data?.user;
       if (user && !user.email) {
@@ -258,6 +274,32 @@ function LoginForm() {
       }
     }
     await finish();
+  }
+
+  // "Which student?": open one of the accounts linked to this number, or delete an empty extra one.
+  async function pickAccount(a) {
+    setError("");
+    setBusy(true);
+    const res = await fetch("/api/auth/phone-accounts", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "open", id: a.id }) }).then((x) => x.json()).catch(() => ({ error: "Couldn't open that account. Try again." }));
+    if (res.error) { setBusy(false); return setError(res.error); }
+    if (res.token_hash) {
+      const { error } = await supabase.auth.verifyOtp({ token_hash: res.token_hash, type: "magiclink" });
+      if (error) { setBusy(false); return setError(friendly(error.message)); }
+    }
+    setBusy(false);
+    await finish();
+  }
+
+  async function deleteAccount(a) {
+    if (!window.confirm(`Delete the empty account "${a.name}"? This can't be undone.`)) return;
+    setError("");
+    setBusy(true);
+    const res = await fetch("/api/auth/phone-accounts", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "delete", id: a.id }) }).then((x) => x.json()).catch(() => ({ error: "Couldn't delete it. Try again." }));
+    setBusy(false);
+    if (res.error) return setError(res.error);
+    setAccounts((list) => list.filter((x) => x.id !== a.id));
   }
 
   // Adds the email to the signed-in WhatsApp account. Supabase emails a confirmation link; the email is
@@ -293,7 +335,7 @@ function LoginForm() {
       </button>
     </div>}
     <div className="card p-6 shadow-xl shadow-black/5 sm:p-8">
-      <h1 className="text-2xl font-semibold">{mode === "addEmail" ? "Add your email" : mode === "signup" ? "Create your account" : mode === "forgot" ? "Forgot password" : mode === "whatsapp" ? "Sign in or join" : "Sign in"}</h1>
+      <h1 className="text-2xl font-semibold">{mode === "addEmail" ? "Add your email" : mode === "pick" ? "Which student?" : mode === "signup" ? "Create your account" : mode === "forgot" ? "Forgot password" : mode === "whatsapp" ? "Sign in or join" : "Sign in"}</h1>
       <p className="mt-1 text-sm text-muted">
         {mode === "addEmail" ? "One last step: we send payment receipts and course updates here, and it lets you sign in with email too."
           : mode === "signup" ? "Use the student's own email and mobile number. You can sign in with either."
@@ -413,6 +455,23 @@ function LoginForm() {
           <button disabled={busy || (byWhatsApp && wait > 0)} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : byWhatsApp && wait > 0 ? `Send again in ${wait}s` : byWhatsApp ? "Send code on WhatsApp" : "Send code"}</button>
           <button type="button" onClick={() => go(HOME)} className="min-h-11 w-full text-sm text-muted hover:text-fg">Use a password instead</button>
         </form>
+      )}
+
+      {mode === "pick" && (
+        <div className="mt-6 space-y-3">
+          <p className="text-sm text-muted">This number is linked to more than one account. Which student is signing in?</p>
+          {accounts.map((a) => (
+            <div key={a.id} className="card flex items-center gap-3 p-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{a.name}</p>
+                <p className="text-xs text-muted">{a.empty ? "Empty account: no lessons or payments yet" : "Has lessons or a course"}</p>
+              </div>
+              <button type="button" disabled={busy || !a.canOpen} onClick={() => pickAccount(a)} className="btn-primary min-h-11 px-4">Open</button>
+              {a.empty && !a.current && <button type="button" disabled={busy} onClick={() => deleteAccount(a)} className="min-h-11 px-2 text-sm text-danger">Delete</button>}
+            </div>
+          ))}
+          <p className="text-xs text-muted">Brother or sister? Each student keeps their own account. You can only delete an empty one.</p>
+        </div>
       )}
 
       {mode === "codeSent" && (
