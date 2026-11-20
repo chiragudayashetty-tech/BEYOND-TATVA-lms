@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowRight, CircleCheck, CircleX, RotateCcw, Sparkles, Troph
 import { Badge, Progress } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { QUIZ_TRIES, XP_RULES } from "@/lib/catalog";
+import posthog from "posthog-js";
 
 // `tries`: this student's earlier tries, oldest first. `limited`: students get QUIZ_TRIES tries (staff are not counted).
 export default function QuizRunner({ quiz, questions, tries = [], limited = false, backHref = "/course" }) {
@@ -38,6 +39,14 @@ export default function QuizRunner({ quiz, questions, tries = [], limited = fals
     if (error) return setError(/fetch|network|load failed/i.test(error.message) ? "We couldn't send your answers. Check your internet and tap Submit again. Your answers are still here." : error.message);
     setResult(data);
     setUsed(data.attempt ?? used + 1);
+    posthog.capture("quiz_submitted", {
+      question_count: questions.length,
+      score: data.score,
+      total_questions: data.total,
+      passed: data.passed,
+      attempt_number: data.attempt ?? used + 1,
+      is_limited: limited,
+    });
     router.refresh(); // XP and module status
   }
 

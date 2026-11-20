@@ -6,6 +6,7 @@ import Image from "next/image";
 import { CircleCheck, FileText, ImagePlus, MessageSquareText, Send, X } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
+import posthog from "posthog-js";
 
 const MAX_FILES = 5;
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -95,6 +96,13 @@ export default function HandIn({ assignment: a, moduleLabel, submission: sub, fi
       previews.current.forEach((url) => URL.revokeObjectURL(url));
       previews.current.clear();
       setPreviewSources({});
+      posthog.capture("assignment_submitted", {
+        assignment_id: a.id,
+        is_update: Boolean(sub),
+        submission_has_text: Boolean(text.trim()),
+        submission_has_link: Boolean(link.trim()),
+        file_count: kept.length + uploaded.length,
+      });
       setDone(true);
       router.refresh();
     } catch (err) {

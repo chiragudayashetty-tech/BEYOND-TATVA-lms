@@ -12,6 +12,10 @@
     "test:e2e": "node --test tests/smoke/*.spec.js"
   },
   "dependencies": {
+    "@opentelemetry/api-logs": "^0.223.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.301.2",
+    "@opentelemetry/resources": "^3.1.1",
+    "@opentelemetry/sdk-logs": "^3.1.1",
     "@sentry/nextjs": "^11.15.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
