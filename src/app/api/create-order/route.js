@@ -3,6 +3,7 @@ import { readJson } from "@/lib/body";
 import { createClient, getSession } from "@/lib/supabase/server";
 import { COURSE_ID } from "@/lib/catalog";
 import { createOrder, razorpayKeys } from "@/lib/razorpay";
+import { trackServer } from "@/lib/track";
 import { hasPendingPurchase } from "@/lib/pending-purchase";
 
 // POST /api/create-order { coupon? } → { order_id, amount, currency, key_id }
@@ -47,6 +48,7 @@ export async function POST(request) {
       console.error("razorpay order failed", r.status, r.data?.error?.description);
       return NextResponse.json({ error: "Could not start the payment. Please try again." }, { status: 500 });
     }
+    await trackServer("checkout_started", user.id, { amount_inr: amount / 100, coupon: code || null });
     return NextResponse.json({ order_id: r.data.id, amount: r.data.amount, currency: r.data.currency, key_id: keys.id });
   } catch {
     return NextResponse.json({ error: "Could not reach Razorpay. Please try again." }, { status: 500 });

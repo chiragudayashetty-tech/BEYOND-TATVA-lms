@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, CircleCheck, CircleX, RotateCcw, Sparkles, Trophy } from "lucide-react";
 import { Badge, Progress } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
+import { track } from "@/lib/track-client";
 import { QUIZ_TRIES, XP_RULES } from "@/lib/catalog";
 
 // `tries`: this student's earlier tries, oldest first. `limited`: students get QUIZ_TRIES tries (staff are not counted).
@@ -37,6 +38,7 @@ export default function QuizRunner({ quiz, questions, tries = [], limited = fals
     // Database messages are written for students ("Take a short break…"); a dropped connection is not.
     if (error) return setError(/fetch|network|load failed/i.test(error.message) ? "We couldn't send your answers. Check your internet and tap Submit again. Your answers are still here." : error.message);
     setResult(data);
+    track("quiz_submitted", { quiz_id: quiz.id, score: data?.score ?? null, total: data?.total ?? null, passed: data?.passed ?? null, attempt: data?.attempt ?? null });
     setUsed(data.attempt ?? used + 1);
     router.refresh(); // XP and module status
   }

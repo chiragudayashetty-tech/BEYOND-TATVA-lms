@@ -13,6 +13,7 @@ import { parseVideo, tracksProgress } from "@/lib/video";
 import { createClient } from "@/lib/supabase/client";
 import { localVideoUrl, useOffline } from "@/lib/offline";
 import { trackSeen } from "@/lib/watch";
+import { track } from "@/lib/track-client";
 
 const tabs = ["Overview", "Notes"];
 export default function LessonView({ course, lesson, hasAccess, video, activities, canSave, userId }) {
@@ -38,7 +39,10 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
     const { data } = await createClient().from("lesson_progress").select("completed_at").eq("student_id", userId).eq("lesson_id", lesson.id).maybeSingle();
     const nowDone = Boolean(data?.completed_at);
     setDone(nowDone);
-    if (nowDone && !wasDone.current) router.refresh();
+    if (nowDone && !wasDone.current) {
+      track("lesson_completed", { lesson_id: lesson.id });
+      router.refresh();
+    }
     wasDone.current = nowDone;
   }, [canSave, userId, lesson.id, router]);
 

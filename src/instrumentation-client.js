@@ -1,16 +1,31 @@
 // Browser monitoring. Each tool turns on only when its key is set in Vercel, so this file is safe without them.
-// Students are minors: no names, emails or phones are sent. PostHog knows a student only by their random account id,
-// session recordings are off, and Sentry drops IP addresses and cookies (sendDefaultPii: false).
+// Students are minors: no names, emails or phones are sent. PostHog and Sentry know a student only by their random
+// account id. Session recordings hide ALL text and typing and block images/video, so screens are wireframes only.
 import posthog from "posthog-js";
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/client";
 
 const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 const SENTRY_DSN = process.env.NEXT_PUBLIC_SENTRY_DSN;
+const ENV = process.env.NEXT_PUBLIC_VERCEL_ENV || "development";
 
 try {
   if (SENTRY_DSN) {
-    Sentry.init({ dsn: SENTRY_DSN, sendDefaultPii: false, tracesSampleRate: 0.1, environment: process.env.NEXT_PUBLIC_VERCEL_ENV || "development" });
+    Sentry.init({
+      dsn: SENTRY_DSN,
+      environment: ENV,
+      release: process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || undefined,
+      sendDefaultPii: false,
+      tracesSampleRate: ENV === "production" ? 0.2 : 1,
+      enableLogs: true,
+      // Replays only when an error happens (free plan: 50/month), fully masked.
+      replaysSessionSampleRate: 0,
+      replaysOnErrorSampleRate: 1,
+      integrations: [
+        Sentry.replayIntegration({ maskAllText: true, maskAllInputs: true, blockAllMedia: true }),
+        Sentry.consoleLoggingIntegration({ levels: ["warn", "error"] }),
+      ],
+    });
   }
 } catch (e) {
   console.warn("sentry init failed", e);
@@ -20,25 +35,31 @@ try {
   if (POSTHOG_KEY) {
     posthog.init(POSTHOG_KEY, {
       api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://eu.i.posthog.com",
-      defaults: "2025-05-24", // page views on every App Router navigation
+      defaults: "2025-05-24", // page views and page leaves on every App Router navigation
       person_profiles: "identified_only",
-      disable_session_recording: true,
+      respect_dnt: true,
+      autocapture: { dom_event_allowlist: ["click", "submit", "change"] },
       mask_all_text: true,
       mask_all_element_attributes: true,
-      autocapture: { dom_event_allowlist: ["click", "submit"] }, // never typed text
-      respect_dnt: true,
+      capture_exceptions: true, // PostHog error tracking (Sentry stays the main error tool)
+      capture_performance: { web_vitals: true },
+      enable_heatmaps: true,
+      session_recording: { maskAllInputs: true, maskTextSelector: "*", blockSelector: "img, video, iframe, canvas" },
     });
+    posthog.register({ app: "lms", environment: ENV });
     // Link events to the account id only (a random uuid), and forget it on sign-out.
     createClient().auth.onAuthStateChange((event, session) => {
-      const id = session?.user?.id;
-      if (id) {
-        posthog.identify(id);
-        Sentry.setUser({ id });
+      const user = session?.user;
+      if (user?.id) {
+        posthog.identify(user.id);
+        Sentry.setUser({ id: user.id });
       } else if (event === "SIGNED_OUT") {
         posthog.reset();
         Sentry.setUser(null);
       }
     });
+  } else if (SENTRY_DSN) {
+    createClient().auth.onAuthStateChange((_e, session) => Sentry.setUser(session?.user?.id ? { id: session.user.id } : null));
   }
 } catch (e) {
   console.warn("posthog init failed", e);

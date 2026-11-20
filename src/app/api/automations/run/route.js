@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sheetsKeyValid } from "@/lib/sheets-key";
 import { runAutomations } from "@/lib/automations";
@@ -14,7 +15,10 @@ export async function POST(request) {
   const db = createAdminClient();
   let result;
   try {
-    result = await runAutomations(db);
+    // Sentry cron monitor: alerts if the 5-minute sender stops running or keeps failing.
+    result = await Sentry.withMonitor("whatsapp-automations", () => runAutomations(db), {
+      schedule: { type: "interval", value: 5, unit: "minute" }, checkinMargin: 10, maxRuntime: 5, timezone: "Asia/Kolkata",
+    });
   } catch (e) {
     console.error("automations run failed", e.message);
     return NextResponse.json({ error: "temporary failure" }, { status: 500 });
