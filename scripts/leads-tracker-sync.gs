@@ -97,7 +97,10 @@ function newRow_(head, rec) {
 // Never let a bad answer wipe the sheet.
 function safeToDelete_(gone, linked, received) {
   if (!gone) return true;
-  return !(received === 0 || (gone > 10 && gone > linked * 0.2));
+  // An empty LMS answer is only believed when the sheet has a few linked rows (e.g. the last test lead was
+  // deleted in Studio); before 17 Nov 2026 that case turned A1 red every 5 minutes.
+  if (received === 0) return linked <= 3;
+  return !(gone > 10 && gone > linked * 0.2);
 }
 
 // ── Sheet access ────────────────────────────────────────────────────────────
