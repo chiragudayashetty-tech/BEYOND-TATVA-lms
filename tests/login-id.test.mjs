@@ -35,3 +35,16 @@ test("password rules", () => {
   assert.match(passwordProblem("aaaaaaaa"), /easy/);
   assert.equal(passwordProblem("udupi2026"), null);
 });
+
+test("WhatsApp login finds the existing account for a number", async () => {
+  const { phoneVariants, pickAccount } = await import("../src/lib/phone-account.js");
+  assert.ok(phoneVariants("919845012345").includes("+919845012345"));
+  assert.ok(phoneVariants("919845012345").includes("9845012345"));
+  assert.deepEqual(phoneVariants("12345"), []);
+  assert.equal(pickAccount(["a"], ["b"], false), "a");          // student's own number wins
+  assert.equal(pickAccount(["a", "b"], [], false), null);       // shared → never guess
+  assert.equal(pickAccount([], ["g"], false), "g");             // one parent number, one child
+  assert.equal(pickAccount([], ["g", "h"], false), null);       // siblings
+  assert.equal(pickAccount([], ["g"], true), null);             // marked siblings
+  assert.equal(pickAccount([], [], false), null);
+});

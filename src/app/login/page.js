@@ -18,11 +18,15 @@ import { supportWhatsApp } from "@/lib/social";
 const WHATSAPP_CODES = process.env.NEXT_PUBLIC_PHONE_LOGIN === "1";
 const HOME = WHATSAPP_CODES ? "whatsapp" : "password";
 const friendly = (msg = "") => {
-  if (/hook/i.test(msg)) return "Couldn't send the WhatsApp code right now. Try again in a minute, or use Google.";
+  // Hook errors (Chirag 2026-11-20): 429 = our 1-per-minute / 5-per-hour limit; "unavailable due to hook" =
+  // Supabase pausing the hook after several failures in a row (usually from tapping Send again and again).
+  if (/hook.*429|429.*hook/i.test(msg)) return "Please wait a minute before asking for another code. Use the latest code we sent.";
+  if (/unavailable due to hook/i.test(msg)) return "Too many tries in a row. Wait 2–3 minutes, then tap Send code once.";
+  if (/hook/i.test(msg)) return "Couldn't send the WhatsApp code right now. Wait a minute and try once more, or use Google.";
   if (/phone.*(disabled|not enabled)|Phone logins/i.test(msg)) return "Sign-in with mobile number isn't switched on yet. Use your email and the same password.";
   if (/Invalid login credentials/i.test(msg)) return "Wrong number/email or password. Try again, or tap Forgot password.";
   if (/provider is not enabled|Unsupported provider/i.test(msg)) return "Google sign-in isn't switched on yet. Use your phone or email.";
-  if (/expired|invalid/i.test(msg)) return "That code didn't work. Check it, or send a new one.";
+  if (/expired|invalid/i.test(msg)) return "That code is wrong or too old. Type the latest code we sent, or send a new one.";
   if (/rate|seconds|too many/i.test(msg)) return "Too many tries. Wait a minute and try again.";
   return msg || "Something went wrong. Try again.";
 };
@@ -64,6 +68,13 @@ function LoginForm() {
   const [error, setError] = useState(params.get("error") ? "That sign-in link has expired. Send a new code." : "");
   const [inAppBrowser, setInAppBrowser] = useState(null);
   const [copied, setCopied] = useState(false);
+  // Seconds until another WhatsApp code may be asked for (the server allows 1 per minute per number).
+  const [wait, setWait] = useState(0);
+  useEffect(() => {
+    if (wait <= 0) return;
+    const t = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
 
   useEffect(() => {
     const ua = navigator.userAgent;
@@ -200,11 +211,16 @@ function LoginForm() {
     e.preventDefault();
     setError("");
     if (!codeTo || (codeTo.kind === "phone" && !WHATSAPP_CODES)) return setError(WHATSAPP_CODES ? "Type your mobile number or email." : "Type your email.");
+    if (byWhatsApp && wait > 0) return setError(`Please wait ${wait} seconds before asking for another code.`);
     setBusy(true);
+    // Students who gave this number before WhatsApp login existed: open their existing account (lib/phone-account).
+    if (byWhatsApp) await fetch("/api/auth/phone-account", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ phone: codeTo.phone }) }).catch(() => {});
     const { error } = byWhatsApp
       ? await supabase.auth.signInWithOtp({ phone: `+${codeTo.phone}`, options: { shouldCreateUser: true, channel: "sms" } })
       : await supabase.auth.signInWithOtp({ email: codeTo.email, options: { emailRedirectTo: callback } });
     setBusy(false);
+    if (byWhatsApp) setWait(60); // a failed send may still have used up this minute
     if (error) setError(friendly(error.message));
     else { setCode(""); setMode("codeSent"); }
   }
@@ -294,7 +310,7 @@ function LoginForm() {
             <input id="wa-phone" className="input text-lg" type="tel" inputMode="numeric" value={contact} onChange={(e) => setContact(e.target.value)}
               placeholder="98765 43210" autoComplete="tel-national" required />
           </div>
-          <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : "Send code on WhatsApp"}</button>
+          <button disabled={busy || wait > 0} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : wait > 0 ? `Send again in ${wait}s` : "Send code on WhatsApp"}</button>
           <p className="text-xs text-muted">New here? This creates your account. Use the student&apos;s number, or a parent&apos;s.</p>
         </form>
         <div className="my-6 flex items-center gap-3 text-xs text-muted">
@@ -394,7 +410,7 @@ function LoginForm() {
           <label className="label" htmlFor="code-to">{WHATSAPP_CODES ? "Mobile number (WhatsApp) or email" : "Email"}</label>
           <input id="code-to" className="input" type={WHATSAPP_CODES ? "text" : "email"} value={contact} onChange={(e) => setContact(e.target.value)}
             placeholder={WHATSAPP_CODES ? "98765 43210 or you@example.com" : "you@example.com"} autoComplete="username" autoCapitalize="none" spellCheck={false} required />
-          <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : byWhatsApp ? "Send code on WhatsApp" : "Send code"}</button>
+          <button disabled={busy || (byWhatsApp && wait > 0)} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : byWhatsApp && wait > 0 ? `Send again in ${wait}s` : byWhatsApp ? "Send code on WhatsApp" : "Send code"}</button>
           <button type="button" onClick={() => go(HOME)} className="min-h-11 w-full text-sm text-muted hover:text-fg">Use a password instead</button>
         </form>
       )}
@@ -402,7 +418,7 @@ function LoginForm() {
       {mode === "codeSent" && (
         <form onSubmit={verify} className="mt-6 space-y-3">
           <p className="text-sm text-muted">{byWhatsApp
-            ? <>We sent a {codeLength}-digit code on WhatsApp to <b className="text-fg">{showPhone(codeTo.phone)}</b>. It works for 10 minutes.</>
+            ? <>We sent a {codeLength}-digit code on WhatsApp to <b className="text-fg">{showPhone(codeTo.phone)}</b>. It works for 10 minutes. It can take up to a minute to arrive, so please don&apos;t ask for another one straight away.</>
             : <>We sent an {codeLength}-digit code to <b className="text-fg">{contact}</b>. You can also just tap the link in the email.</>}</p>
           <input className="input text-center text-2xl tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={codeLength} value={code} onChange={(e) => onCode(e.target.value)} onPaste={(e) => { e.preventDefault(); onCode(e.clipboardData.getData("text")); }} placeholder={"•".repeat(codeLength)} aria-label={`${codeLength}-digit code`} autoFocus required />
           <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? "Checking…" : "Verify and continue"}</button>
