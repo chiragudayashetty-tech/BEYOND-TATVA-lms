@@ -48,3 +48,16 @@ test("WhatsApp login finds the existing account for a number", async () => {
   assert.equal(pickAccount([], ["g"], true), null);             // marked siblings
   assert.equal(pickAccount([], [], false), null);
 });
+
+test("account switching trusts only a signed, fresh WhatsApp proof", async () => {
+  const { signProof, readProof, firstName } = await import("../src/lib/phone-account.js");
+  const now = Date.parse("2026-11-20T10:00:00Z");
+  const proof = signProof("919845012345", "secret", now);
+  assert.equal(readProof(proof, "secret", now + 60_000), "919845012345");
+  assert.equal(readProof(proof, "secret", now + 31 * 60_000), null);       // expired
+  assert.equal(readProof(proof, "other", now), null);                      // wrong key
+  assert.equal(readProof(proof.replace("919845012345", "919999999999"), "secret", now), null); // edited number
+  assert.equal(readProof("", "secret", now), null);
+  assert.equal(firstName("Ravi Kumar Shetty"), "Ravi");
+  assert.equal(firstName(null), "Student (no name yet)");
+});
