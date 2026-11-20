@@ -188,3 +188,7 @@ Full feature audit, flaws and next fixes: **`docs/AUDIT-2026-11-15.md`**.
 - Earlier list (PWA install prompt, in-app browser warning, Profile edit + Help page, loading skeletons) is **done**. No open Codex task: wait for Claude to write the next one.
 
 Codex tasks that need a table, an API route or auth changes: stop and hand back to Claude (Claude builds all SQL/backend).
+
+## Monitoring (2026-11-20)
+- PostHog (analytics) and Sentry (errors) via `src/instrumentation-client.js` + `src/instrumentation.js`. Off until
+  `NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_SENTRY_DSN` are set in Vercel. Minors: account id only, no recordings, no PII.
