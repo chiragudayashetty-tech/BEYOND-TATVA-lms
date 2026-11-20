@@ -4,7 +4,7 @@ import Shell from "@/components/shell/Shell";
 import { Empty, IconTile, PageTitle } from "@/components/ui";
 import { Thumb } from "@/components/course";
 import { quizBadge, submissionBadge } from "@/components/activity";
-import StudyFiles from "./StudyFiles";
+import StudyFiles from "@/components/StudyFiles";
 import { getActivities, getCourse, getModuleResources, getNewsletters } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 import { nextFirstSunday } from "@/lib/first-sunday";
