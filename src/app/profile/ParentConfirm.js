@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
+import posthog from "posthog-js";
 
 // Student asks for a WhatsApp code to their parent's number, the parent reads it out, the student types it.
 export default function ParentConfirm({ verified = false, wording = "" }) {
@@ -30,7 +31,7 @@ export default function ParentConfirm({ verified = false, wording = "" }) {
           {busy ? "Sending…" : "Send code to my parent"}
         </button>
       ) : (
-        <form className="flex gap-2" onSubmit={async (e) => { e.preventDefault(); if (await call({ action: "verify", code })) { setDone(true); router.refresh(); } }}>
+        <form className="flex gap-2" onSubmit={async (e) => { e.preventDefault(); if (await call({ action: "verify", code })) { posthog.capture("parent_consent_confirmed"); setDone(true); router.refresh(); } }}>
           <label className="sr-only" htmlFor="parent-code">Code sent to {sentTo}</label>
           <input id="parent-code" className="input flex-1" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder={`Code sent to ${sentTo}`} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
           <button disabled={busy || code.length !== 6} className="btn-primary px-4">{busy ? "…" : "Confirm"}</button>

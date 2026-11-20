@@ -13,6 +13,7 @@ import { parseVideo, tracksProgress } from "@/lib/video";
 import { createClient } from "@/lib/supabase/client";
 import { localVideoUrl, useOffline } from "@/lib/offline";
 import { trackSeen } from "@/lib/watch";
+import posthog from "posthog-js";
 
 const tabs = ["Overview", "Notes"];
 export default function LessonView({ course, lesson, hasAccess, video, activities, canSave, userId }) {
@@ -38,9 +39,17 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
     const { data } = await createClient().from("lesson_progress").select("completed_at").eq("student_id", userId).eq("lesson_id", lesson.id).maybeSingle();
     const nowDone = Boolean(data?.completed_at);
     setDone(nowDone);
-    if (nowDone && !wasDone.current) router.refresh();
+    if (nowDone && !wasDone.current) {
+      posthog.capture("lesson_completed", {
+        course_id: course.id,
+        lesson_number: lesson.n,
+        module_number: lesson.module,
+        has_course_access: hasAccess,
+      });
+      router.refresh();
+    }
     wasDone.current = nowDone;
-  }, [canSave, userId, lesson.id, router]);
+  }, [canSave, userId, lesson.id, lesson.n, lesson.module, course.id, hasAccess, router]);
 
   // Progress and answers go through checked database functions (save_progress / save_answer):
   // the database confirms the lesson is open for this student and caps watch time.

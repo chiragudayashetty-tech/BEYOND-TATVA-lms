@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import posthog from "posthog-js";
 import { RotateCw, TriangleAlert } from "lucide-react";
 import Logo from "@/components/Logo";
 
 // Shown when a page fails to load. Keeps the student one tap away from retrying or going home.
 export default function Error({ error, unstable_retry }) {
   useEffect(() => {
+    posthog.captureException(error);
     console.error(error);
   }, [error]);
 

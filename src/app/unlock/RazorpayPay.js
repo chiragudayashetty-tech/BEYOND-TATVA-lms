@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Check, CreditCard, MessageCircle, ShieldCheck, Tag, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isInApp } from "@/lib/android-app";
+import posthog from "posthog-js";
 
 // Razorpay Standard Checkout: create order on our server → Razorpay modal → our server checks the
 // signature and unlocks. If anything fails, the student gets a WhatsApp button to reach us.
@@ -80,12 +81,20 @@ export default function RazorpayPay({ price, listPrice, enabled, name, email, ph
         setMsg({ tone: "info", text: "Payment received. Unlocking your course…" });
         const { ok: verified, data } = await post("/api/verify-payment", resp);
         if (verified && data.unlocked) {
+          posthog.capture("purchase_completed", {
+            access_granted: true,
+            requires_onboarding: false,
+          });
           // Full page load, not router.refresh(): the client page cache (staleTimes 30 s) kept
           // showing the pay page and a locked course right after paying.
           setMsg({ tone: "info", text: "Payment done! Opening your course…" });
           return window.location.replace("/course");
         }
         if (verified && data.paid && data.next) {
+          posthog.capture("purchase_completed", {
+            access_granted: false,
+            requires_onboarding: true,
+          });
           setMsg({ tone: "info", text: "Payment done! Now one minute of details and your course opens." });
           return router.replace(data.next);
         }
@@ -101,6 +110,10 @@ export default function RazorpayPay({ price, listPrice, enabled, name, email, ph
     });
     rzp.on("payment.failed", (resp) => { failedReason = resp.error?.description || "please try again"; });
     rzp.open();
+    posthog.capture("checkout_started", {
+      amount_inr: amount,
+      coupon_applied: Boolean(coupon),
+    });
   }
 
   if (!enabled) {

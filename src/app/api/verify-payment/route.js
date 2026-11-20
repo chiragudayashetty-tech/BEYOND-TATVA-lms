@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { flushPosthogLogs, posthogLog } from "@/instrumentation";
 import { readJson } from "@/lib/body";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getSession } from "@/lib/supabase/server";
@@ -49,7 +50,15 @@ export async function POST(request) {
     return NextResponse.json({ verified: true, unlocked: false, error: "Payment received; unlocking is delayed. We'll sort it out, or message us with your payment ID." }, { status: 500 });
   }
   // Paid before filling in their details: the purchase waits (matched to this email) and onboarding claims it.
-  if (!profile) return NextResponse.json({ verified: true, unlocked: false, paid: true, next: "/onboarding?next=%2Fcourse", payment_id: paymentId });
+  if (!profile) {
+    posthogLog("payment verification completed", {
+      event: "payment_verification_completed",
+      outcome: "awaiting_onboarding",
+      course_id: COURSE_ID,
+    });
+    after(() => flushPosthogLogs());
+    return NextResponse.json({ verified: true, unlocked: false, paid: true, next: "/onboarding?next=%2Fcourse", payment_id: paymentId });
+  }
   // record_purchase usually unlocks straight away ("claimed"); claim_purchases covers the rest.
   const supabase = await createClient();
   if (status !== "claimed" && status !== "already_claimed") await supabase.rpc("claim_purchases");
@@ -58,5 +67,11 @@ export async function POST(request) {
     console.error("paid but not unlocked", paymentId, status);
     return NextResponse.json({ verified: true, unlocked: false, error: "Payment received. Unlocking needs a quick check from us." }, { status: 202 });
   }
+  posthogLog("payment verification completed", {
+    event: "payment_verification_completed",
+    outcome: "unlocked",
+    course_id: COURSE_ID,
+  });
+  after(() => flushPosthogLogs());
   return NextResponse.json({ verified: true, unlocked: true, payment_id: paymentId });
 }

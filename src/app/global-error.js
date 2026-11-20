@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
+import posthog from "posthog-js";
 
 // Last-resort screen when the root layout itself fails. It replaces the layout, so it carries its own
 // <html>, <body> and inline styles (globals.css and fonts may not have loaded).
 export default function GlobalError({ error, unstable_retry }) {
   useEffect(() => {
+    posthog.captureException(error);
     console.error(error);
   }, [error]);
 

@@ -7,6 +7,7 @@ import Logo from "@/components/Logo";
 import { IconTile } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { TermsList } from "@/components/TeacherTerms";
+import posthog from "posthog-js";
 
 const who = [
   { id: "student", icon: GraduationCap, label: "I'm the student", body: "I'm in Grade 8, 9 or 10" },
@@ -112,6 +113,10 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
         }
       } catch {}
     }
+    posthog.capture("onboarding_completed", {
+      account_role: teacher ? "teacher" : "student",
+      onboarding_started_by: by,
+    });
     done();
   }
 
