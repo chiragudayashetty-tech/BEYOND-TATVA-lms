@@ -82,7 +82,7 @@ export default async function Dashboard() {
 
       {(board || stats) && <section className="mt-6 grid gap-4 lg:gap-6 xl:grid-cols-2">
         {board && <div className="card rounded-3xl p-5">
-          <Link href="/leaderboard" className="mb-4 flex min-h-11 items-baseline justify-between gap-3"><h2 className="text-lg font-semibold">Top learners</h2><span className="text-sm font-medium text-primary">See all {board.players} →</span></Link>
+          <Link href="/leaderboard" className="mb-4 flex min-h-11 items-baseline justify-between gap-3"><h2 className="text-lg font-semibold">Top learners</h2><span className="text-sm font-medium text-primary">See all →</span></Link>
           {podium.length > 0 ? <ol className="grid grid-cols-3 items-end gap-2 text-center" aria-label="Top 3">
             {podium.map((p) => <li key={p.rank} className={p.order}>
               {p.rank === 1 && <Crown className="mx-auto mb-1 h-5 w-5 fill-warning text-warning" aria-hidden="true" />}
