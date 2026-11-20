@@ -71,5 +71,7 @@ test("safety net: never mass-delete on a bad answer", () => {
   assert.equal(safeToDelete_(0, 100, 100), true);
   assert.equal(safeToDelete_(3, 100, 97), true);
   assert.equal(safeToDelete_(1, 100, 0), false);
+  assert.equal(safeToDelete_(1, 1, 0), true); // last test lead deleted in Studio
+  assert.equal(safeToDelete_(4, 4, 0), false);
   assert.equal(safeToDelete_(30, 100, 70), false);
 });

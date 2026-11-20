@@ -1197,3 +1197,17 @@ exception when insufficient_privilege then raise notice 'M505 pass: students can
 select 'M506 students cannot read templates' t, count(*) = 0 as pass from public.wa_templates;
 reset role;
 select 'M507 claim returns template campaign + media' t, bool_or(campaign = 'A1_kn' and media_url is not null) as pass from public.automation_claim(50);
+
+-- ── WhatsApp opt-outs M6xx ──────────────────────────────────────────────────
+reset role;
+insert into public.leads (reference, phone, parent_name, source) values ('opt-1', '+919845000020', 'Uma', 'sheet');
+insert into public.message_queue (template_key, dedupe, phone, status) values ('a1_kn', 'opt-test', '+919845000020', 'sending');
+select 'M601a opt-out recorded' t, public.automation_opted_out(id) = 'opted_out' as pass from public.message_queue where dedupe = 'opt-test';
+select 'M601b lead is now Do not contact' t, do_not_contact as pass from public.leads where reference = 'opt-1';
+set role authenticated;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'M602 admin sees opt-in/out counts' t, opted_out >= 1 and opted_out_whatsapp >= 1 as pass from public.wa_optin_stats();
+select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
+do $$ begin perform public.wa_optin_stats(); raise exception 'M603 FAIL';
+exception when insufficient_privilege then raise notice 'M603 pass: students cannot read opt-in stats'; end $$;
+reset role;

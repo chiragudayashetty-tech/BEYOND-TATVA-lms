@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { aisensyBody, aisensyDestination, inSendWindow, runAutomations, sendAisensy } from "../src/lib/automations.js";
+import { isOptOutError, aisensyBody, aisensyDestination, inSendWindow, runAutomations, sendAisensy } from "../src/lib/automations.js";
 
 test("send window is 9:00–20:59 IST", () => {
   assert.equal(inSendWindow(new Date("2026-11-16T03:29:00Z")), false); // 08:59 IST
@@ -38,4 +38,14 @@ test("AiSensy body carries contact tags, attributes and media", () => {
   assert.deepEqual(b.tags, ["SRVK", "Lead"]);
   assert.deepEqual(b.attributes, { grade: "9" });
   assert.deepEqual(b.media, { url: "https://x.in/v/w.mp4?x=1", filename: "w.mp4" });
+});
+
+test("AiSensy opt-out refusals are recognised and recorded, not counted as failed", async () => {
+  assert.equal(isOptOutError("AiSensy 400: User has opted-out of API campaigns"), true);
+  assert.equal(isOptOutError("AiSensy 406: Campaign is Not Live"), false);
+  const calls = [];
+  const db = { rpc: async (fn, a) => { calls.push(fn); return fn === "automation_claim" ? { data: [{ id: "x" }] } : { data: "ok" }; } };
+  const r = await runAutomations(db, { force: true, send: async () => ({ ok: false, error: "Contact opted out" }) });
+  assert.deepEqual(r, { sent: 0, failed: 0 });
+  assert.deepEqual(calls, ["automation_claim", "automation_opted_out"]);
 });
