@@ -35,6 +35,7 @@ export async function POST(request) {
   const sent = await sendWhatsappCode(to, otp, "login");
   if (sent.ok) return NextResponse.json({});
   if (sent.error === "not_configured") return fail(500, "WhatsApp login isn't set up yet. Use Google or email.");
+  if (sent.error === "not_on_whatsapp") return fail(422, "This number is not on WhatsApp. Use a number that has WhatsApp, or sign in with Google or email.");
   if (sent.error === "unreachable") return fail(502, "Couldn't reach WhatsApp. Please try again.");
   return fail(502, "Couldn't send the code on WhatsApp. Check the number, or use Google or email.");
 }

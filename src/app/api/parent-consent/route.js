@@ -56,6 +56,7 @@ export async function POST(request) {
   const to = whatsappNumber(data.phone);
   if (!to) return json({ error: MESSAGES.no_phone }, 400);
   const sent = await sendWhatsappCode(to, code, "parent");
+  if (sent.error === "not_on_whatsapp") return json({ error: "The parent's number is not on WhatsApp. WhatsApp us to change it." }, 422);
   if (!sent.ok) return json({ error: sent.error === "unreachable" ? "Couldn't reach WhatsApp. Please try again." : "Couldn't send the WhatsApp message. Please try again." }, 502);
   return json({ ok: true, sent_to: maskPhone(data.phone) });
 }

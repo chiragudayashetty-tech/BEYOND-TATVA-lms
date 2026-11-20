@@ -22,6 +22,8 @@ const HOME = WHATSAPP_CODES ? "whatsapp" : "password";
 const friendly = (msg = "") => {
   // Hook errors (Chirag 2026-11-20): 429 = our 1-per-minute / 5-per-hour limit; "unavailable due to hook" =
   // Supabase pausing the hook after several failures in a row (usually from tapping Send again and again).
+  // 422 = our "number isn't on WhatsApp" answer (api/auth/send-otp). Must sit above the generic /hook/ rule.
+  if (/not on whatsapp|hook.*422|422.*hook/i.test(msg)) return "This number is not on WhatsApp, so we can't send the code. Use a number that has WhatsApp, or sign in with Google or email.";
   if (/hook.*429|429.*hook/i.test(msg)) return "Please wait a minute before asking for another code. Use the latest code we sent.";
   if (/unavailable due to hook/i.test(msg)) return "Too many tries in a row. Wait 2–3 minutes, then tap Send code once.";
   if (/hook/i.test(msg)) return "Couldn't send the WhatsApp code right now. Wait a minute and try once more, or use Google.";
@@ -230,8 +232,11 @@ function LoginForm() {
       : await supabase.auth.signInWithOtp({ email: codeTo.email, options: { emailRedirectTo: callback } });
     setBusy(false);
     setWait(60); // WhatsApp and email both allow 1 code per minute; a failed send may still use it up
-    if (error) setError(friendly(error.message));
-    else { setCode(""); setMode("codeSent"); }
+    if (error) {
+      const msg = friendly(error.message);
+      setError(msg);
+      if (byWhatsApp && /not on WhatsApp/.test(msg)) { setWait(0); window.alert(msg); } // no code was sent, so no wait
+    } else { setCode(""); setMode("codeSent"); }
   }
 
   // Email codes are 8 digits, WhatsApp codes 6 (Supabase settings). Full code typed, pasted or autofilled → verify.
