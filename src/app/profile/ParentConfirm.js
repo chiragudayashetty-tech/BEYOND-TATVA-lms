@@ -3,12 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
+import { useCountdown } from "@/lib/useCountdown";
 
 // Student asks for a WhatsApp code to their parent's number, the parent reads it out, the student types it.
 export default function ParentConfirm({ verified = false, wording = "" }) {
   const router = useRouter();
   const [sentTo, setSentTo] = useState(""); const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [done, setDone] = useState(verified);
+  const [wait, setWait] = useCountdown();
+  async function send() { const d = await call({ action: "send" }); setWait(60); if (d) { setSentTo(d.sent_to); setCode(""); } }
 
   async function call(body) {
     setBusy(true); setError("");
@@ -26,7 +29,7 @@ export default function ParentConfirm({ verified = false, wording = "" }) {
       <p className="text-muted">Ask your parent to confirm. We send a 6-digit code to their WhatsApp; they read it out to you.</p>
       {wording && <details className="text-muted"><summary className="cursor-pointer">What your parent agrees to</summary><p className="mt-1">{wording}</p></details>}
       {!sentTo ? (
-        <button type="button" disabled={busy} className="btn-secondary w-full py-2" onClick={async () => { const d = await call({ action: "send" }); if (d) setSentTo(d.sent_to); }}>
+        <button type="button" disabled={busy} className="btn-secondary w-full py-2" onClick={send}>
           {busy ? "Sending…" : "Send code to my parent"}
         </button>
       ) : (
@@ -36,6 +39,10 @@ export default function ParentConfirm({ verified = false, wording = "" }) {
           <button disabled={busy || code.length !== 6} className="btn-primary px-4">{busy ? "…" : "Confirm"}</button>
         </form>
       )}
+      {sentTo && <p className="text-muted">Didn&apos;t get it?{" "}
+        {wait > 0 ? <>Resend in <b className="tabular-nums text-fg">0:{String(wait).padStart(2, "0")}</b></>
+          : <button type="button" disabled={busy} onClick={send} className="font-semibold text-primary hover:underline">Resend code</button>}
+      </p>}
       {error && <p role="alert" className="text-danger">{error}</p>}
     </div>
   );
