@@ -85,6 +85,7 @@ export async function posthogSummary(days) {
     hogql(`SELECT coalesce(properties.$device_type, 'Unknown') AS device, uniq(person_id) AS people
       FROM events WHERE ${since} AND event = '$pageview' GROUP BY device ORDER BY people DESC LIMIT 5`),
     hogql(`SELECT properties.app AS app,
+        round(quantile(0.75)(toFloat(properties.$web_vitals_FCP_value))) AS fcp_ms,
         round(quantile(0.75)(toFloat(properties.$web_vitals_LCP_value))) AS lcp_ms,
         round(quantile(0.75)(toFloat(properties.$web_vitals_INP_value))) AS inp_ms,
         round(quantile(0.75)(toFloat(properties.$web_vitals_CLS_value)), 3) AS cls

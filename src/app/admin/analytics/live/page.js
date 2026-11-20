@@ -82,6 +82,7 @@ export default async function LiveTrackingPage({ searchParams }) {
         </Card>
         <Card title="Speed (75% of visits load faster than this)">
           {ph.vitals.length ? <ul className="space-y-3 text-sm">{ph.vitals.map((v) => <li key={v.app} className="flex flex-wrap items-center gap-2"><span className="w-20 font-medium capitalize">{v.app || "?"}</span>
+            <Badge tone={vitalTone(v.fcp_ms, 1800, 3000)}>First paint {v.fcp_ms != null ? `${(v.fcp_ms / 1000).toFixed(1)} s` : "–"}</Badge>
             <Badge tone={vitalTone(v.lcp_ms, 2500, 4000)}>Load {v.lcp_ms != null ? `${(v.lcp_ms / 1000).toFixed(1)} s` : "–"}</Badge>
             <Badge tone={vitalTone(v.inp_ms, 200, 500)}>Tap response {v.inp_ms ?? "–"} ms</Badge>
             <Badge tone={vitalTone(v.cls, 0.1, 0.25)}>Jumpiness {v.cls ?? "–"}</Badge></li>)}</ul> : <Empty title="No speed data yet" />}
