@@ -14,6 +14,8 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
+  // /api/sheets/script reads the sync code from scripts/ at run time (the sheets download it).
+  outputFileTracingIncludes: { "/api/sheets/script": ["./scripts/*.gs"] },
   // Dev server only: the smoke tests open pages at 127.0.0.1; Next 16.4 blocks other dev hostnames by default.
   allowedDevOrigins: ["127.0.0.1"],
   async headers() {

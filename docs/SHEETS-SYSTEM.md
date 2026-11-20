@@ -3,6 +3,11 @@
 _Agreed design, 2026-11-14. School Outreach sync: `scripts/sheets-sync.gs` (`/api/sheets`). School Leads Tracker sync:
 `scripts/leads-tracker-sync.gs` (`/api/sheets/leads`, migration `20261114000006`). If this file and the code disagree, tell Claude._
 
+## The code inside the sheets (since 20 Nov 2026)
+Each sheet holds only `scripts/sheets-loader.gs` (set `BOOK = 'outreach'` or `'tracker'`). It downloads the real sync code
+from the LMS (`/api/sheets/script`) on every run, so fixes ship with a normal deploy: **never paste sync code again**.
+If the LMS is down it uses the last good copy (6 h). Every 5-minute refresh also puts back a missing on-edit timer.
+
 ## The three places and who owns what
 | Place | What it is | Main record for |
 |---|---|---|
