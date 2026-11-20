@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { RotateCw, TriangleAlert } from "lucide-react";
 import Logo from "@/components/Logo";
 
@@ -9,6 +10,7 @@ import Logo from "@/components/Logo";
 export default function Error({ error, unstable_retry }) {
   useEffect(() => {
     console.error(error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (

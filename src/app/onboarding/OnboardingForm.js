@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/track-client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GraduationCap, House, Info, Loader2, Users } from "lucide-react";
@@ -101,6 +102,7 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
       setBusy(false);
       return setError(error.message);
     }
+    track("onboarding_completed", { role: teacher ? "teacher" : "student" });
     if (!teacher) {
       await supabase.rpc("claim_purchases"); // paid on the website before signing up? unlock now
       try {

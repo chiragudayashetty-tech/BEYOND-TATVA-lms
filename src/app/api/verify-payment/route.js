@@ -3,6 +3,7 @@ import { readJson } from "@/lib/body";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getSession } from "@/lib/supabase/server";
 import { COURSE_ID } from "@/lib/catalog";
+import { trackServer } from "@/lib/track";
 import { fetchOrder, paymentSignatureValid, razorpayKeys } from "@/lib/razorpay";
 
 // POST /api/verify-payment { razorpay_order_id, razorpay_payment_id, razorpay_signature }
@@ -48,6 +49,8 @@ export async function POST(request) {
     console.error("record_purchase failed", paymentId, error.message);
     return NextResponse.json({ verified: true, unlocked: false, error: "Payment received; unlocking is delayed. We'll sort it out, or message us with your payment ID." }, { status: 500 });
   }
+  // First to record this payment (here or the webhook) counts it once in analytics.
+  if (status === "claimed" || status === "pending") await trackServer("payment_completed", user.id, { amount_inr: Number.isInteger(order.amount) ? order.amount / 100 : null, coupon: order.notes?.coupon || null, via: "checkout" });
   // Paid before filling in their details: the purchase waits (matched to this email) and onboarding claims it.
   if (!profile) return NextResponse.json({ verified: true, unlocked: false, paid: true, next: "/onboarding?next=%2Fcourse", payment_id: paymentId });
   // record_purchase usually unlocks straight away ("claimed"); claim_purchases covers the rest.

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { COURSE_ID } from "@/lib/catalog";
 import { fullRefundPaymentId, webhookSignatureValid } from "@/lib/razorpay";
+import { trackServer } from "@/lib/track";
 import { readLimited } from "@/lib/body";
 
 // POST /api/razorpay-webhook: Razorpay calls this on payment.captured / order.paid, even if the parent closed
@@ -63,5 +64,6 @@ export async function POST(request) {
     console.error("razorpay webhook: record_purchase failed", payment.id, error.message);
     return NextResponse.json({ error: "retry" }, { status: 500 }); // Razorpay retries
   }
+  if (status === "claimed" || status === "pending") await trackServer("payment_completed", user.id, { amount_inr: Number.isInteger(payment.amount) ? payment.amount / 100 : null, coupon: notes.coupon || null, via: "webhook" });
   return NextResponse.json({ ok: true, status });
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readJson } from "@/lib/body";
+import { trackServer } from "@/lib/track";
 import { cleanEmail, indianMobile, isStaffDomain, passwordProblem } from "@/lib/login-id";
 
 // POST { email, phone, password } → creates the account with BOTH (no code, Chirag 2026-11-14). The browser
@@ -32,7 +33,7 @@ export async function POST(request) {
 
   // Neither is proven by a code. password_unverified: the first Google / email-code sign-in replaces the
   // password (lib/password-accounts), so a stranger can't keep an account made on someone else's email.
-  const { error } = await admin.auth.admin.createUser({
+  const { data: created, error } = await admin.auth.admin.createUser({
     email, email_confirm: true, phone, phone_confirm: true, password: body.password,
     app_metadata: { signup: "password", password_unverified: true },
   });
@@ -45,5 +46,6 @@ export async function POST(request) {
     return say(500, "Couldn't create the account. Try again in a minute.");
   }
   console.info("password signup ok");
+  await trackServer("signed_up", created?.user?.id, { method: "password" });
   return NextResponse.json({ ok: true });
 }

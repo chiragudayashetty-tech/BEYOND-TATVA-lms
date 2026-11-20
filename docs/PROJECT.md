@@ -190,5 +190,10 @@ Full feature audit, flaws and next fixes: **`docs/AUDIT-2026-11-15.md`**.
 Codex tasks that need a table, an API route or auth changes: stop and hand back to Claude (Claude builds all SQL/backend).
 
 ## Monitoring (2026-11-20)
-- PostHog (analytics) and Sentry (errors) via `src/instrumentation-client.js` + `src/instrumentation.js`. Off until
-  `NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_SENTRY_DSN` are set in Vercel. Minors: account id only, no recordings, no PII.
+- PostHog (analytics) and Sentry (errors) via `src/instrumentation-client.js` + `src/instrumentation.js`. Keys are in
+  Vercel. Minors: account id only, no names/emails/phones; recordings mask all text/inputs and block media.
+- PostHog: page views, clicks, web vitals, heatmaps, exceptions, masked recordings. Funnel events: `signed_up`,
+  `onboarding_completed`, `checkout_started`, `payment_completed` (once per payment, server: `src/lib/track.js`),
+  `lesson_completed`, `quiz_submitted` (browser: `src/lib/track-client.js`). Website pages tag `app: website`.
+- Sentry: errors (incl. error pages), 20% tracing, warn/error logs, replays on error only (masked), release = commit,
+  cron monitor `whatsapp-automations` (/api/automations/run), uptime monitors for both sites.
