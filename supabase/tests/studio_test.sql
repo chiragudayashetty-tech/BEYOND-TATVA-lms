@@ -1218,3 +1218,8 @@ select 'M701 students cannot call automation trigger functions' t,
   not has_function_privilege('authenticated', 'public.automation_on_lead()', 'execute')
   and not has_function_privilege('authenticated', 'public.automation_on_purchase()', 'execute')
   and not has_function_privilege('authenticated', 'public.automation_on_student()', 'execute') as pass;
+
+-- P1 perf fixes: resource_views own-read policy uses (select auth.uid()); FK indexes exist.
+select 'P1a resource_views own read uses initplan', (select qual from pg_policies where policyname = 'resource_views_own_read') like '%SELECT auth.uid()%';
+select 'P1b data_deletions.deleted_by indexed', exists (select 1 from pg_indexes where indexname = 'data_deletions_deleted_by_idx');
+select 'P1c message_queue.rule_key indexed', exists (select 1 from pg_indexes where indexname = 'message_queue_rule_key_idx');
