@@ -1,5 +1,6 @@
 "use client";
 
+import { startNavLoader } from "@/components/TopLoader";
 import PriceTag from "@/components/PriceTag";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -87,6 +88,7 @@ export default function RazorpayPay({ price, listPrice, enabled, name, email, ph
         }
         if (verified && data.paid && data.next) {
           setMsg({ tone: "info", text: "Payment done! Now one minute of details and your course opens." });
+          startNavLoader();
           return router.replace(data.next);
         }
         fail(`${data.error || "We couldn't confirm the payment."} Don't worry, message us and we'll unlock it.`, resp.razorpay_payment_id);

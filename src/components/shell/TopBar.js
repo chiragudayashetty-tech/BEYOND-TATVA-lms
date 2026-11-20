@@ -1,5 +1,6 @@
 "use client";
 
+import { startNavLoader } from "@/components/TopLoader";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -37,7 +38,7 @@ export default function TopBar({ name, role, greeting }) {
         </div>
 
         <form
-          onSubmit={(e) => { e.preventDefault(); router.push(`/search?q=${encodeURIComponent(q)}`); }}
+          onSubmit={(e) => { e.preventDefault(); if (location.pathname !== "/search") startNavLoader(); router.push(`/search?q=${encodeURIComponent(q)}`); }}
           className="ml-auto hidden w-full max-w-sm items-center gap-2 rounded-xl border border-border bg-surface px-3 md:flex"
         >
           <Search className="h-4 w-4 text-subtle" />

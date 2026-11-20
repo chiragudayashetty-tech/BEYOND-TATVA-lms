@@ -1,5 +1,6 @@
 "use client";
 
+import FactLoader from "@/components/FactLoader";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -31,7 +32,7 @@ export default function MfaForm({ next = "/admin" }) {
     window.location.assign(next);  // full load so the server sees the upgraded login
   }
 
-  if (state.step === "loading") return <div className="card p-6 text-center text-sm text-muted">Loading…</div>;
+  if (state.step === "loading") return <div className="card"><FactLoader inline label="two-step login" /></div>;
   if (state.step === "error") return <div className="card p-6 text-sm text-danger">{state.message}</div>;
   return (
     <form onSubmit={submit} className="card space-y-4 p-6">

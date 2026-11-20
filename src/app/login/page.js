@@ -1,5 +1,7 @@
 "use client";
 
+import FactLoader from "@/components/FactLoader";
+import { startNavLoader } from "@/components/TopLoader";
 import SocialLinks from "@/components/SocialLinks";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -156,6 +158,7 @@ function LoginForm() {
   // Signed in on this device: claim website purchases, then continue (as auth/callback does).
   async function finish() {
     await supabase.rpc("claim_purchases");
+    startNavLoader();
     router.replace(next);
     router.refresh();
   }
@@ -217,7 +220,7 @@ function LoginForm() {
     e.preventDefault();
     setError("");
     if (!codeTo || (codeTo.kind === "phone" && !WHATSAPP_CODES)) return setError(WHATSAPP_CODES ? "Type your mobile number or email." : "Type your email.");
-    if (byWhatsApp && wait > 0) return setError(`Please wait ${wait} seconds before asking for another code.`);
+    if (wait > 0) return setError(`Please wait ${wait} seconds before asking for another code.`);
     setBusy(true);
     // Students who gave this number before WhatsApp login existed: open their existing account (lib/phone-account).
     if (byWhatsApp) await fetch("/api/auth/phone-account", { method: "POST", headers: { "content-type": "application/json" },
@@ -226,7 +229,7 @@ function LoginForm() {
       ? await supabase.auth.signInWithOtp({ phone: `+${codeTo.phone}`, options: { shouldCreateUser: true, channel: "sms" } })
       : await supabase.auth.signInWithOtp({ email: codeTo.email, options: { emailRedirectTo: callback } });
     setBusy(false);
-    if (byWhatsApp) setWait(60); // a failed send may still have used up this minute
+    setWait(60); // WhatsApp and email both allow 1 code per minute; a failed send may still use it up
     if (error) setError(friendly(error.message));
     else { setCode(""); setMode("codeSent"); }
   }
@@ -452,7 +455,7 @@ function LoginForm() {
           <label className="label" htmlFor="code-to">{WHATSAPP_CODES ? "Mobile number (WhatsApp) or email" : "Email"}</label>
           <input id="code-to" className="input" type={WHATSAPP_CODES ? "text" : "email"} value={contact} onChange={(e) => setContact(e.target.value)}
             placeholder={WHATSAPP_CODES ? "98765 43210 or you@example.com" : "you@example.com"} autoComplete="username" autoCapitalize="none" spellCheck={false} required />
-          <button disabled={busy || (byWhatsApp && wait > 0)} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : byWhatsApp && wait > 0 ? `Send again in ${wait}s` : byWhatsApp ? "Send code on WhatsApp" : "Send code"}</button>
+          <button disabled={busy || wait > 0} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : wait > 0 ? `Send again in ${wait}s` : byWhatsApp ? "Send code on WhatsApp" : "Send code"}</button>
           <button type="button" onClick={() => go(HOME)} className="min-h-11 w-full text-sm text-muted hover:text-fg">Use a password instead</button>
         </form>
       )}
@@ -480,8 +483,12 @@ function LoginForm() {
             ? <>We sent a {codeLength}-digit code on WhatsApp to <b className="text-fg">{showPhone(codeTo.phone)}</b>. It works for 10 minutes. It can take up to a minute to arrive, so please don&apos;t ask for another one straight away.</>
             : <>We sent an {codeLength}-digit code to <b className="text-fg">{contact}</b>. You can also just tap the link in the email.</>}</p>
           <input className="input text-center text-2xl tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={codeLength} value={code} onChange={(e) => onCode(e.target.value)} onPaste={(e) => { e.preventDefault(); onCode(e.clipboardData.getData("text")); }} placeholder={"•".repeat(codeLength)} aria-label={`${codeLength}-digit code`} autoFocus required />
-          {byWhatsApp && <p className="text-sm text-danger">Didn&apos;t get the code? Wait 30 seconds before asking for a new one.</p>}
           <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? "Checking…" : "Verify and continue"}</button>
+          <p className="text-center text-sm text-muted">Didn&apos;t get the code?{" "}
+            {wait > 0
+              ? <span>Resend in <b className="tabular-nums text-fg">0:{String(wait).padStart(2, "0")}</b></span>
+              : <button type="button" disabled={busy} onClick={sendCode} className="font-semibold text-primary hover:underline">Resend code</button>}
+          </p>
           <button type="button" onClick={() => go(byWhatsApp && mode === "codeSent" ? HOME : "code")} className="min-h-11 w-full text-sm text-muted hover:text-fg">{byWhatsApp ? "Use a different number" : "Use a different email"}</button>
         </form>
       )}
@@ -497,7 +504,7 @@ export default function LoginPage() {
     <div className="grid min-h-screen bg-bg place-items-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-8 flex justify-center"><Logo /></div>
-        <Suspense fallback={<div className="card h-96" />}>
+        <Suspense fallback={<div className="card"><FactLoader inline label="sign in" /></div>}>
           <LoginForm />
         </Suspense>
         <p className="mt-6 text-center text-xs text-muted">Students under 18 need a parent or guardian&apos;s consent to join.</p>
