@@ -90,6 +90,23 @@ export default async function LiveTrackingPage({ searchParams }) {
         </Card>
       </div>
 
+      <Card title="Modules" className="mb-5">
+        {ph.modules.length ? <Table head={["Module", "Started", "Finished a lesson", "Lessons done"]} rows={ph.modules.map((m) => [`${m.module}. ${m.title ?? ""}`, m.started, m.finished, m.lessons_done])} /> : <Empty title="No lessons watched yet" body="Each module appears here once a student opens it." />}
+      </Card>
+
+      <div className="mb-5 grid gap-5 lg:grid-cols-2">
+        <Card title="WhatsApp messages by template">
+          {ph.whatsapp.length ? <Table head={["Template", "Sent", "Failed", "Opted out"]} rows={ph.whatsapp.map((w) => [w.campaign, w.sent, w.failed, w.opted_out])} /> : <Empty title="No WhatsApp messages yet" body="New templates show here after their first message." />}
+        </Card>
+        <Card title="Quizzes">
+          {ph.quizzes.length ? <Table head={["Quiz", "Tries", "Students", "Passed", "Avg score"]} rows={ph.quizzes.map((q) => [q.quiz, q.attempts, q.students, `${q.pass_pct ?? 0}%`, q.avg_score != null ? `${q.avg_score}%` : "–"])} /> : <Empty title="No quiz tries yet" />}
+        </Card>
+      </div>
+
+      <Card title="LMS users by grade" className="mb-5">
+        {ph.grades.length ? <Table head={["Grade", "Role", "Active", "Paid"]} rows={ph.grades.map((g) => [g.grade, g.role, g.people, g.paid])} /> : <Empty title="No signed-in students yet" />}
+      </Card>
+
       <Card title="Where students get stuck" className="mb-5">
         {ph.problems.length ? <ul className="divide-y divide-border text-sm">{ph.problems.map((p, i) => <li key={i} className="flex items-center justify-between gap-3 py-2"><span className="min-w-0 truncate">{PROBLEM[p.event] ?? p.event} <span className="text-muted">on {p.app} {p.path}</span></span><span className="shrink-0 font-semibold">{p.times}</span></li>)}</ul> : <Empty title="Nothing yet" body="Rage clicks, taps that do nothing and page errors show here." />}
       </Card>
@@ -111,6 +128,13 @@ export default async function LiveTrackingPage({ searchParams }) {
       </Card>
     </div>}
   </Shell>;
+}
+
+function Table({ head, rows }) {
+  return <div className="-mx-5 overflow-x-auto px-5"><table className="w-full min-w-[420px] text-sm">
+    <thead><tr className="text-left text-xs text-muted">{head.map((h, i) => <th key={h} className={`pb-2 font-medium ${i ? "text-right" : ""}`}>{h}</th>)}</tr></thead>
+    <tbody className="divide-y divide-border">{rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} className={`py-2 ${j ? "text-right tabular-nums" : "pr-3"}`}>{c ?? "–"}</td>)}</tr>)}</tbody>
+  </table></div>;
 }
 
 function List({ rows, label, value, empty }) {

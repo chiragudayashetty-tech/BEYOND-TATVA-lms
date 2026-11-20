@@ -3,6 +3,8 @@
 // Meta-approved template; templateParams fill its {{1}}, {{2}}.
 // Docs: POST https://backend.aisensy.com/campaign/t1/api/v2 { apiKey, campaignName, destination, userName, templateParams }
 
+import { trackServer } from "./track.js";
+
 export const AISENSY_URL = "https://backend.aisensy.com/campaign/t1/api/v2";
 const PER_RUN = 40;
 
@@ -57,7 +59,13 @@ export async function sendAisensy(msg, { apiKey = process.env.AISENSY_API_KEY, f
 export const isOptOutError = (e) => /opt(ed)?[\s_-]*out|unsubscrib/i.test(String(e ?? ""));
 
 // One sender run: claim a batch, send each, record the result. db = service-role client.
-export async function runAutomations(db, { now = new Date(), force = false, send = sendAisensy } = {}) {
+// Analytics for every WhatsApp message: rule + AiSensy campaign only (never the phone or name). Not a person in
+// PostHog ($process_person_profile false). New templates and rules show up in Studio → Live tracking by themselves.
+const waEvent = (track, outcome, msg, error) => track(`whatsapp_${outcome}`, `whatsapp:${msg.rule_key || "manual"}`, {
+  rule_key: msg.rule_key || "manual", campaign: msg.campaign || null, error: error ? String(error).slice(0, 120) : null, $process_person_profile: false,
+});
+
+export async function runAutomations(db, { now = new Date(), force = false, send = sendAisensy, track = trackServer } = {}) {
   if (!force && !inSendWindow(now)) return { waiting: true, sent: 0, failed: 0 };
   if (!process.env.AISENSY_API_KEY && send === sendAisensy) return { off: true, sent: 0, failed: 0 };
   const { data: batch, error } = await db.rpc("automation_claim", { p_limit: PER_RUN });
@@ -68,9 +76,11 @@ export async function runAutomations(db, { now = new Date(), force = false, send
     if (!r.ok && isOptOutError(r.error)) {
       // The parent opted out in AiSensy (STOP etc.): record it and mark them Do not contact. Not a failure.
       await db.rpc("automation_opted_out", { p_id: msg.id, p_reason: "Opted out on WhatsApp" });
+      await waEvent(track, "opted_out", msg);
       continue;
     }
     await db.rpc("automation_done", { p_id: msg.id, p_ok: r.ok, p_error: r.ok ? null : r.error });
+    await waEvent(track, r.ok ? "sent" : "failed", msg, r.ok ? null : r.error);
     if (r.ok) sent++;
     else {
       failed++;

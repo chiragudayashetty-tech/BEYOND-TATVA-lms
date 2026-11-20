@@ -50,7 +50,7 @@ export async function POST(request) {
     return NextResponse.json({ verified: true, unlocked: false, error: "Payment received; unlocking is delayed. We'll sort it out, or message us with your payment ID." }, { status: 500 });
   }
   // First to record this payment (here or the webhook) counts it once in analytics.
-  if (status === "claimed" || status === "pending") await trackServer("payment_completed", user.id, { amount_inr: Number.isInteger(order.amount) ? order.amount / 100 : null, coupon: order.notes?.coupon || null, via: "checkout" });
+  if (status === "claimed" || status === "pending") await trackServer("payment_completed", user.id, { amount_inr: Number.isInteger(order.amount) ? order.amount / 100 : null, coupon: order.notes?.coupon || null, via: "checkout", $set: { paid: true } });
   // Paid before filling in their details: the purchase waits (matched to this email) and onboarding claims it.
   if (!profile) return NextResponse.json({ verified: true, unlocked: false, paid: true, next: "/onboarding?next=%2Fcourse", payment_id: paymentId });
   // record_purchase usually unlocks straight away ("claimed"); claim_purchases covers the rest.

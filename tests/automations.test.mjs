@@ -49,3 +49,16 @@ test("AiSensy opt-out refusals are recognised and recorded, not counted as faile
   assert.deepEqual(r, { sent: 0, failed: 0 });
   assert.deepEqual(calls, ["automation_claim", "automation_opted_out"]);
 });
+
+test("each WhatsApp outcome becomes one analytics event, without the phone or name", async () => {
+  const events = [];
+  const msgs = [{ id: "a", rule_key: "welcome", campaign: "Welcome_kn", phone: "919845012345", name: "Lata" },
+    { id: "b", rule_key: null, campaign: "A1_kn", phone: "919845012346" }, { id: "c", rule_key: "nudge", campaign: "Nudge" }];
+  const db = { rpc: async (fn) => (fn === "automation_claim" ? { data: msgs } : { data: "ok" }) };
+  const send = async (m) => (m.id === "a" ? { ok: true } : m.id === "b" ? { ok: false, error: "Campaign not live" } : { ok: false, error: "User opted out" });
+  await runAutomations(db, { force: true, send, track: async (...a) => events.push(a) });
+  assert.deepEqual(events.map((e) => [e[0], e[1], e[2].campaign]), [
+    ["whatsapp_sent", "whatsapp:welcome", "Welcome_kn"], ["whatsapp_failed", "whatsapp:manual", "A1_kn"], ["whatsapp_opted_out", "whatsapp:nudge", "Nudge"]]);
+  assert.ok(!JSON.stringify(events).includes("9198450") && !JSON.stringify(events).includes("Lata"));
+  assert.equal(events[0][2].$process_person_profile, false);
+});

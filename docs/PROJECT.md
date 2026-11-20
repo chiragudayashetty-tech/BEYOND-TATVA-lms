@@ -197,3 +197,7 @@ Codex tasks that need a table, an API route or auth changes: stop and hand back 
   `lesson_completed`, `quiz_submitted` (browser: `src/lib/track-client.js`). Website pages tag `app: website`.
 - Sentry: errors (incl. error pages), 20% tracing, warn/error logs, replays on error only (masked), release = commit,
   cron monitor `whatsapp-automations` (/api/automations/run), uptime monitors for both sites.
+- Tracking is tag-based so new content needs no code: lesson events carry `module`, `module_title`, `lesson_n`,
+  `lesson_title`; `quiz_submitted` carries `quiz_title`; WhatsApp sends emit `whatsapp_sent|failed|opted_out` with
+  `rule_key` + `campaign` (no phone/name, not a person). Person props: `role`, `grade`, `paid`. Studio → Analytics →
+  Live tracking (`/admin/analytics/live`, `src/lib/monitoring.js`) groups by these tags.

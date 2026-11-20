@@ -63,7 +63,7 @@ const n = (v) => Number(v) || 0;
 // Everything PostHog knows, summarised for one window of `days` days.
 export async function posthogSummary(days) {
   const since = `timestamp > now() - INTERVAL ${days} DAY`;
-  const [overview, funnel, daily, pages, sources, devices, vitals, problems, countries] = await Promise.all([
+  const [overview, funnel, daily, pages, sources, devices, vitals, problems, countries, modules, whatsapp, quizzes, grades] = await Promise.all([
     hogql(`SELECT
         uniqIf(person_id, event = '$pageview' AND properties.app = 'website') AS website_visitors,
         uniqIf(properties.$session_id, properties.app = 'website') AS website_sessions,
@@ -94,6 +94,23 @@ export async function posthogSummary(days) {
       WHERE ${since} AND event IN ('$rageclick','$dead_click','$exception') GROUP BY event, app, path ORDER BY times DESC LIMIT 12`),
     hogql(`SELECT coalesce(properties.$geoip_city_name, 'Unknown') AS city, uniq(person_id) AS people FROM events
       WHERE ${since} AND event = '$pageview' GROUP BY city ORDER BY people DESC LIMIT 8`),
+    // Grouped by the tags each event carries, so new modules, templates and quizzes appear without code changes.
+    hogql(`SELECT toInt(properties.module) AS module, any(properties.module_title) AS title,
+        uniqIf(person_id, event = 'lesson_viewed') AS started, uniqIf(person_id, event = 'lesson_completed') AS finished,
+        countIf(event = 'lesson_completed') AS lessons_done
+      FROM events WHERE ${since} AND event IN ('lesson_viewed','lesson_completed') AND properties.module IS NOT NULL
+      GROUP BY module ORDER BY module LIMIT 50`),
+    hogql(`SELECT coalesce(properties.campaign, properties.rule_key, 'unknown') AS campaign,
+        countIf(event = 'whatsapp_sent') AS sent, countIf(event = 'whatsapp_failed') AS failed, countIf(event = 'whatsapp_opted_out') AS opted_out
+      FROM events WHERE ${since} AND event IN ('whatsapp_sent','whatsapp_failed','whatsapp_opted_out')
+      GROUP BY campaign ORDER BY sent + failed DESC LIMIT 30`),
+    hogql(`SELECT coalesce(properties.quiz_title, properties.quiz_id) AS quiz, count() AS attempts, uniq(person_id) AS students,
+        round(100 * avg(if(properties.passed = 'true' OR properties.passed = true, 1, 0))) AS pass_pct,
+        round(avg(toFloat(properties.score) / nullIf(toFloat(properties.total), 0)) * 100) AS avg_score
+      FROM events WHERE ${since} AND event = 'quiz_submitted' GROUP BY quiz ORDER BY attempts DESC LIMIT 30`),
+    hogql(`SELECT coalesce(toString(person.properties.grade), 'Not set') AS grade, coalesce(person.properties.role, 'visitor') AS role,
+        uniq(person_id) AS people, uniqIf(person_id, person.properties.paid = true OR person.properties.paid = 'true') AS paid
+      FROM events WHERE ${since} AND properties.app = 'lms' AND event = '$pageview' GROUP BY grade, role ORDER BY people DESC LIMIT 20`),
   ]);
   if (!overview) return null;
   const o = overview[0] ?? {};
@@ -103,6 +120,7 @@ export async function posthogSummary(days) {
     pageviews: n(o.pageviews), revenue: n(o.revenue),
     funnel: f, daily: daily ?? [], pages: pages ?? [], sources: sources ?? [], devices: devices ?? [],
     vitals: vitals ?? [], problems: problems ?? [], cities: countries ?? [],
+    modules: modules ?? [], whatsapp: whatsapp ?? [], quizzes: quizzes ?? [], grades: grades ?? [],
   };
 }
 
