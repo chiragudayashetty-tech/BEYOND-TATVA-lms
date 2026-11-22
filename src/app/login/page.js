@@ -358,7 +358,7 @@ function LoginForm() {
           <div className="flex gap-2">
             <span className="input grid w-16 shrink-0 place-items-center">+91</span>
             <input id="wa-phone" className="input text-lg" type="tel" inputMode="numeric" value={contact} onChange={(e) => setContact(e.target.value)}
-              placeholder="98765 43210" autoComplete="tel-national" required />
+              placeholder="10-digit mobile number" autoComplete="tel-national" required />
           </div>
           <button disabled={busy || wait > 0} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : wait > 0 ? `Send again in ${wait}s` : "Send code on WhatsApp"}</button>
           <p className="text-xs text-muted">New here? This creates your account. Use the student&apos;s number, or a parent&apos;s.</p>
@@ -387,14 +387,14 @@ function LoginForm() {
               <label className="label" htmlFor="su-phone">Mobile number (WhatsApp)</label>
               <div className="flex gap-2">
                 <span className="input grid w-16 shrink-0 place-items-center">+91</span>
-                <input id="su-phone" className="input" type="tel" inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="98765 43210" autoComplete="tel-national" required />
+                <input id="su-phone" className="input" type="tel" inputMode="numeric" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="10-digit mobile number" autoComplete="tel-national" required />
               </div>
               <p className="mt-1 text-xs text-muted">Forgot your password later? Type the email or this number and we email you a reset link.</p>
             </div>
           </> : (
             <div>
               <label className="label" htmlFor="login-id">Mobile number or email</label>
-              <input id="login-id" className="input" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="98765 43210 or you@example.com"
+              <input id="login-id" className="input" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Mobile number or email"
                 autoComplete="username" autoCapitalize="none" spellCheck={false} required />
             </div>
           )}
@@ -449,7 +449,7 @@ function LoginForm() {
         </div>
       ) : (
         <form onSubmit={forgot} className="mt-6 space-y-3">
-          <input className="input" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="98765 43210 or you@example.com" autoComplete="username" autoCapitalize="none" required />
+          <input className="input" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Mobile number or email" autoComplete="username" autoCapitalize="none" required />
           <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : "Reset my password"}</button>
           <button type="button" onClick={() => go(HOME)} className="min-h-11 w-full text-sm text-muted hover:text-fg">Back to sign in</button>
         </form>
@@ -459,7 +459,7 @@ function LoginForm() {
         <form onSubmit={sendCode} className="mt-6 space-y-3">
           <label className="label" htmlFor="code-to">{WHATSAPP_CODES ? "Mobile number (WhatsApp) or email" : "Email"}</label>
           <input id="code-to" className="input" type={WHATSAPP_CODES ? "text" : "email"} value={contact} onChange={(e) => setContact(e.target.value)}
-            placeholder={WHATSAPP_CODES ? "98765 43210 or you@example.com" : "you@example.com"} autoComplete="username" autoCapitalize="none" spellCheck={false} required />
+            placeholder={WHATSAPP_CODES ? "Mobile number or email" : "you@example.com"} autoComplete="username" autoCapitalize="none" spellCheck={false} required />
           <button disabled={busy || wait > 0} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : wait > 0 ? `Send again in ${wait}s` : byWhatsApp ? "Send code on WhatsApp" : "Send code"}</button>
           <button type="button" onClick={() => go(HOME)} className="min-h-11 w-full text-sm text-muted hover:text-fg">Use a password instead</button>
         </form>
