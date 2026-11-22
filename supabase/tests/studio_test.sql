@@ -926,11 +926,15 @@ select 'K6 Module 0 keeps one date for everyone' t,
   pg_temp.rel('ba000000-0000-0000-0000-000000000003', 0) = (select release_at from public.chapters where course_id = 'ai-for-students' and position = 0) as pass;
 set role authenticated; select pg_temp.as_user('ba000000-0000-0000-0000-000000000003');
 select 'K7 student cannot open a module before their batch date' t,
-  not public.can_open_chapter((select id from public.chapters where course_id = 'ai-for-students' and position = 1))
+  not public.can_open_chapter((select id from public.chapters where course_id = 'ai-for-students' and position = 5))
   and (select count(*) = (select count(*) from public.chapters where course_id = 'ai-for-students') from public.my_module_releases('ai-for-students')) as pass;
 do $$ begin perform public.admin_student_batches('ai-for-students'); raise exception 'K8x FAIL';
 exception when others then if sqlerrm like 'K8%' then raise; end if; raise notice 'K8 pass: %', sqlerrm; end $$;
 reset role;
+update public.course_access set unlock_all = true where student_id = 'ba000000-0000-0000-0000-000000000003';
+select 'K9 unlock_all skips the batch schedule but not Coming soon' t,
+  pg_temp.rel('ba000000-0000-0000-0000-000000000003', 3) = '2026-11-01'
+  and pg_temp.rel('ba000000-0000-0000-0000-000000000003', 4) = '2099-12-31' as pass;
 
 -- ── WhatsApp OTP send limits (audit 2026-11-09) ──────────────────────────────
 set role authenticated;
