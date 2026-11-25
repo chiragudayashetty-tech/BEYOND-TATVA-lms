@@ -1230,19 +1230,19 @@ select 'P1c message_queue.rule_key indexed', exists (select 1 from pg_indexes wh
 
 -- ── Class sections and school race R8xx ─────────────────────────────────────
 reset role;
-select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
 update public.profiles set school_id = (select id from public.schools order by created_at limit 1), grade = 9, duplicate_of = null
-  where id = '44444444-4444-4444-4444-444444444444';
+  where id = '11111111-1111-1111-1111-111111111111';
 set role authenticated;
 select 'R801 no race = nothing' t, public.school_race() is null as pass;
 select public.set_my_section('b');
 reset role;
 insert into public.school_races select school_id, now() - interval '1 hour', now() + interval '47 hours'
-  from public.profiles where id = '44444444-4444-4444-4444-444444444444';
-delete from public.course_access where student_id = '44444444-4444-4444-4444-444444444444';
-insert into public.course_access (student_id, course_id, source) select '44444444-4444-4444-4444-444444444444', id, 'key' from public.courses limit 1;
+  from public.profiles where id = '11111111-1111-1111-1111-111111111111';
+delete from public.course_access where student_id = '11111111-1111-1111-1111-111111111111';
+insert into public.course_access (student_id, course_id, source) select '11111111-1111-1111-1111-111111111111', id, 'key' from public.courses limit 1;
 insert into public.lesson_progress (student_id, lesson_id, completed_at)
-  select '44444444-4444-4444-4444-444444444444', l.id, now() from public.lessons l join public.chapters c on c.id = l.chapter_id and c.position = 0 limit 1
+  select '11111111-1111-1111-1111-111111111111', l.id, now() from public.lessons l join public.chapters c on c.id = l.chapter_id and c.position = 0 limit 1
   on conflict (student_id, lesson_id) do update set completed_at = now();
 set role authenticated;
 select 'R801b module 0 leader' t, public.school_race() ->> 'watched' = 'Class 9 B' as pass;
