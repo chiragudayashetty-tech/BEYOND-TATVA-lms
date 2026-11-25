@@ -1227,3 +1227,30 @@ select 'M701 students cannot call automation trigger functions' t,
 select 'P1a resource_views own read uses initplan', (select qual from pg_policies where policyname = 'resource_views_own_read') like '%SELECT auth.uid()%';
 select 'P1b data_deletions.deleted_by indexed', exists (select 1 from pg_indexes where indexname = 'data_deletions_deleted_by_idx');
 select 'P1c message_queue.rule_key indexed', exists (select 1 from pg_indexes where indexname = 'message_queue_rule_key_idx');
+
+-- ── Class sections and school race R8xx ─────────────────────────────────────
+reset role;
+select pg_temp.as_user('44444444-4444-4444-4444-444444444444');
+update public.profiles set school_id = (select id from public.schools order by created_at limit 1), grade = 9, duplicate_of = null
+  where id = '44444444-4444-4444-4444-444444444444';
+set role authenticated;
+select 'R801 no race = nothing' t, public.school_race() is null as pass;
+select public.set_my_section('b');
+reset role;
+insert into public.school_races select school_id, now() - interval '1 hour', now() + interval '47 hours'
+  from public.profiles where id = '44444444-4444-4444-4444-444444444444';
+delete from public.course_access where student_id = '44444444-4444-4444-4444-444444444444';
+insert into public.course_access (student_id, course_id, source) select '44444444-4444-4444-4444-444444444444', id, 'key' from public.courses limit 1;
+insert into public.lesson_progress (student_id, lesson_id, completed_at)
+  select '44444444-4444-4444-4444-444444444444', l.id, now() from public.lessons l join public.chapters c on c.id = l.chapter_id and c.position = 0 limit 1
+  on conflict (student_id, lesson_id) do update set completed_at = now();
+set role authenticated;
+select 'R801b module 0 leader' t, public.school_race() ->> 'watched' = 'Class 9 B' as pass;
+select 'R802 section saved, leader by class, no counts' t, public.school_race() ->> 'section' = 'B'
+  and public.school_race() ->> 'enrolled' = 'Class 9 B'
+  and (select count(*) from jsonb_object_keys(public.school_race())) = 6 as pass;
+select public.set_my_section('');
+select 'R803 no section' t, public.school_race() ->> 'enrolled' = 'Class 9' as pass;
+reset role;
+select 'R804 higher signup limit during race' t, bool_and(public.password_signup_allowed('race-ip') = 'ok') as pass from generate_series(1, 30);
+delete from public.school_races;

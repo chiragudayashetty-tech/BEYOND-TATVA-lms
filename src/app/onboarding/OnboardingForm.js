@@ -9,6 +9,7 @@ import { GraduationCap, House, Info, Users } from "lucide-react";
 import Logo from "@/components/Logo";
 import { IconTile } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
+import { SECTIONS } from "@/lib/sections";
 import { TermsList } from "@/components/TeacherTerms";
 
 const who = [
@@ -22,7 +23,7 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [by, setBy] = useState(null);
-  const [form, setForm] = useState({ name: "", code: "", school: "", grade: "", gName: "", gPhone: "", kidPhone: "", consent: false });
+  const [form, setForm] = useState({ name: "", code: "", school: "", grade: "", section: "", gName: "", gPhone: "", kidPhone: "", consent: false });
   const [schoolChoices, setSchoolChoices] = useState(null);
   const done = () => {
     const to = next ?? "/dashboard";
@@ -108,6 +109,8 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
     // $set: person properties for segmenting (role, grade). No names, phones or school names.
     track("onboarding_completed", { role: teacher ? "teacher" : "student", grade: teacher ? null : Number(form.grade) || null, $set: { role: teacher ? "teacher" : "student", grade: teacher ? null : Number(form.grade) || null } });
     if (!teacher) {
+      // Optional; a failure here must not block sign-up (the competition card lets them pick again).
+      if (form.section) await supabase.rpc("set_my_section", { p_section: form.section });
       await supabase.rpc("claim_purchases"); // paid on the website before signing up? unlock now
       try {
         const tags = JSON.parse(localStorage.getItem("bt_signup_source") ?? "null");
@@ -182,6 +185,13 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
                         </button>
                       ))}
                     </div>
+                  </label>
+                  <label className="block">
+                    <span className="label">Section (optional)</span>
+                    <select className="input" value={form.section} onChange={set("section")}>
+                      <option value="">No section</option>
+                      {SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
                   </label>
                   <div>
                     <label className="block">
