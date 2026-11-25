@@ -201,3 +201,6 @@ Codex tasks that need a table, an API route or auth changes: stop and hand back 
   `lesson_title`; `quiz_submitted` carries `quiz_title`; WhatsApp sends emit `whatsapp_sent|failed|opted_out` with
   `rule_key` + `campaign` (no phone/name, not a person). Person props: `role`, `grade`, `paid`. Studio → Analytics →
   Live tracking (`/admin/analytics/live`, `src/lib/monitoring.js`) groups by these tags.
+
+## Class competition (2026-11-25)
+Migration `20261125000001_class_section_race` applied live 25 Nov after "apply" (recorded as `class_section_race`; do not apply again). Optional `profiles.section` (A-F), `school_races` window, `school_race()` returns leading class names only. SVVN: 26 Nov 08:00 to 28 Nov 08:00 IST. Password sign-up limit is 150/hour, 300/day per IP while a race is on.
