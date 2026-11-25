@@ -7,6 +7,7 @@ import { QUIZ_TRIES, XP_RULES, canWatch, nextPremiere, nextStep, stepLink } from
 import { getActivities, getCourse, getLearningStats, getLeaderboard } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 import InstallPrompt from "@/components/InstallPrompt";
+import ClassRace from "@/components/ClassRace";
 
 export const metadata = { title: "Dashboard · Beyond Tatva" };
 
@@ -40,6 +41,7 @@ export default async function Dashboard() {
   return (
     <Shell roles={["student"]} greeting>
       {profile?.role === "student" && <InstallPrompt />}
+      <div className="mb-4 empty:hidden lg:mb-6"><ClassRace /></div>
       {!hasAccess && (
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 lg:mb-6">
           <IconTile icon={Gift} />
