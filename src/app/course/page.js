@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Award, CalendarClock, CircleCheck, ClipboardList, Download, FolderKanban, Gift, KeyRound, PlayCircle, Sparkles } from "lucide-react";
 import Shell from "@/components/shell/Shell";
+import ClassRace from "@/components/ClassRace";
 import { IconTile, Ring } from "@/components/ui";
 import { ModuleCard, NextStepCard } from "@/components/course";
 import { isReleased, nextStep } from "@/lib/catalog";
@@ -33,6 +34,8 @@ export default async function CoursePage({ searchParams }) {
   return (
     <Shell roles={["student", "teacher"]}>
       <div className="space-y-4 lg:space-y-5">
+        <ClassRace />
+
         {welcome && hasAccess && (
           <div role="status" className="card flex items-start gap-3 border-success/40 bg-success-soft p-4">
             <IconTile icon={CircleCheck} tone="success" />
