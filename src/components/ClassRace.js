@@ -1,45 +1,44 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Flag, GraduationCap, PlayCircle, Timer, Trophy, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SECTIONS } from "@/lib/sections";
 
 // School class race: which classes lead. Names only, never numbers. Renders nothing when no race is on.
-const PLACES = [
-  { label: "1st", car: "bg-amber-300 text-amber-950", lane: "from-amber-300/40" },
-  { label: "2nd", car: "bg-slate-200 text-slate-900", lane: "from-slate-200/30" },
-  { label: "3rd", car: "bg-orange-400 text-orange-950", lane: "from-orange-400/30" },
-];
-const LANE_WIDTH = ["w-full", "w-[78%]", "w-[60%]"];
+// Positions on the track show rank only (1st nearest the finish), not how many students.
+const POS = ["92%", "70%", "50%"];
 
-function left(ms) {
-  if (ms <= 0) return "Finished";
-  const m = Math.floor(ms / 60000), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60), mm = m % 60;
-  return d ? `${d}d ${h}h ${mm}m` : `${h}h ${String(mm).padStart(2, "0")}m`;
+function parts(ms) {
+  const m = Math.max(0, Math.floor(ms / 60000));
+  return [["d", Math.floor(m / 1440)], ["h", Math.floor((m % 1440) / 60)], ["m", m % 60]];
 }
 
-function Track({ icon: Icon, title, leaders, mine, ended }) {
+function Board({ title, leaders, mine, ended }) {
   return (
-    <div className="rounded-2xl bg-black/20 p-3 ring-1 ring-white/15">
-      <p className="flex items-center gap-2 text-sm font-semibold"><Icon className="h-4 w-4" /> {title}</p>
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">{title}</p>
       {leaders.length ? (
-        <ol className="mt-3 space-y-2">
+        <ol className="mt-3 space-y-3">
           {leaders.map((name, i) => {
             const you = mine && name === mine;
+            const lead = i === 0;
             return (
-              <li key={name} className={`${LANE_WIDTH[i]} motion-safe:animate-[race-in_.6s_ease-out_both]`} style={{ animationDelay: `${i * 120}ms` }}>
-                <div className={`flex items-center gap-2 rounded-full bg-gradient-to-r ${PLACES[i].lane} to-transparent p-1 pr-3 ${you ? "ring-2 ring-white" : ""}`}>
-                  <span className={`grid h-8 min-w-11 place-items-center rounded-full px-2 text-xs font-black ${PLACES[i].car}`}>{PLACES[i].label}</span>
-                  <span className="truncate font-bold">{name}</span>
-                  {i === 0 && <Trophy className="ml-auto h-4 w-4 shrink-0 text-amber-300" aria-label={ended ? "Winner" : "Leading"} />}
-                  {you && <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-fuchsia-700">You</span>}
+              <li key={name}>
+                <div className="flex items-baseline gap-3">
+                  <span className={`w-6 text-sm tabular-nums ${lead ? "font-semibold text-primary" : "text-subtle"}`}>{String(i + 1).padStart(2, "0")}</span>
+                  <span className={`flex-1 truncate ${lead ? "text-base font-semibold" : "text-sm"}`}>{name}</span>
+                  {you && <span className="text-[11px] font-medium uppercase tracking-wider text-primary">Your class</span>}
+                  {lead && !you && <span className="text-[11px] uppercase tracking-wider text-muted">{ended ? "Winner" : "Leading"}</span>}
+                </div>
+                <div className="relative ml-9 mt-1.5 h-px bg-border" aria-hidden>
+                  <span className="absolute right-0 top-1/2 h-2.5 w-px -translate-y-1/2 bg-fg/40" />
+                  <span className={`absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full motion-safe:transition-[left] motion-safe:duration-700 ${lead ? "bg-primary ring-4 ring-primary/15" : you ? "bg-primary/70" : "bg-fg/30"}`} style={{ left: POS[i] }} />
                 </div>
               </li>
             );
           })}
         </ol>
-      ) : <p className="mt-3 text-sm text-white/80">No class on the board yet. Be the first!</p>}
+      ) : <p className="mt-3 text-sm text-muted">No class on the board yet.</p>}
     </div>
   );
 }
@@ -63,42 +62,52 @@ export default function ClassRace() {
   const watched = race.watched_top ?? (race.watched ? [race.watched] : []);
   const enrolled = race.enrolled_top ?? (race.enrolled ? [race.enrolled] : []);
   const mine = race.my_class;
-  const leadingAny = mine && (watched[0] === mine || enrolled[0] === mine);
+  const leading = mine && (watched[0] === mine || enrolled[0] === mine);
+  const line = !mine ? null
+    : race.ended ? <>You raced for <span className="font-medium text-fg">{mine}</span>.</>
+    : leading ? <><span className="font-medium text-fg">{mine}</span> is in the lead. Keep it there.</>
+    : <>You race for <span className="font-medium text-fg">{mine}</span>. Finish Module 0 to move your class up.</>;
 
   return (
-    <section aria-label="Class race" className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-fuchsia-600 via-violet-600 to-sky-500 p-4 text-white shadow-lg sm:p-5">
-      <div aria-hidden className="absolute inset-x-0 top-0 h-2 bg-[repeating-linear-gradient(90deg,#fff_0_10px,#111_10px_20px)] opacity-80" />
-      <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-300/30 blur-2xl" />
-
-      <div className="relative mt-1 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-white/80"><Flag className="h-3.5 w-3.5" /> {race.school ?? "Your school"}</p>
-          <h2 className="mt-0.5 text-xl font-black sm:text-2xl">{race.ended ? "Class race: final result" : "Class race is ON!"}</h2>
-          {mine && <p className="mt-1 text-sm text-white/90">You race for <b>{mine}</b>{leadingAny && !race.ended ? ". Your class is leading! Keep going 🔥" : race.ended ? "." : ". Watch Module 0 to push your class up!"}</p>}
-        </div>
-        {!race.ended && (
-          <div className="rounded-2xl bg-black/25 px-3 py-2 text-right ring-1 ring-white/20">
-            <p className="flex items-center justify-end gap-1 text-[11px] font-semibold uppercase tracking-wide text-white/80"><Timer className="h-3.5 w-3.5" /> Ends in</p>
-            <p className="font-mono text-lg font-black tabular-nums">{left(new Date(race.ends_at).getTime() - now)}</p>
+    <section aria-label="Class race" className="card overflow-hidden p-0">
+      <div className="h-1 bg-gradient-to-r from-primary/0 via-primary to-primary/0" aria-hidden />
+      <div className="p-5 sm:p-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+              {!race.ended && <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 motion-safe:animate-ping" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" /></span>}
+              {race.ended ? "Final result" : "Class race · Live"}
+            </p>
+            <h2 className="mt-1.5 truncate text-xl font-semibold tracking-tight sm:text-2xl">{race.school ?? "Your school"}</h2>
+            {line && <p className="mt-1 text-sm text-muted">{line}</p>}
           </div>
+          {!race.ended && (
+            <div className="flex items-end gap-3" aria-label="Time left">
+              {parts(new Date(race.ends_at).getTime() - now).map(([u, v]) => (
+                <div key={u} className="text-center">
+                  <p className="text-2xl font-light tabular-nums leading-none">{String(v).padStart(2, "0")}</p>
+                  <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-subtle">{u === "d" ? "days" : u === "h" ? "hrs" : "min"}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 grid gap-6 border-t border-border pt-5 sm:grid-cols-2 sm:gap-8">
+          <Board title="Module 0 watched" leaders={watched} mine={mine} ended={race.ended} />
+          <Board title="Enrolled" leaders={enrolled} mine={mine} ended={race.ended} />
+        </div>
+
+        {race.student && !race.ended && (
+          <label className="mt-6 flex items-center justify-between gap-3 border-t border-border pt-4 text-sm">
+            <span className="text-muted">Your section</span>
+            <select className="input max-w-32" value={race.section ?? ""} onChange={pick}>
+              <option value="">None</option>
+              {SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </label>
         )}
       </div>
-
-      <div className="relative mt-4 grid gap-3 sm:grid-cols-2">
-        <Track icon={PlayCircle} title="Most Module 0 watched" leaders={watched} mine={mine} ended={race.ended} />
-        <Track icon={GraduationCap} title="Most enrolled" leaders={enrolled} mine={mine} ended={race.ended} />
-      </div>
-
-      {race.student && !race.ended && (
-        <label className="relative mt-4 flex items-center gap-2 text-sm">
-          <Zap className="h-4 w-4 shrink-0 text-amber-300" />
-          <span className="shrink-0 font-medium">Your section</span>
-          <select className="input max-w-40 text-fg" value={race.section ?? ""} onChange={pick}>
-            <option value="">No section</option>
-            {SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </label>
-      )}
     </section>
   );
 }
