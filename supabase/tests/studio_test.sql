@@ -1254,3 +1254,26 @@ select 'R803 no section' t, public.school_race() ->> 'enrolled' = 'Class 9' as p
 reset role;
 select 'R804 higher signup limit during race' t, bool_and(public.password_signup_allowed('race-ip') = 'ok') as pass from generate_series(1, 30);
 delete from public.school_races;
+
+-- ── Test accounts out of Studio numbers (20261125000002) ─────────────────────
+set role authenticated;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+create temp table t_before as select
+  jsonb_array_length(public.admin_student_scores(null, 3650)) scores,
+  (public.admin_stats() ->> 'students')::int students, (public.admin_stats() ->> 'unlocked')::int unlocked,
+  (public.admin_student_scores(null, 3650) @> '[{"student_id":"11111111-1111-1111-1111-111111111111","paid":true}]')::int had_access,
+  (select count(*) from public.admin_pipeline() where student_id = '11111111-1111-1111-1111-111111111111') pipe,
+  (public.admin_insights(30) -> 'engagement' ->> 'students')::int insights;
+select public.admin_set_test('11111111-1111-1111-1111-111111111111', true);
+select public.admin_set_test_paid('11111111-1111-1111-1111-111111111111', true);
+select 'T901 test account gone from scores' t, jsonb_array_length(public.admin_student_scores(null, 3650)) = scores - 1 as pass from t_before;
+select 'T902 not counted as a student' t, (public.admin_stats() ->> 'students')::int = students - 1 as pass from t_before;
+select 'T903 free test access is not "unlocked"' t, (public.admin_stats() ->> 'unlocked')::int = unlocked - had_access as pass from t_before;
+select 'T904 not in the pipeline' t, not exists (select 1 from public.admin_pipeline() where student_id = '11111111-1111-1111-1111-111111111111') as pass;
+select 'T905 not in insights' t, (public.admin_insights(30) -> 'engagement' ->> 'students')::int = insights - 1 as pass from t_before;
+select public.admin_set_test_paid('11111111-1111-1111-1111-111111111111', false);
+select public.admin_set_test('11111111-1111-1111-1111-111111111111', false);
+select 'T906 back as a real student' t, jsonb_array_length(public.admin_student_scores(null, 3650)) = scores as pass from t_before;
+select pg_temp.as_user('99999999-9999-9999-9999-999999999999');
+do $$ begin perform public.admin_set_test('11111111-1111-1111-1111-111111111111', true); raise exception 'T907 FAIL'; exception when insufficient_privilege then raise notice 'T907 pass: only admins mark test accounts'; end $$;
+reset role;

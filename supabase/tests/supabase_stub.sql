@@ -5,7 +5,7 @@ do $$ begin
   if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin bypassrls; end if;
 end $$;
 create schema auth;
-create table auth.users (id uuid primary key, email text);
+create table auth.users (id uuid primary key, email text, raw_app_meta_data jsonb not null default '{}');
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 -- Claims: tests run as a two-step (aal2) login unless request.jwt.claim.aal says otherwise.
 create function auth.jwt() returns jsonb language sql stable as $$
