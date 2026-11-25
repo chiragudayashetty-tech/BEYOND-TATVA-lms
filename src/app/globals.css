@@ -203,3 +203,4 @@ html:not(.in-app) .app-only { display: none !important; }
   .cert-sheet, .cert-sheet * { visibility: visible; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .cert-sheet { position: fixed; inset: 0; width: 100vw; }
 }
+@keyframes race-in { from { opacity: 0; transform: translateX(-24px); } }

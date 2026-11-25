@@ -1248,12 +1248,36 @@ set role authenticated;
 select 'R801b module 0 leader' t, public.school_race() ->> 'watched' = 'Class 9 B' as pass;
 select 'R802 section saved, leader by class, no counts' t, public.school_race() ->> 'section' = 'B'
   and public.school_race() ->> 'enrolled' = 'Class 9 B'
-  and (select count(*) from jsonb_object_keys(public.school_race())) = 6 as pass;
+  and public.school_race() -> 'enrolled_top' = '["Class 9 B"]' and public.school_race() ->> 'my_class' = 'Class 9 B'
+  and public.school_race() ->> 'school' = 'St Test'
+  and not exists (select 1 from jsonb_each(public.school_race()) e where jsonb_typeof(e.value) = 'number') as pass;
 select public.set_my_section('');
 select 'R803 no section' t, public.school_race() ->> 'enrolled' = 'Class 9' as pass;
 reset role;
 select 'R804 higher signup limit during race' t, bool_and(public.password_signup_allowed('race-ip') = 'ok') as pass from generate_series(1, 30);
 delete from public.school_races;
+-- Races from Studio (20261125000003)
+set role authenticated;
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+do $$ begin perform public.admin_start_race((select id from public.schools limit 1), now(), 48); raise exception 'R805 FAIL'; exception when insufficient_privilege then raise notice 'R805 pass: students cannot start a race'; end $$;
+select 'R806 students see no race list' t, not exists (select 1 from public.admin_races()) as pass;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_start_race((select school_id from public.profiles where id = '11111111-1111-1111-1111-111111111111'), now() - interval '1 minute', 48);
+select 'R807 admin starts a 48h race' t, (select status = 'live' and ends_at - starts_at = interval '48 hours' from public.admin_races()) as pass;
+select public.admin_start_race((select school_id from public.profiles where id = '11111111-1111-1111-1111-111111111111'), now() - interval '1 minute', 24);
+select 'R808 starting again replaces it' t, (select count(*) = 1 and bool_and(ends_at - starts_at = interval '24 hours') from public.admin_races()) as pass;
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+select 'R809 the student sees it' t, public.school_race() is not null as pass;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_end_race((select school_id from public.profiles where id = '11111111-1111-1111-1111-111111111111'));
+select 'R810 end now keeps the final result' t, (select status = 'ended' from public.admin_races()) as pass;
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+select 'R811 student sees the final result' t, (public.school_race() ->> 'ended')::boolean as pass;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_end_race((select school_id from public.profiles where id = '11111111-1111-1111-1111-111111111111'));
+select 'R812 ending an ended race removes it' t, not exists (select 1 from public.admin_races()) as pass;
+do $$ begin perform public.admin_start_race((select id from public.schools limit 1), now(), 0); raise exception 'R813 FAIL'; exception when others then if sqlerrm like '%1 hour%' then raise notice 'R813 pass: duration checked'; else raise; end if; end $$;
+reset role;
 
 -- ── Test accounts out of Studio numbers (20261125000002) ─────────────────────
 set role authenticated;
