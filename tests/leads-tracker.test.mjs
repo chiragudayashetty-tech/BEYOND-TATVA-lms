@@ -35,10 +35,17 @@ test("columns in any order still map", () => {
   assert.equal(payload_(h2, r2, 2).student, "Ria");
 });
 
+test("no parent phone: the student's WhatsApp number is used; parent phone wins when both", () => {
+  const h = ["School", "Student name", "Student WhatsApp", "Parent phone"];
+  assert.equal(payload_(h, ["SVVN", "Deeksha", "8431127065", ""], 2).phone, "8431127065");
+  assert.equal(payload_(h, ["SVVN", "Ria", "8431127065", "9845122222"], 3).phone, "9845122222");
+  assert.equal(problem_(payload_(h, ["SVVN", "Ria", "", ""], 4)), "Add a 10-digit parent or student phone.");
+});
+
 test("rows that can't be sent say why; blank rows are skipped", () => {
   assert.equal(problem_({ student: "", phone: "" }), "empty");
   assert.match(problem_({ student: "", phone: "9845122222" }), /student name/);
-  assert.match(problem_({ student: "Ria", phone: "98451" }), /parent phone/);
+  assert.match(problem_({ student: "Ria", phone: "98451" }), /parent or student phone/);
   assert.equal(problem_({ student: "Ria", phone: "98451 22222" }), null);
 });
 

@@ -3,7 +3,7 @@
  * Paste into the Leads Tracker sheet only: Extensions → Apps Script → Code.gs → replace all → Save.
  * Reload the sheet → "Beyond Tatva sync → Set up sync" once (asks for the sync key). Manual: docs/SHEETS-SYSTEM.md.
  *
- *  • Each row = one student. It reaches the LMS a few seconds after an edit. Needs School, Student name, Parent phone.
+ *  • Each row = one student. It reaches the LMS a few seconds after an edit. Needs School, Student name and a parent or student phone.
  *  • Every 5 minutes only what changed in the LMS comes back (payments, Studio logs, website leads): tiny runs,
  *    so 100 schools stay inside Google's free daily script time. Once an hour a full check also removes rows
  *    deleted in Studio and refreshes the School list in Options column A.
@@ -51,6 +51,13 @@ function payload_(head, values, rowNum, touched, fmt) {
   var id = head.indexOf('ID');
   p.id = id >= 0 ? text_(values[id]) : '';
   p.do_not_contact = yes_(p.do_not_contact);
+  // No parent phone? Use the student's own number (a "Student WhatsApp" / "Student phone" column) instead.
+  if (String(p.phone || '').replace(/\D/g, '').length < 10) {
+    head.forEach(function (h, i) {
+      if (/^student\s*(whatsapp|phone|mobile|number)/i.test(String(h).trim()) && text_(values[i]).replace(/\D/g, '').length >= 10 &&
+          String(p.phone || '').replace(/\D/g, '').length < 10) p.phone = text_(values[i]);
+    });
+  }
   if (touched) p.touched = touched;
   return p;
 }
@@ -59,7 +66,7 @@ function payload_(head, values, rowNum, touched, fmt) {
 function problem_(p) {
   if (!p.student && !p.phone) return 'empty';
   if (!p.student) return 'Add the student name.';
-  if (String(p.phone).replace(/\D/g, '').length < 10) return 'Add the 10-digit parent phone.';
+  if (String(p.phone).replace(/\D/g, '').length < 10) return 'Add a 10-digit parent or student phone.';
   return null;
 }
 
