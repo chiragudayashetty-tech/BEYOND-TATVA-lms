@@ -1277,6 +1277,16 @@ select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
 select public.admin_end_race((select school_id from public.profiles where id = '11111111-1111-1111-1111-111111111111'));
 select 'R812 ending an ended race removes it' t, not exists (select 1 from public.admin_races()) as pass;
 do $$ begin perform public.admin_start_race((select id from public.schools limit 1), now(), 0); raise exception 'R813 FAIL'; exception when others then if sqlerrm like '%1 hour%' then raise notice 'R813 pass: duration checked'; else raise; end if; end $$;
+select public.admin_start_race((select school_id from public.profiles where id = '11111111-1111-1111-1111-111111111111'), now() - interval '1 minute', 24);
+reset role;
+update public.school_races set by_section = false;
+update public.profiles set section = 'B' where id = '11111111-1111-1111-1111-111111111111';
+set role authenticated;
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+select 'R814 no-section race: class only, no picker' t, public.school_race() ->> 'my_class' = 'Class 9'
+  and public.school_race() -> 'enrolled_top' = '["Class 9"]' and not (public.school_race() ->> 'student')::boolean as pass;
+reset role;
+delete from public.school_races;
 reset role;
 
 -- ── Test accounts out of Studio numbers (20261125000002) ─────────────────────
