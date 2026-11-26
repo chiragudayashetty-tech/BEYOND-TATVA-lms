@@ -2,7 +2,7 @@ import { Flag } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { EndRaceButton, StartRaceForm } from "./RaceForms";
+import { EndRaceButton, SchoolBatchRow, StartRaceForm } from "./RaceForms";
 
 export const metadata = { title: "Class races · Admin · Beyond Tatva" };
 
@@ -12,10 +12,10 @@ const LABEL = { live: "Live", upcoming: "Upcoming", ended: "Ended (result shown 
 
 export default async function RacesPage() {
   const supabase = await createClient();
-  const [{ data: races, error }, { data: schools }] = await Promise.all([supabase.rpc("admin_races"), supabase.rpc("admin_schools")]);
+  const [{ data: races, error }, { data: schools }, { data: batches }] = await Promise.all([supabase.rpc("admin_races"), supabase.rpc("admin_schools"), supabase.rpc("admin_school_batches")]);
   return (
     <Shell roles={["admin"]}>
-      <PageTitle title="Class races" subtitle="After a workshop, start a race at that school. Its students see which class leads on Module 0 watched and on enrolments." />
+      <PageTitle title="Races and batches" subtitle="After a workshop: set the school&apos;s batch start and start a class race. Its students see which class leads on Module 0 watched and on enrolments." />
       <div className="grid gap-6 xl:grid-cols-[1fr_1.2fr]">
         <Card title="Start a race"><StartRaceForm schools={schools ?? []} /></Card>
         <Card title="Races" pad={false}>
@@ -35,6 +35,12 @@ export default async function RacesPage() {
           ) : !error && <div className="p-5"><Empty icon={Flag} title="No races yet" body="Start one for the school you just ran a workshop at." /></div>}
         </Card>
       </div>
+      <Card title="School batches" className="mt-6" pad={false}
+        action={<span className="text-xs text-muted">Module 1 opens at this time (IST), then one module every week</span>}>
+        <p className="px-5 pt-4 text-sm text-muted">One school = one batch. Every student of the school gets the same dates, however late they join. Clear the date to go back to weekly batches by join date.</p>
+        {batches?.length ? <div className="divide-y divide-border">{batches.map((s) => <SchoolBatchRow key={s.id} school={s} />)}</div>
+          : <div className="p-5"><Empty title="No schools yet" body="Add a school in Schools and people." /></div>}
+      </Card>
     </Shell>
   );
 }

@@ -460,3 +460,10 @@ export async function setTestAccount(studentId, test) {
   const res = await run((s) => s.rpc("admin_set_test", { p_student: studentId, p_test: Boolean(test) }));
   return res.ok ? { ok: true, message: test ? "Marked as a test account." : "Now counts as a real student." } : res;
 }
+
+// One school = one batch: the Sunday Module 1 opens for every student of that school. Empty = clear.
+export async function setSchoolBatch(_, fd) {
+  const school = str(fd, "school");
+  if (!school) return { ok: false, error: "Pick a school." };
+  return run((s) => s.rpc("admin_set_school_batch", { p_school: school, p_start: istToIso(str(fd, "start")) }));
+}

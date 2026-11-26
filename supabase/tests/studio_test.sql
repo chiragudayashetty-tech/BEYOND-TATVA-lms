@@ -60,14 +60,14 @@ select 'T2 school code' t, school_id is not null as pass from public.profiles wh
 select pg_temp.as_user('55555555-5555-5555-5555-555555555555');
 do $$ begin perform public.complete_onboarding('student', 'X', 'NOPE', 8::smallint, 'D', '9900011223', p_consent => true); raise exception 'T3a FAIL';
 exception when others then if sqlerrm like 'T3a%' then raise; end if; raise notice 'T3a pass: %', sqlerrm; end $$;
-do $$ begin perform public.complete_onboarding('student', 'X', null, 8::smallint, 'D', '12345', p_consent => true); raise exception 'T3b FAIL';
+do $$ begin perform public.complete_onboarding('student', 'X', null, 8::smallint, 'D', '12345', p_school_name => 'Test School', p_consent => true); raise exception 'T3b FAIL';
 exception when others then if sqlerrm like 'T3b%' then raise; end if; raise notice 'T3b pass: %', sqlerrm; end $$;
 select pg_temp.as_user('66666666-6666-6666-6666-666666666666');
-select public.complete_onboarding('student', 'Sibling One', null, 8::smallint, 'Same Parent', '9876500000', p_consent => true);
+select public.complete_onboarding('student', 'Sibling One', null, 8::smallint, 'Same Parent', '9876500000', p_school_name => 'Test School', p_consent => true);
 select pg_temp.as_user('77777777-7777-7777-7777-777777777777');
-select public.complete_onboarding('student', 'Sibling Two', null, 10::smallint, 'Same Parent', '9876500000', p_consent => true);
+select public.complete_onboarding('student', 'Sibling Two', null, 10::smallint, 'Same Parent', '9876500000', p_school_name => 'Test School', p_consent => true);
 select pg_temp.as_user('88888888-8888-8888-8888-888888888888');
-select public.complete_onboarding('student', 'Phone Login Kid', null, 9::smallint, 'P', '9811111111', p_consent => true);
+select public.complete_onboarding('student', 'Phone Login Kid', null, 9::smallint, 'P', '9811111111', p_school_name => 'Test School', p_consent => true);
 reset role;
 
 -- ── Website enrollments ──────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ reset role;
 -- The buyer of pay_2 signs up later with that email: access appears on first sign-in.
 insert into auth.users (id, email) values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'newkid@gmail.com');
 set role authenticated; select pg_temp.as_user('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
-select public.complete_onboarding('student', 'New Kid', null, 9::smallint, 'P', '9845077777', p_consent => true);
+select public.complete_onboarding('student', 'New Kid', null, 9::smallint, 'P', '9845077777', p_school_name => 'Test School', p_consent => true);
 select 'P9a claim on sign-in' t, public.claim_purchases() = 1 as pass;
 select 'P9b course unlocked' t, public.has_course_access('ai-for-students') as pass;
 select 'P10 nothing left to claim' t, public.claim_purchases() = 0 as pass;
@@ -239,7 +239,7 @@ reset role;
 -- ── H2: unverified email never unlocks ───────────────────────────────────────
 insert into auth.users (id, email, email_confirmed_at) values ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'unverified@x.in', null);
 set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
-select public.complete_onboarding('student', 'Unverified', null, 9::smallint, 'P', '9811122233', p_consent => true);
+select public.complete_onboarding('student', 'Unverified', null, 9::smallint, 'P', '9811122233', p_school_name => 'Test School', p_consent => true);
 reset role; set role service_role;
 select 'H2c unverified email stays pending' t, public.record_purchase('pay_unv', 'unverified@x.in') = 'pending' as pass;
 reset role; set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
@@ -254,17 +254,17 @@ insert into auth.users (id, email, phone) values
  ('f1111111-1111-1111-1111-111111111111', 'mom@x.in', null),
  ('f2222222-2222-2222-2222-222222222222', 'kid2@x.in', null);
 set role authenticated; select pg_temp.as_user('f1111111-1111-1111-1111-111111111111');
-do $$ begin perform public.complete_onboarding('student', 'Kid', null, 9::smallint, 'Mom', '9845011111'); raise exception 'O1 FAIL';
+do $$ begin perform public.complete_onboarding('student', 'Kid', null, 9::smallint, 'Mom', '9845011111', p_school_name => 'Test School'); raise exception 'O1 FAIL';
 exception when others then if sqlerrm like 'O1%' then raise; end if; raise notice 'O1 pass: %', sqlerrm; end $$;
 do $$ begin perform public.complete_onboarding('parent', 'Mom', 'ABC123'); raise exception 'O2 FAIL';
 exception when others then if sqlerrm like 'O2%' then raise; end if; raise notice 'O2 pass: %', sqlerrm; end $$;
-do $$ begin perform public.complete_onboarding('student', 'Kid', null, 9::smallint, 'Mom', '9845011111', null, 'parent', '12345', true); raise exception 'O3 FAIL';
+do $$ begin perform public.complete_onboarding('student', 'Kid', null, 9::smallint, 'Mom', '9845011111', 'Test School', 'parent', '12345', true); raise exception 'O3 FAIL';
 exception when others then if sqlerrm like 'O3%' then raise; end if; raise notice 'O3 pass: %', sqlerrm; end $$;
-select public.complete_onboarding('student', 'Kid Rao', null, 9::smallint, 'Mom Rao', '9845011111', null, 'parent', '98450 22222', true);
+select public.complete_onboarding('student', 'Kid Rao', null, 9::smallint, 'Mom Rao', '9845011111', 'Test School', 'parent', '98450 22222', true);
 select 'O4 parent sets up the child account' t, (select role = 'student' and signed_up_by = 'parent' and consent_by = 'parent' and guardian_consent_at is not null
   and student_phone = '+919845022222' and guardian_phone = '+919845011111' and invite_code is null from public.profiles where id = auth.uid()) as pass;
 select pg_temp.as_user('f2222222-2222-2222-2222-222222222222');
-select public.complete_onboarding('student', 'Kid Two', null, 8::smallint, 'Dad', '9845033333', null, 'student', null, true);
+select public.complete_onboarding('student', 'Kid Two', null, 8::smallint, 'Dad', '9845033333', 'Test School', 'student', null, true);
 select 'O5 student signs up, child phone optional' t, (select signed_up_by = 'student' and student_phone is null and consent_by = 'student' from public.profiles where id = auth.uid()) as pass;
 reset role;
 select 'O6 no invite codes left' t, not exists (select 1 from public.profiles where invite_code is not null) as pass;
@@ -792,7 +792,7 @@ reset role;
 -- Parts really played (20261115000002): skipping doesn't count, parts can't arrive faster than real time.
 insert into auth.users (id, email) values ('abababab-0000-0000-0000-000000000002', 'seen@x.in');
 set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000002');
-select public.complete_onboarding('student', 'Seer', null, 9::smallint, 'Mum', '9811122244', null, p_consent => true);
+select public.complete_onboarding('student', 'Seer', null, 9::smallint, 'Mum', '9811122244', 'Test School', p_consent => true);
 select 'Z17 first save: 9 parts of 60 = 15%' t, public.save_progress(pg_temp.lesson(0), 90, null, 90, 600, array(select generate_series(0, 8))) = 15 as pass;
 select 'Z17b skipping to the end with no parts played does not complete' t,
   public.save_progress(pg_temp.lesson(0), 590, null, 590, 600, '{}') = 15
@@ -815,7 +815,7 @@ reset role;
 reset role;
 insert into auth.users (id, email) values ('abababab-0000-0000-0000-000000000003', 'old@x.in');
 set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000003');
-select public.complete_onboarding('student', 'Old Row', null, 9::smallint, 'Mum', '9811122255', null, p_consent => true);
+select public.complete_onboarding('student', 'Old Row', null, 9::smallint, 'Mum', '9811122255', 'Test School', p_consent => true);
 select public.save_progress(pg_temp.lesson(0), 400, null, 400, 600);
 select 'Z18 old-style save (no parts) adds no %' t, (select watched_pct = 0 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 select 'Z18b first real parts replace the estimate' t, public.save_progress(pg_temp.lesson(0), 30, null, 30, 600, '{0,1,2}') = 5 as pass;
@@ -824,7 +824,7 @@ reset role;
 -- Faked video length (20261115000008)
 insert into auth.users (id, email) values ('abababab-0000-0000-0000-000000000004', 'len@x.in');
 set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000004');
-select public.complete_onboarding('student', 'Short Claim', null, 9::smallint, 'Mum', '9811122266', null, p_consent => true);
+select public.complete_onboarding('student', 'Short Claim', null, 9::smallint, 'Mum', '9811122266', 'Test School', p_consent => true);
 select public.save_progress(pg_temp.lesson(0), 30, null, 30, 30, '{0,1,2}');
 select 'Z19 a 30-second length claim for a longer lesson is ignored (3 parts of a 6-min lesson = 8%)' t,
   (select watched_pct = 8 and completed_at is null and video_seconds is distinct from 30 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
@@ -857,7 +857,7 @@ select 'Q53 filled lead fields are not overwritten' t,
   (select student_name = 'Asha Rao' and parent_name = 'Lead Parent' from public.leads where reference = 'sl-1') as pass;
 set role authenticated; select pg_temp.as_user('5c000000-0000-0000-0000-0000000000a2');
 select 'Q54 signup list shows only listed schools' t, (select array_agg(name) = array['Kodi School'] from public.signup_schools()) as pass;
-select public.complete_onboarding('student', 'Picker', null, 8::smallint, 'Dad', '9822200002', null, p_consent => true,
+select public.complete_onboarding('student', 'Picker', null, 8::smallint, 'Dad', '9822200002', 'Test School', p_consent => true,
   p_school_pick => '5c000000-0000-0000-0000-000000000001');
 reset role;
 select 'Q55 picking a listed school sets it without class enrollment' t,
@@ -869,7 +869,7 @@ select 'Q56 a lead added later links and fills its blanks' t,
        from public.leads where reference = 'sl-2') as pass;
 reset role; insert into auth.users (id, email) values ('5c000000-0000-0000-0000-0000000000a3', 'nolist@x.in');
 set role authenticated; select pg_temp.as_user('5c000000-0000-0000-0000-0000000000a3');
-do $$ begin perform public.complete_onboarding('student', 'X', null, 8::smallint, 'D', '9822200003', null, p_consent => true,
+do $$ begin perform public.complete_onboarding('student', 'X', null, 8::smallint, 'D', '9822200003', 'Test School', p_consent => true,
   p_school_pick => '5c000000-0000-0000-0000-000000000099'); raise exception 'Q57x FAIL';
 exception when others then if sqlerrm like 'Q57%' then raise; end if; raise notice 'Q57 pass: %', sqlerrm; end $$;
 reset role;
@@ -1326,4 +1326,21 @@ select 'T908 real student not flagged' t, not (select is_test from public.admin_
 select 'T906 back as a real student' t, jsonb_array_length(public.admin_student_scores(null, 3650)) = scores as pass from t_before;
 select pg_temp.as_user('99999999-9999-9999-9999-999999999999');
 do $$ begin perform public.admin_set_test('11111111-1111-1111-1111-111111111111', true); raise exception 'T907 FAIL'; exception when insufficient_privilege then raise notice 'T907 pass: only admins mark test accounts'; end $$;
+reset role;
+
+-- ── School required + Studio batch start (20261126000003) ───────────────────
+reset role;
+insert into auth.users (id, email) values ('5c000000-0000-0000-0000-000000000001', 'noschool@x.in');
+set role authenticated;
+select pg_temp.as_user('5c000000-0000-0000-0000-000000000001');
+do $$ begin perform public.complete_onboarding('student', 'No School', null, 9::smallint, 'Mum', '9811100001', p_consent => true); raise exception 'B901 FAIL';
+exception when others then if sqlerrm like '%Choose your school%' then raise notice 'B901 pass: school is required'; else raise; end if; end $$;
+select 'B902 typed school name is enough' t, public.complete_onboarding('student', 'Has School', null, 9::smallint, 'Mum', '9811100001', 'Some School', p_consent => true) = 'student' as pass;
+do $$ begin perform public.admin_set_school_batch((select id from public.schools limit 1), now()); raise exception 'B903 FAIL';
+exception when insufficient_privilege then raise notice 'B903 pass: only admins set a batch'; end $$;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_set_school_batch((select id from public.admin_school_batches() where name = 'St Test'), '2026-12-06 10:00 Asia/Kolkata');
+select 'B904 admin sets and sees the batch start' t, (select batch_start = '2026-12-06 10:00 Asia/Kolkata' from public.admin_school_batches() where name = 'St Test') as pass;
+select public.admin_set_school_batch((select id from public.admin_school_batches() where name = 'St Test'), null);
+select 'B905 and clears it' t, (select batch_start is null from public.admin_school_batches() where name = 'St Test') as pass;
 reset role;

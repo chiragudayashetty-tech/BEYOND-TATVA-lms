@@ -195,21 +195,21 @@ export default function OnboardingForm({ defaultName, next, signedInAs, loginPho
                   </label>
                   <div>
                     <label className="block">
-                      <span className="label">School name</span>
+                      <span className="label">School</span>
                       {schoolChoices === null ? (
                         <div role="status" className="input flex items-center text-sm text-muted">Loading school choices…</div>
                       ) : schoolChoices.length > 0 ? (
-                        <select className="input" value={form.schoolPick ?? ""} onChange={(e) => setForm((f) => ({ ...f, schoolPick: e.target.value, school: e.target.value === "other" ? f.school : "" }))}>
-                          <option value="">Choose a school (optional)</option>
+                        <select className="input" required value={form.schoolPick ?? ""} onChange={(e) => setForm((f) => ({ ...f, schoolPick: e.target.value, school: e.target.value === "other" ? f.school : "" }))}>
+                          <option value="" disabled>Choose your school</option>
                           {schoolChoices.map((school) => <option key={school.id} value={school.id}>{school.name}</option>)}
                           <option value="other">Other</option>
                         </select>
                       ) : (
-                        <input className="input" value={form.school} onChange={set("school")} maxLength={120} placeholder="e.g. Vidyodaya Public School, Udupi" />
+                        <input className="input" required value={form.school} onChange={set("school")} maxLength={120} placeholder="e.g. Vidyodaya Public School, Udupi" />
                       )}
                     </label>
                     {schoolChoices?.length > 0 && form.schoolPick === "other" && (
-                      <input className="input mt-2" aria-label="Enter your school name" value={form.school} onChange={set("school")} maxLength={120} placeholder="Enter your school name" />
+                      <input className="input mt-2" required aria-label="Enter your school name" value={form.school} onChange={set("school")} maxLength={120} placeholder="Enter your school name" />
                     )}
                   </div>
                   <label className="block">
