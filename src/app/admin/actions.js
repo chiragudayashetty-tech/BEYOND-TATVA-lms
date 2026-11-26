@@ -453,6 +453,14 @@ export async function endRace(schoolId) {
   return run((s) => s.rpc("admin_end_race", { p_school: schoolId }));
 }
 
+// Mark / unmark a student as a test account (admin_set_test). Test accounts sit on Pipeline → Test accounts
+// and are left out of every Studio number.
+export async function setTestAccount(studentId, test) {
+  if (!studentId) return { ok: false, error: "Only a signed-in student can be a test account." };
+  const res = await run((s) => s.rpc("admin_set_test", { p_student: studentId, p_test: Boolean(test) }));
+  return res.ok ? { ok: true, message: test ? "Marked as a test account." : "Now counts as a real student." } : res;
+}
+
 // One school = one batch: the Sunday Module 1 opens for every student of that school. Empty = clear.
 export async function setSchoolBatch(_, fd) {
   const school = str(fd, "school");

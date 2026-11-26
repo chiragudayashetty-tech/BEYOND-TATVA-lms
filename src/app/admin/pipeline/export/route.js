@@ -15,7 +15,7 @@ export async function GET(request) {
   if (error) return NextResponse.json({ error: "Admins only" }, { status: 403 });
   // Same filters as the page (school, class, section, status, source, siblings, due, search).
   const f = parseFilters(Object.fromEntries(params));
-  const rows = applyFilters((data ?? []).filter((r) => (schools === (r.source === "schools")) && (!stage || r.stage === stage)), f, todayIST());
+  const rows = applyFilters((data ?? []).filter((r) => !r.is_test && (schools === (r.source === "schools")) && (!stage || r.stage === stage)), f, todayIST());
   const day = new Date().toISOString().slice(0, 10);
   return new NextResponse(toCsv(rows), {
     headers: {

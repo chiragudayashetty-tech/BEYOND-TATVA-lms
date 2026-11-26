@@ -8,7 +8,7 @@ import { OUTCOMES, applyFilters, classSections, facets, filterQuery, groupByScho
 import { todayIST } from "@/lib/outreach";
 import { createClient } from "@/lib/supabase/server";
 import { NotesButton } from "./CrmNotes";
-import { ClearLeadsButton, DeleteLeadButton } from "./LeadActions";
+import { ClearLeadsButton, DeleteLeadButton, TestAccountButton } from "./LeadActions";
 import AddLeads from "./AddLeads";
 import SendWhatsApp from "@/components/whatsapp/SendWhatsApp";
 import PersonLink from "../PersonLink";
@@ -35,7 +35,7 @@ function groupRows(rows) {
 export default async function PipelinePage({ searchParams }) {
   const sp = await searchParams;
   const { stage: stageParam, stalled, view: viewParam, followups, tab: tabParam } = sp;
-  const tab = tabParam === "closed" ? "closed" : "open";
+  const tab = ["closed", "test"].includes(tabParam) ? tabParam : "open";
   const f = parseFilters(sp);
   const today = todayIST();
   const view = viewParam === "schools" ? "schools" : "parents";
@@ -55,13 +55,17 @@ export default async function PipelinePage({ searchParams }) {
   const now = new Date();
   const isDue = (r) => notesFor(r).some((n) => !n.done_at && n.follow_up_at && new Date(n.follow_up_at) <= now);
   // School enquiries (principals from the /schools form) are counted apart from parents and students.
-  const everyone = (data ?? []).filter((r) => (view === "schools") === (r.source === "schools"));
+  // Test accounts live on their own tab and never count in Open/Closed or the stage cards.
+  const inView = (data ?? []).filter((r) => (view === "schools") === (r.source === "schools"));
+  const testRows = inView.filter((r) => r.is_test);
+  const everyone = tab === "test" ? testRows : inView.filter((r) => !r.is_test);
   const choices = facets(everyone);
   // School / class / section / status / source / siblings / due / search (src/lib/crm.js). Stage cards count after these.
   const filteredAll = applyFilters(everyone, f, today, isDue);
-  const openCount = filteredAll.filter((r) => !isClosed(r)).length, closedCount = filteredAll.length - openCount;
+  const realFiltered = tab === "test" ? applyFilters(inView.filter((r) => !r.is_test), f, today, isDue) : filteredAll;
+  const openCount = realFiltered.filter((r) => !isClosed(r)).length, closedCount = realFiltered.length - openCount;
   // Open / Closed tabs (closed = won, lost or do not contact). A status filter picks its own tab.
-  const all = f.outcome ? filteredAll : filteredAll.filter((r) => isClosed(r) === (tab === "closed"));
+  const all = f.outcome || tab === "test" ? filteredAll : filteredAll.filter((r) => isClosed(r) === (tab === "closed"));
   const rows = sortRows(all.filter((r) => (stage ? r.stage === stage : true) && (stalled ? r.stalled : true) && (followups ? isDue(r) : true)));
   const bySchool = f.group === "school" && !f.school ? groupBySchool(all) : null;
   const breakdown = f.school ? classSections(all) : null;
@@ -70,7 +74,7 @@ export default async function PipelinePage({ searchParams }) {
   const stalledCount = all.filter((r) => r.stalled).length;
   const dueCount = all.filter(isDue).length;
   const href = (q, change = {}) => {
-    const qs = [view === "schools" && "view=schools", tab === "closed" && "tab=closed", filterQuery(f, change), q].filter(Boolean).join("&");
+    const qs = [view === "schools" && "view=schools", tab !== "open" && `tab=${tab}`, filterQuery(f, change), q].filter(Boolean).join("&");
     return `/admin/pipeline${qs ? `?${qs}` : ""}`;
   };
 
@@ -96,7 +100,7 @@ export default async function PipelinePage({ searchParams }) {
       <form method="get" action="/admin/pipeline" className="card mb-4 grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-6" aria-label="Filters">
         {view === "schools" && <input type="hidden" name="view" value="schools" />}
         {f.group && <input type="hidden" name="group" value={f.group} />}
-        {tab === "closed" && <input type="hidden" name="tab" value="closed" />}
+        {tab !== "open" && <input type="hidden" name="tab" value={tab} />}
         <label className="col-span-2 sm:col-span-3 lg:col-span-2"><span className="label">School</span>
           <select name="school" defaultValue={f.school ?? ""} className="input"><option value="">All schools</option>{[...(f.school && !choices.schools.some((x) => x.toLowerCase() === f.school.toLowerCase()) ? [f.school] : []), ...choices.schools].map((x) => <option key={x}>{x}</option>)}</select></label>
         <label><span className="label">Class</span>
@@ -117,11 +121,11 @@ export default async function PipelinePage({ searchParams }) {
         </div>
       </form>
 
-      {!f.outcome && (
+      {(!f.outcome || tab === "test") && (
         <div className="mb-4 flex gap-2" role="tablist" aria-label="Open or closed leads">
-          {[["open", `Open (${openCount})`], ["closed", `Closed (${closedCount})`]].map(([id, label]) => (
+          {[["open", `Open (${openCount})`], ["closed", `Closed (${closedCount})`], ["test", `Test accounts (${testRows.length})`]].map(([id, label]) => (
             <Link key={id} role="tab" aria-selected={tab === id} className={`${tab === id ? "btn-primary" : "btn-secondary"} min-h-11`}
-              href={`/admin/pipeline?${[view === "schools" && "view=schools", id === "closed" && "tab=closed", filterQuery(f)].filter(Boolean).join("&")}`}>{label}</Link>
+              href={`/admin/pipeline?${[view === "schools" && "view=schools", id !== "open" && `tab=${id}`, filterQuery(f)].filter(Boolean).join("&")}`}>{label}</Link>
           ))}
         </div>
       )}
@@ -206,6 +210,7 @@ export default async function PipelinePage({ searchParams }) {
                   <li key={r.student_id ?? r.lead_id} className="flex flex-wrap items-start gap-3 px-5 py-3 text-sm">
                     <div className="min-w-0 flex-1">
                       <PersonLink studentId={r.student_id} leadId={r.lead_id} className="font-medium">{r.name}</PersonLink>
+                      {r.is_test && <span className="ml-2"><Badge tone="warning">Test</Badge></span>}
                       <div className="truncate text-xs text-muted">
                         {[r.parent_name && `Parent: ${r.parent_name}`, r.phone, r.grade && `Class ${r.grade}${r.section ? ` ${r.section}` : ""}`, r.school].filter(Boolean).join(" · ")}
                       </div>
@@ -227,6 +232,7 @@ export default async function PipelinePage({ searchParams }) {
                       {r.stalled && <Badge tone="danger">Stopped</Badge>}
                       {r.source && <span className="text-[11px] text-subtle">from {r.source}</span>}
                       <NotesButton person={r} notes={notesFor(r)} />
+                      <TestAccountButton studentId={r.student_id} isTest={r.is_test} name={r.name} />
                       <DeleteLeadButton leadId={r.lead_id} name={r.name} />
                     </div>
                   </li>
