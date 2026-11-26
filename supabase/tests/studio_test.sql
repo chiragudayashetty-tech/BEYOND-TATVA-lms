@@ -935,6 +935,21 @@ update public.course_access set unlock_all = true where student_id = 'ba000000-0
 select 'K9 unlock_all skips the batch schedule but not Coming soon' t,
   pg_temp.rel('ba000000-0000-0000-0000-000000000003', 3) = '2026-11-01'
   and pg_temp.rel('ba000000-0000-0000-0000-000000000003', 4) = '2099-12-31' as pass;
+-- School batches (20261126000002): a school's batch_start decides, whenever the student joined.
+update public.course_access set unlock_all = false where student_id = 'ba000000-0000-0000-0000-000000000003';
+insert into public.schools (name, code, teacher_code, batch_start) values ('Batch School', 'BATCH-1', 'BATCH-T-1', '2026-11-29 10:00 Asia/Kolkata');
+update public.profiles set school_id = (select id from public.schools where code = 'BATCH-1')
+  where id in ('ba000000-0000-0000-0000-000000000001', 'ba000000-0000-0000-0000-000000000003');
+select 'K10 school batch: Module 1 on the school date, in order, for an early joiner' t,
+  pg_temp.rel('ba000000-0000-0000-0000-000000000001', 1) = '2026-11-29 10:00 Asia/Kolkata'
+  and pg_temp.rel('ba000000-0000-0000-0000-000000000001', 3) = '2026-12-13 10:00 Asia/Kolkata' as pass;
+select 'K11 same dates for a student who joined at another time' t,
+  pg_temp.rel('ba000000-0000-0000-0000-000000000003', 1) = '2026-11-29 10:00 Asia/Kolkata'
+  and pg_temp.rel('ba000000-0000-0000-0000-000000000003', 2) = pg_temp.rel('ba000000-0000-0000-0000-000000000001', 2) as pass;
+select 'K12 Coming soon still closed; no-school student keeps the old batch' t,
+  pg_temp.rel('ba000000-0000-0000-0000-000000000003', 4) = '2099-12-31'
+  and pg_temp.rel('ba000000-0000-0000-0000-000000000002', 1) = '2026-11-15 10:00 Asia/Kolkata' as pass;
+update public.profiles set school_id = null where id::text like 'ba000000%';
 
 -- ── WhatsApp OTP send limits (audit 2026-11-09) ──────────────────────────────
 set role authenticated;
