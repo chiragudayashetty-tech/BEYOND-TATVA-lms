@@ -440,3 +440,22 @@ export async function resetStudentPassword(studentId) {
   console.info("studio password reset", studentId.slice(0, 8));
   return { ok: true, password, login: loginLabel(live.user) };
 }
+
+// Class race for a school (school_races). Start = from "start" (IST) or now; replaces any race at that school.
+export async function startRace(_, fd) {
+  const school = str(fd, "school");
+  if (!school) return { ok: false, error: "Pick a school." };
+  const hours = num(fd, "hours");
+  return run((s) => s.rpc("admin_start_race", { p_school: school, p_starts: istToIso(str(fd, "start")), p_hours: hours }));
+}
+
+export async function endRace(schoolId) {
+  return run((s) => s.rpc("admin_end_race", { p_school: schoolId }));
+}
+
+// One school = one batch: the Sunday Module 1 opens for every student of that school. Empty = clear.
+export async function setSchoolBatch(_, fd) {
+  const school = str(fd, "school");
+  if (!school) return { ok: false, error: "Pick a school." };
+  return run((s) => s.rpc("admin_set_school_batch", { p_school: school, p_start: istToIso(str(fd, "start")) }));
+}
