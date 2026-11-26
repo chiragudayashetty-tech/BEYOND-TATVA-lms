@@ -72,3 +72,8 @@ end;
 $$;
 revoke execute on function public.admin_pipeline(text, int) from public, anon;
 grant execute on function public.admin_pipeline(text, int) to authenticated;
+
+-- Chirag 2026-11-26: every new login is a real student. No more automatic test marking (the auth-metadata
+-- and before-20-Nov rules); a test account is only ever marked by hand in Studio (admin_set_test).
+drop trigger if exists profile_test_flag on public.profiles;
+drop function if exists public.profile_test_flag();
