@@ -20,7 +20,7 @@ const sections = [
   { href: "/admin/access", icon: KeyRound, title: "School keys", body: "Make access keys for a school and upload a class list" },
   { href: "/admin/pipeline", icon: Contact, title: "Pipeline", body: "Leads to paid: who signed in, watched Module 0 and bought" },
   { href: "/admin/outreach", icon: School, title: "School outreach", body: "Schools to approach: calls, visits and the next follow-up" },
-  { href: "/admin/races", icon: Flag, title: "Class races", body: "After a workshop: start a class competition for that school" },
+  { href: "/admin/races", icon: Flag, title: "Races and batches", body: "After a workshop: school batch start date and class competition" },
   { href: "/admin/analytics", icon: ChartLine, title: "Analytics", body: "Funnel, revenue, student scores and school results" },
   { href: "/admin/automations", icon: Workflow, title: "WhatsApp", body: "Messages through AiSensy: auto-send, history, failed" },
 ];

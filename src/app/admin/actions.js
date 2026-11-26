@@ -452,3 +452,10 @@ export async function startRace(_, fd) {
 export async function endRace(schoolId) {
   return run((s) => s.rpc("admin_end_race", { p_school: schoolId }));
 }
+
+// One school = one batch: the Sunday Module 1 opens for every student of that school. Empty = clear.
+export async function setSchoolBatch(_, fd) {
+  const school = str(fd, "school");
+  if (!school) return { ok: false, error: "Pick a school." };
+  return run((s) => s.rpc("admin_set_school_batch", { p_school: school, p_start: istToIso(str(fd, "start")) }));
+}

@@ -2,7 +2,7 @@
 
 import { useActionState, useTransition } from "react";
 import { CircleCheck, Flag, Square } from "lucide-react";
-import { endRace, startRace } from "../actions";
+import { endRace, setSchoolBatch, startRace } from "../actions";
 
 const LENGTHS = [[24, "24 hours"], [48, "48 hours"], [72, "3 days"], [168, "1 week"]];
 
@@ -38,5 +38,27 @@ export function EndRaceButton({ schoolId, live }) {
       onClick={() => { if (confirm(live ? "End this race now? Students see the final result for 3 days." : "Remove this race?")) start(() => endRace(schoolId)); }}>
       <Square className="h-4 w-4" /> {pending ? "…" : live ? "End now" : "Remove"}
     </button>
+  );
+}
+
+// Module 1 opens at this date and time for the whole school; then one module every 7 days.
+export function SchoolBatchRow({ school }) {
+  const [state, action, pending] = useActionState(setSchoolBatch, null);
+  const value = school.batch_start
+    ? new Date(new Date(school.batch_start).getTime() + 330 * 60000).toISOString().slice(0, 16) // UTC → IST wall time
+    : "";
+  return (
+    <form action={action} className="flex flex-wrap items-end gap-3 px-5 py-4">
+      <input type="hidden" name="school" value={school.id} />
+      <div className="min-w-40 flex-1">
+        <p className="font-medium">{school.name}</p>
+        <p className="text-xs text-muted">{school.students} students · {school.batch_start ? "own batch" : "no school batch (weekly batches by join date)"}</p>
+      </div>
+      <label className="w-full sm:w-auto"><span className="sr-only">Module 1 opens (IST)</span>
+        <input name="start" type="datetime-local" defaultValue={value} className="input" /></label>
+      <button className="btn-secondary" disabled={pending}>{pending ? "Saving…" : "Save"}</button>
+      {state?.ok && <span className="inline-flex items-center gap-1 text-sm text-success"><CircleCheck className="h-4 w-4" /> Saved</span>}
+      {state && !state.ok && <span role="alert" className="text-sm text-danger">{state.error}</span>}
+    </form>
   );
 }
