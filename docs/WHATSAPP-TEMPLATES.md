@@ -22,15 +22,17 @@ The LMS fills every `{{n}}` itself. You never type them.
 
 ## Logged in, not enrolled
 
-### `j_welcome_s` · Utility · 1 min after sign-up · header: Module 0 PDF · button "Watch Module 0"
+### `j_welcome_s` · Utility · 1 min after sign-up · header: Module 0 PDF · buttons "Watch Module 0", "Join now"
 ```
-Hi {{1}}, welcome to Beyond Tatva! Your free Module 0 is unlocked.
-Watch it, take the quiz, and keep the attached guide handy.
+Hi {{1}}, welcome to Beyond Tatva! 🎉 Your free Module 0 is unlocked. Watch it, take the quiz, and keep the attached guide handy.
+
+This is just the start of AI Superpowers: 5 more modules on studying smarter, creating posters and videos, life hacks, building websites and apps, and earning with AI. 🚀
 ```
-### `j_welcome_p` · Utility · 1 min after sign-up
+### `j_welcome_p` · Utility · 1 min after sign-up · button "ಈಗಲೇ ಸೇರಿ"
 ```
-ನಮಸ್ಕಾರ! {{1}} ಇಂದು Beyond Tatva ಗೆ ಲಾಗಿನ್ ಆಗಿ ಉಚಿತ Module 0 ಆರಂಭಿಸಿದ್ದಾರೆ.
-ಅವರ ಪ್ರಗತಿಯನ್ನು ನಾವು ನಿಮಗೆ ತಿಳಿಸುತ್ತೇವೆ. – Beyond Tatva ತಂಡ
+ನಮಸ್ಕಾರ! 🙏 {{1}} ಇಂದು Beyond Tatva ಗೆ ಲಾಗಿನ್ ಆಗಿ ಉಚಿತ Module 0 ಆರಂಭಿಸಿದ್ದಾರೆ. ಅವರ ಪ್ರಗತಿಯನ್ನು ನಾವು ನಿಮಗೆ ತಿಳಿಸುತ್ತೇವೆ.
+
+ಪೂರ್ಣ AI Superpowers ಕೋರ್ಸ್‌ನಲ್ಲಿ ಇನ್ನೂ 5 ಮಾಡ್ಯೂಲ್: ಸ್ಮಾರ್ಟ್ ಓದು, ಸೃಜನಶೀಲತೆ, ಲೈಫ್ ಹ್ಯಾಕ್ಸ್, ವೆಬ್‌ಸೈಟ್/ಆಪ್ ನಿರ್ಮಾಣ ಮತ್ತು ಗಳಿಕೆ. – Beyond Tatva ತಂಡ
 ```
 ### `j_follow1_s` · Marketing · day 2, 6 pm · button "Join now" · {{2}} = status line
 ```
