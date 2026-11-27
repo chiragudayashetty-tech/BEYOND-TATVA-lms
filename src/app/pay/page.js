@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic"; // payment keys and price read on each r
 export default async function PayPage({ searchParams }) {
   const sp = await searchParams;
   const paidPhone = /^[6-9]\d{9}$/.test(String(sp?.paid || "")) ? String(sp.paid) : "";
+  const paidClaim = /^[a-f0-9]{32}$/.test(String(sp?.c || "")) ? String(sp.c) : "";
   const paidId = /^pay_[A-Za-z0-9]{6,30}$/.test(String(sp?.id || "")) ? String(sp.id) : "";
   const course = await getCourse();
   return (
@@ -28,6 +29,7 @@ export default async function PayPage({ searchParams }) {
               enabled={Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)}
               paidPhone={paidPhone}
               paidId={paidId}
+              paidClaim={paidClaim}
               whatsapp={(process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "").replace(/\D/g, "")}
             />
           </div>

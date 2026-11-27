@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { COURSE_ID } from "@/lib/catalog";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 // Guest checkout on /pay (no login). The payment is recorded against the parent's mobile number and waits
 // as a pending purchase; it unlocks when that number signs in with a WhatsApp code (claim_purchases matches a
@@ -36,4 +37,19 @@ export async function recordGuestPurchase(paymentId, phone, amountPaise) {
   });
   if (error) console.error("guest lead failed", paymentId, error.message); // the payment is what matters
   return result;
+}
+
+// Proof that this browser made the payment (given only by guest-verify after a valid Razorpay signature).
+// Lets the payer sign in with a different number and move the waiting payment there ("Change number").
+function claimSecret() {
+  return (process.env.RAZORPAY_KEY_SECRET || "").trim();
+}
+export function claimToken(paymentId) {
+  const secret = claimSecret();
+  return secret ? createHmac("sha256", secret).update(`guest-claim|${paymentId}`).digest("hex").slice(0, 32) : "";
+}
+export function claimTokenValid(paymentId, token) {
+  const expected = claimToken(String(paymentId || ""));
+  const a = Buffer.from(expected), b = Buffer.from(String(token || ""));
+  return expected.length > 0 && a.length === b.length && timingSafeEqual(a, b);
 }

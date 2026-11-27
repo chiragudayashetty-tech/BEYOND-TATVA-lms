@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { readJson } from "@/lib/body";
 import { COURSE_ID } from "@/lib/catalog";
 import { fetchOrder, paymentSignatureValid, razorpayKeys } from "@/lib/razorpay";
-import { recordGuestPurchase, tenDigits, validMobile } from "@/lib/guest-pay";
+import { claimToken, recordGuestPurchase, tenDigits, validMobile } from "@/lib/guest-pay";
 import { trackServer } from "@/lib/track";
 
 // POST /api/guest-verify { razorpay_order_id, razorpay_payment_id, razorpay_signature } → { paid, phone }
@@ -33,5 +33,5 @@ export async function POST(request) {
     return NextResponse.json({ paid: true, delayed: true, error: "Payment received; saving it is delayed. Message us with your payment ID." }, { status: 500 });
   }
   if (status === "claimed" || status === "pending") await trackServer("payment_completed", `guest:${paymentId}`, { amount_inr: Number.isInteger(order.amount) ? order.amount / 100 : null, coupon: order.notes?.coupon || null, via: "guest" });
-  return NextResponse.json({ paid: true, phone, payment_id: paymentId });
+  return NextResponse.json({ paid: true, phone, payment_id: paymentId, claim: claimToken(paymentId) });
 }
