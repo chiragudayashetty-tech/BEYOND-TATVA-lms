@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, GraduationCap, House, KeyRound, RotateCcw, School, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import Logo from "@/components/Logo";
 import { TermsList } from "@/components/TeacherTerms";
 
 // Sign-up as a short chat with Loki (like the website): one question at a time, tap answers,
@@ -28,7 +29,6 @@ export default function OnboardingChat({ defaultName, next, signedInAs, loginPho
   const [error, setError] = useState("");
   const [field, setField] = useState("");
   const [field2, setField2] = useState("");
-  const end = useRef(null);
   const started = useRef(false);
 
   useEffect(() => {
@@ -37,7 +37,6 @@ export default function OnboardingChat({ defaultName, next, signedInAs, loginPho
     return () => { on = false; };
   }, []);
 
-  useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [log, typing, ask]);
 
   async function say(en, kn, note) {
     setAsk(null);
@@ -211,55 +210,52 @@ export default function OnboardingChat({ defaultName, next, signedInAs, loginPho
 
   const steps = teacher ? ["who", "tName", "terms"] : ["who", "grade", "name", "school", "gName", "phone", "consent"];
   const at = Math.max(0, steps.indexOf(ask === "schoolOther" || ask === "key" ? "school" : ask));
-  const pct = ask ? Math.round(((at + 1) / steps.length) * 100) : 100;
+
+  // One question at a time in one box (like the website): only Loki's newest lines, then the answer controls.
+  const lastMe = log.map((m) => m.from).lastIndexOf("me");
+  const current = log.slice(lastMe + 1);
+  const answered = lastMe >= 0 ? log[lastMe].en : "";
+  const step = Math.min(at + 1, steps.length);
 
   return (
     <>
       {busy && <FactLoader title="Setting up your course… please don't close this page." />}
-      <div className="flex min-h-dvh flex-col bg-bg">
-        <header className="sticky top-0 z-10 border-b border-border bg-surface/90 backdrop-blur">
-          <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3">
-            {/* eslint-disable-next-line @next/next/no-img-element -- small static mascot */}
-            <img src="/brand/loki.webp" alt="" width={40} height={41} className="h-10 w-10 animate-[loki-bob_3s_ease-in-out_infinite]" />
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold leading-tight">Loki</p>
-              <p className="text-xs text-success">{typing ? "typing…" : "online · ನಿಮ್ಮ ಸಹಾಯಕ"}</p>
-            </div>
-            {log.length > 2 && !busy && <button type="button" onClick={restart} aria-label="Start again" className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-surface-2"><RotateCcw className="h-4 w-4" /></button>}
-          </div>
-          <div className="h-1 bg-border"><div className="h-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} /></div>
-        </header>
-
-        <main className="mx-auto w-full max-w-lg flex-1 space-y-3 px-4 py-5">
-          {log.map((m, i) => m.from === "loki" ? (
-            <div key={i} className="flex animate-[chat-in_.3s_ease-out] items-end gap-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/loki.webp" alt="" width={28} height={29} className="h-7 w-7 shrink-0" />
-              <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-surface px-4 py-2.5 shadow-sm ring-1 ring-border">
-                <p className="text-[15px] leading-snug">{m.en}</p>
-                {m.note && <p className="mt-2 rounded-lg bg-warning-soft px-2.5 py-1.5 text-sm font-semibold">{m.note}</p>}
-                {m.kn && <p lang="kn" className="mt-1 text-xs text-muted">{m.kn}</p>}
+      <div className="grid min-h-dvh place-items-center bg-bg px-4 py-8">
+        <div className="w-full max-w-md">
+          <div className="mb-5 flex justify-center"><Logo /></div>
+          <div className="card overflow-hidden shadow-xl shadow-black/5">
+            <div className="px-5 pt-5 sm:px-6">
+              <div className="flex items-center justify-between text-xs font-semibold text-muted">
+                <span>Step {step} of {steps.length} <span lang="kn" className="font-normal">· ಹಂತ {step}/{steps.length}</span></span>
+                {log.length > 2 && !busy && <button type="button" onClick={restart} className="flex items-center gap-1 rounded-full px-2 py-1 hover:bg-surface-2"><RotateCcw className="h-3.5 w-3.5" /> Start again</button>}
+              </div>
+              <div className="mt-2 flex gap-1.5" aria-hidden="true">
+                {steps.map((s, i) => <span key={s} className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${i < step - (ask ? 1 : 0) ? "bg-success" : i === step - 1 && ask ? "bg-primary" : "bg-border"}`} />)}
               </div>
             </div>
-          ) : (
-            <div key={i} className="flex animate-[chat-in_.25s_ease-out] justify-end">
-              <p className="max-w-[80%] rounded-2xl rounded-br-md bg-primary px-4 py-2.5 text-[15px] text-white shadow-sm">{m.en}</p>
-            </div>
-          ))}
-          {typing && (
-            <div className="flex items-end gap-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/loki.webp" alt="" width={28} height={29} className="h-7 w-7" />
-              <div className="flex gap-1 rounded-2xl rounded-bl-md bg-surface px-4 py-3.5 ring-1 ring-border" aria-label="Loki is typing">
-                {[0, 1, 2].map((d) => <span key={d} className="h-2 w-2 animate-bounce rounded-full bg-muted" style={{ animationDelay: `${d * 0.15}s` }} />)}
-              </div>
-            </div>
-          )}
-          <div ref={end} className="h-px scroll-mb-64" />
-        </main>
 
-        <footer className="sticky bottom-0 border-t border-border bg-surface/95 backdrop-blur">
-          <div className="mx-auto max-w-lg px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <div key={lastMe} className="animate-[chat-in_.35s_ease-out] px-5 pb-6 pt-5 sm:px-6">
+              {answered && <p className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1 text-xs font-semibold text-success"><Check className="h-3.5 w-3.5" /> {answered}</p>}
+              <div className="flex items-start gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element -- small static mascot */}
+                <img src="/brand/loki.webp" alt="Loki" width={48} height={50} className="h-12 w-12 shrink-0 animate-[loki-bob_3s_ease-in-out_infinite]" />
+                <div className="min-w-0 flex-1 space-y-2 pt-1" aria-live="polite">
+                  {current.map((m, i) => (
+                    <div key={i} className="animate-[chat-in_.3s_ease-out]">
+                      <p className={i === current.length - 1 ? "text-lg font-semibold leading-snug" : "text-[15px] text-muted"}>{m.en}</p>
+                      {m.note && <p className="mt-2 rounded-lg bg-warning-soft px-3 py-2 text-sm font-semibold">{m.note}</p>}
+                      {m.kn && <p lang="kn" className="mt-0.5 text-xs text-muted">{m.kn}</p>}
+                    </div>
+                  ))}
+                  {typing && (
+                    <div className="flex gap-1 py-2" aria-label="Loki is typing">
+                      {[0, 1, 2].map((d) => <span key={d} className="h-2 w-2 animate-bounce rounded-full bg-muted" style={{ animationDelay: `${d * 0.15}s` }} />)}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-5">
             {error && <p role="alert" className="mb-3 animate-[chat-in_.2s] rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
             {ask === "who" && (
               <div className="grid gap-2">
@@ -282,7 +278,7 @@ export default function OnboardingChat({ defaultName, next, signedInAs, loginPho
                 placeholder={ask === "name" ? (parent ? "Child's full name" : "Your full name") : ask === "gName" ? (parent ? "Your name" : "Parent's name") : "School name, town"} autoComplete={ask === "schoolOther" ? "off" : "name"} />
             )}
             {ask === "school" && (
-              <div className="max-h-64 space-y-2 overflow-y-auto">
+              <div className="max-h-72 space-y-2 overflow-y-auto">
                 {schools === null && <p className="text-sm text-muted">Loading schools…</p>}
                 {schools?.map((s) => <Chip key={s.id} onClick={() => pickSchool(s)} icon={School} en={s.name} />)}
                 <Chip onClick={() => pickSchool("other")} icon={School} en="My school isn't here" kn="ನನ್ನ ಶಾಲೆ ಇಲ್ಲಿಲ್ಲ" />
@@ -333,9 +329,10 @@ export default function OnboardingChat({ defaultName, next, signedInAs, loginPho
               </div>
             )}
             {!ask && !busy && error && <button type="button" onClick={finish} className="btn-primary w-full">Try again</button>}
-            {!ask && !error && <p className="py-2 text-center text-xs text-muted">Loki is typing…</p>}
+              </div>
+            </div>
           </div>
-        </footer>
+        </div>
       </div>
     </>
   );
