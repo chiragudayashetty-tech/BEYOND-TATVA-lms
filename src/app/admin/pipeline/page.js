@@ -65,12 +65,13 @@ export default async function PipelinePage({ searchParams }) {
   const realFiltered = tab === "test" ? applyFilters(inView.filter((r) => !r.is_test), f, today, isDue) : filteredAll;
   const openCount = realFiltered.filter((r) => !isClosed(r)).length, closedCount = realFiltered.length - openCount;
   // Open / Closed tabs (closed = won, lost or do not contact). A status filter picks its own tab.
-  const all = f.outcome || tab === "test" ? filteredAll : filteredAll.filter((r) => isClosed(r) === (tab === "closed"));
+  // Buyers are marked Won (Closed), but the Bought card should still list them: it ignores the Open/Closed tab.
+  const all = f.outcome || tab === "test" || stage === "bought" ? filteredAll : filteredAll.filter((r) => isClosed(r) === (tab === "closed"));
   const rows = sortRows(all.filter((r) => (stage ? r.stage === stage : true) && (stalled ? r.stalled : true) && (followups ? isDue(r) : true)));
   const bySchool = f.group === "school" && !f.school ? groupBySchool(all) : null;
   const breakdown = f.school ? classSections(all) : null;
   const filtered = Boolean(filterQuery({ ...f, group: null }));
-  const count = (id) => all.filter((r) => r.stage === id).length;
+  const count = (id) => (id === "bought" && tab !== "test" ? filteredAll : all).filter((r) => r.stage === id).length;
   const stalledCount = all.filter((r) => r.stalled).length;
   const dueCount = all.filter(isDue).length;
   const href = (q, change = {}) => {
