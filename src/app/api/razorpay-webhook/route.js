@@ -4,6 +4,7 @@ import { COURSE_ID } from "@/lib/catalog";
 import { fullRefundPaymentId, webhookSignatureValid } from "@/lib/razorpay";
 import { trackServer } from "@/lib/track";
 import { readLimited } from "@/lib/body";
+import { recordGuestPurchase, tenDigits, validMobile } from "@/lib/guest-pay";
 
 // POST /api/razorpay-webhook: Razorpay calls this on payment.captured / order.paid, even if the parent closed
 // the browser or lost signal after paying. Records the purchase for the student in the order notes.
@@ -43,7 +44,19 @@ export async function POST(request) {
   const notes = { ...(payment?.notes || {}), ...(order?.notes || {}) };
   if (!payment?.id || payment.status !== "captured") return NextResponse.json({ ignored: true });
   // Only our LMS orders: they carry the student id and course in the notes (create-order).
-  if (notes.source !== "lms" || notes.course !== COURSE_ID || !notes.student_id) return NextResponse.json({ ignored: true });
+  if (notes.source !== "lms" || notes.course !== COURSE_ID) return NextResponse.json({ ignored: true });
+  // Guest checkout on /pay: no account yet, the purchase waits on the parent's mobile (src/lib/guest-pay.js).
+  if (!notes.student_id) {
+    const phone = tenDigits(notes.guest_phone);
+    if (!validMobile(phone)) return NextResponse.json({ ignored: true });
+    const { data: status, error } = await recordGuestPurchase(payment.id, phone, payment.amount);
+    if (error) {
+      console.error("razorpay webhook: guest record_purchase failed", payment.id, error.message);
+      return NextResponse.json({ error: "retry" }, { status: 500 });
+    }
+    if (status === "claimed" || status === "pending") await trackServer("payment_completed", `guest:${payment.id}`, { amount_inr: Number.isInteger(payment.amount) ? payment.amount / 100 : null, coupon: notes.coupon || null, via: "webhook_guest" });
+    return NextResponse.json({ ok: true, status });
+  }
 
   const admin = createAdminClient();
   const { data: found, error: userError } = await admin.auth.admin.getUserById(String(notes.student_id));

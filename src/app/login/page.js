@@ -106,7 +106,8 @@ function LoginForm() {
   const next = safeNext(params.get("next"));
   // "whatsapp" (main) | "password" | "signup" | "forgot" | "code" (email code) | "codeSent"
   const [mode, setMode] = useState(HOME);
-  const [contact, setContact] = useState("");
+  // /pay sends ?phone= so the number the parent paid with is already filled in.
+  const [contact, setContact] = useState(() => (params.get("phone") || "").replace(/\D/g, "").slice(-10));
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
