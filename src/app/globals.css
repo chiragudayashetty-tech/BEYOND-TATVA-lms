@@ -203,3 +203,8 @@ html:not(.in-app) .app-only { display: none !important; }
   .cert-sheet, .cert-sheet * { visibility: visible; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .cert-sheet { position: fixed; inset: 0; width: 100vw; }
 }
+
+/* Sign-up chat with Loki (onboarding) */
+@keyframes chat-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+@keyframes loki-bob { 50% { transform: translateY(-3px) rotate(-3deg); } }
+@media (prefers-reduced-motion: reduce) { [class*="animate-[chat-in"], [class*="animate-[loki-bob"] { animation: none !important; } }

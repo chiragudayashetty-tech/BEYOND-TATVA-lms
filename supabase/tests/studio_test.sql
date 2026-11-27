@@ -1344,3 +1344,12 @@ select 'B904 admin sets and sees the batch start' t, (select batch_start = '2026
 select public.admin_set_school_batch((select id from public.admin_school_batches() where name = 'St Test'), null);
 select 'B905 and clears it' t, (select batch_start is null from public.admin_school_batches() where name = 'St Test') as pass;
 reset role;
+
+-- Sign-up chat: has_keys only when the school has an unused key (20261127000001).
+reset role;
+select 'K1 no keys for Kodi yet' t, (select not has_keys from public.signup_schools() where name = 'Kodi School') as pass;
+insert into public.access_keys (code, course_id, school_id, label) values ('KODI-KEY-1', 'ai-for-students', '5c000000-0000-0000-0000-000000000001', 'test');
+select 'K2 unused key shows the key question' t, (select has_keys from public.signup_schools() where name = 'Kodi School') as pass;
+update public.access_keys set redeemed_by = '5c000000-0000-0000-0000-0000000000a1' where code = 'KODI-KEY-1';
+select 'K3 all keys used: no key question' t, (select not has_keys from public.signup_schools() where name = 'Kodi School') as pass;
+delete from public.access_keys where code = 'KODI-KEY-1';
