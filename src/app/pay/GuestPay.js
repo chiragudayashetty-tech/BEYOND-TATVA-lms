@@ -72,6 +72,7 @@ export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, p
     try { sessionStorage.setItem("bt_pay_phone", mobile); } catch {}
     if (!(await loadCheckout())) return fail("Couldn't load the payment window.");
     const { ok, data: order } = await post("/api/guest-order", { phone: mobile, coupon: coupon?.code });
+    if (!ok && order.signin) { setBusy(false); return setMsg({ tone: "info", text: order.error, signin: order.signin }); }
     if (!ok) return fail(order.error || "Couldn't start the payment.");
     let failedReason = null;
     const rzp = new window.Razorpay({
@@ -167,6 +168,7 @@ export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, p
       {msg && (
         <div role={msg.tone === "error" ? "alert" : "status"} className={`mt-3 rounded-xl p-3 text-sm ${msg.tone === "error" ? "bg-danger-soft text-danger" : "bg-surface-2 text-muted"}`}>
           <p>{msg.text}{msg.paymentId && <> Payment ID: <b>{msg.paymentId}</b></>}</p>
+          {msg.signin && <a href={msg.signin} className="btn-primary mt-3 w-full">Sign in and open the course</a>}
           {msg.tone === "error" && waLink(msg.paymentId) && <a href={waLink(msg.paymentId)} target="_blank" rel="noopener" className="btn-secondary mt-3 w-full"><MessageCircle className="h-4 w-4" /> Get help on WhatsApp</a>}
         </div>
       )}
