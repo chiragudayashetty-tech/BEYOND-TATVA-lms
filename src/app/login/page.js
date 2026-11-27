@@ -171,7 +171,7 @@ function LoginForm() {
   }
 
   // Remember where they came from (website link / QR: ?src=loki&utm_source=qr). Saved to the
-  // profile once, right after onboarding (see OnboardingForm).
+  // profile once, right after onboarding (see OnboardingChat).
   useEffect(() => {
     const tags = {};
     for (const k of ["src", "utm_source", "utm_medium", "utm_campaign"]) {

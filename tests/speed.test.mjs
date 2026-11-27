@@ -10,7 +10,7 @@ test("the per-page session never calls claim_purchases (it slowed every tap)", (
 
 test("purchases are still claimed at sign-in, after onboarding and on /unlock", () => {
   assert.match(src("app/auth/callback/route.js"), /rpc\("claim_purchases"\)/);
-  assert.match(src("app/onboarding/OnboardingForm.js"), /rpc\("claim_purchases"\)/);
+  assert.match(src("app/onboarding/OnboardingChat.js"), /rpc\("claim_purchases"\)/);
   assert.match(src("app/unlock/page.js"), /rpc\("claim_purchases"\)/);
 });
 
