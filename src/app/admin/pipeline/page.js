@@ -41,11 +41,20 @@ export default async function PipelinePage({ searchParams }) {
   const view = viewParam === "schools" ? "schools" : "parents";
   const stage = STAGES.find((s) => String(s.id) === stageParam)?.id ?? null;
   const supabase = await createClient();
-  const [{ data, error }, { data: notes }, { data: templates }] = await Promise.all([
+  const [{ data: raw, error }, { data: notes }, { data: templates }, { data: waiting }] = await Promise.all([
     supabase.rpc("admin_pipeline", { p_course: COURSE_ID, p_stall_hours: STALL_HOURS }),
     supabase.from("crm_notes").select("*").order("created_at", { ascending: false }),
     supabase.from("wa_templates").select("key, title, language, category, params, body, active").order("key"),
+    supabase.from("purchases").select("phone, created_at").eq("status", "pending").eq("course_id", COURSE_ID),
   ]);
+  // Paid (e.g. on /pay) but not signed in yet: the payment waits on their phone and gives no access, so
+  // admin_pipeline still says "Lead". Show them as Bought with a "Paid · not signed in yet" note to follow up.
+  const ten = (p) => String(p || "").replace(/\D/g, "").slice(-10);
+  const paidAt = new Map((waiting ?? []).map((w) => [ten(w.phone), w.created_at]));
+  const data = (raw ?? []).map((r) => {
+    const at = r.stage < 5 && !r.student_id && paidAt.get(ten(r.phone));
+    return at ? { ...r, stage: 5, bought_at: at, paid_waiting: true } : r;
+  });
   const byPerson = new Map();
   // A note may carry a student id, a lead id or both; index it under each so it follows the person after sign-up.
   for (const note of notes ?? []) {
@@ -228,7 +237,8 @@ export default async function PipelinePage({ searchParams }) {
                       <div className="text-xs text-subtle">
                         {[r.lead_at && `Lead ${date(r.lead_at)}`, r.signed_up_at && `Signed in ${date(r.signed_up_at)}`,
                           r.seconds_watched > 0 && `Watched ${mins(r.seconds_watched)} (last ${date(r.last_watch_at)})`,
-                          r.bought_at && `Bought ${date(r.bought_at)}`].filter(Boolean).join(" · ")}
+                          r.bought_at && `${r.paid_waiting ? "Paid" : "Bought"} ${date(r.bought_at)}`].filter(Boolean).join(" · ")}
+                        {r.paid_waiting && <span className="ml-1 font-semibold text-warning">· not signed in yet</span>}
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
