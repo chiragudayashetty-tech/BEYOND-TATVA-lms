@@ -61,7 +61,9 @@ export default function WelcomeTour() {
     if (!open || !step?.target) return;
     const el = document.querySelector(`[data-tour="${step.target}"]`);
     if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Put the highlighted part near the top so the tour card (at the bottom on phones) doesn't cover it.
+    const top = el.getBoundingClientRect().top + window.scrollY - 96;
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
     el.classList.add(...RING);
     return () => el.classList.remove(...RING);
   }, [open, step]);
