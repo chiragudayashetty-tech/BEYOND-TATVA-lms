@@ -7,6 +7,7 @@ import { QUIZ_TRIES, XP_RULES, canWatch, nextPremiere, nextStep, stepLink } from
 import { getActivities, getCourse, getLearningStats, getLeaderboard } from "@/lib/data";
 import { getSession } from "@/lib/supabase/server";
 import InstallPrompt from "@/components/InstallPrompt";
+import WelcomeTour from "@/components/tour/WelcomeTour";
 
 export const metadata = { title: "Dashboard · Beyond Tatva" };
 
@@ -39,9 +40,9 @@ export default async function Dashboard() {
 
   return (
     <Shell roles={["student"]} greeting>
-      {profile?.role === "student" && <InstallPrompt />}
+      {profile?.role === "student" && <><InstallPrompt /><WelcomeTour /></>}
       {!hasAccess && (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 lg:mb-6">
+        <div data-tour="unlock" className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-primary/20 bg-primary-soft p-4 lg:mb-6">
           <IconTile icon={Gift} />
           <div className="min-w-0 flex-1 basis-52">
             <div className="text-sm font-semibold">You&apos;re on the free plan: Module 0 is yours</div>
@@ -57,7 +58,7 @@ export default async function Dashboard() {
           <p className="rounded-2xl rounded-bl-sm bg-surface px-4 py-2.5 text-sm font-semibold text-fg">{tip}</p>
         </div>
         <h1 className="text-2xl font-semibold sm:text-3xl">Hi {firstName}!</h1>
-        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-white/10 p-3">
+        <div data-tour="stats" className="grid grid-cols-3 gap-2 rounded-2xl bg-white/10 p-3">
           <Stat ring={<Ring value={course.progress} size={56} stroke={6} tone="light"><span className="text-xs font-bold">{course.progress}%</span></Ring>} title="Course" sub={`${done}/${course.lessonCount} lessons`} />
           {stats ? <Stat ring={<span className="grid h-14 w-14 place-items-center rounded-full bg-warning text-sm font-bold text-[#1e1b3a]">{stats.xp}</span>} title="XP" sub={board?.me ? `Rank #${board.me.rank} of ${board.players}` : "Earn XP to rank"} href="/leaderboard" />
             : <Stat ring={<span className="grid h-14 w-14 place-items-center rounded-full bg-white/20 text-sm font-bold">0</span>} title="XP" sub="Earn XP to rank" />}
@@ -67,7 +68,7 @@ export default async function Dashboard() {
         </div>
         {go && <div>
           <p className="mb-2 text-sm text-white/85">{step.lesson ? `${go.hint} · ${go.title}` : go.hint}</p>
-          <Link href={go.href} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[15px] font-bold text-[#3b2fc0] sm:inline-flex">
+          <Link data-tour="next" href={go.href} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[15px] font-bold text-[#3b2fc0] sm:inline-flex">
             {go.label} <ArrowRight className="h-4 w-4" />
           </Link>
         </div>}
@@ -102,7 +103,7 @@ export default async function Dashboard() {
         </div>}
       </section>}
 
-      <section className="mt-8">
+      <section data-tour="journey" className="mt-8">
         <div className="mb-4 flex items-end justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold">Your journey</h2>

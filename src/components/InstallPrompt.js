@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Download, Share } from "lucide-react";
+import { Check, Download, Share, X } from "lucide-react";
 import { useIsClient } from "@/lib/hooks";
 import { isInApp, PLAY_STORE_URL } from "@/lib/android-app";
 
@@ -100,10 +100,11 @@ export default function InstallPrompt() {
 
   if (play) {
     return (
-      <section className="card mb-5 flex flex-col gap-4 border-primary/20 bg-primary-soft p-4 sm:flex-row sm:items-center sm:justify-between" aria-label="Get the Beyond Tatva app">
+      <section className="card relative mb-5 flex flex-col gap-4 border-primary/20 bg-primary-soft p-4 sm:flex-row sm:items-center sm:justify-between" aria-label="Get the Beyond Tatva app">
+        <button type="button" onClick={() => dismiss()} aria-label="Close" className="absolute right-2 top-2 grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-surface hover:text-fg"><X className="h-5 w-5" /></button>
         <div className="flex min-w-0 items-start gap-3">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-fg"><Download className="h-5 w-5" /></span>
-          <div className="min-w-0">
+          <div className="min-w-0 pr-8">
             <h2 className="font-semibold">Get the Beyond Tatva app</h2>
             <p className="mt-1 text-sm text-muted">Free on Google Play. Sign in with this same login and your course is there.</p>
           </div>
@@ -117,10 +118,11 @@ export default function InstallPrompt() {
   }
 
   return (
-    <section className="card mb-5 flex flex-col gap-4 border-primary/20 bg-primary-soft p-4 sm:flex-row sm:items-center sm:justify-between" aria-label="Install Beyond Tatva">
+    <section className="card relative mb-5 flex flex-col gap-4 border-primary/20 bg-primary-soft p-4 sm:flex-row sm:items-center sm:justify-between" aria-label="Install Beyond Tatva">
+        <button type="button" onClick={() => dismiss()} aria-label="Close" className="absolute right-2 top-2 grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-surface hover:text-fg"><X className="h-5 w-5" /></button>
       <div className="flex min-w-0 items-start gap-3">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-fg"><Download className="h-5 w-5" /></span>
-        <div className="min-w-0">
+        <div className="min-w-0 pr-8">
           <h2 className="font-semibold">Add Beyond Tatva to your home screen</h2>
           {installEvent ? (
             <p className="mt-1 text-sm text-muted">Open your lessons faster, like an app.</p>

@@ -12,6 +12,49 @@ import { createClient } from "@/lib/supabase/client";
 
 import { cleanEmail, indianMobile, parseLoginId, passwordProblem, showPhone } from "@/lib/login-id";
 import { supportWhatsApp } from "@/lib/social";
+import LangToggle from "@/components/LangToggle";
+import WhatsAppIcon from "@/components/WhatsAppIcon";
+import { readLang, saveLang } from "@/lib/lang";
+
+// How long a WhatsApp code usually takes (Chirag 2026-11-27: "wait 10 sec"). "Send again" still waits 60 s:
+// the server allows 1 code per minute per number, so an earlier resend would only fail.
+const CODE_WAIT = 10;
+
+// Words on the sign-in screens, in English and ಕನ್ನಡ. Error messages stay English for now.
+const T = {
+  en: {
+    whatsappTitle: "Welcome! 👋", whatsappSub: "Sign in or join with your WhatsApp number.",
+    signupTitle: "Create your account", signupSub: "Use the student's email and mobile number.",
+    forgotTitle: "Forgot password", forgotSub: "Type the number or email you signed up with.",
+    addEmailTitle: "Add your email", addEmailSub: "For payment receipts and course updates.",
+    pickTitle: "Which student?", signinTitle: "Sign in", signinSub: "Use Google, or your phone / email and password.",
+    codeTitle: "Check WhatsApp", waLabel: "WhatsApp number", waPlaceholder: "10-digit number",
+    send: "Send code on WhatsApp", sending: "Sending…", sendAgain: (s) => `Send again in ${s}s`,
+    waitNote: `The code comes on WhatsApp. Please wait about ${CODE_WAIT} seconds.`,
+    newHere: "New here? This creates your account.", or: "or",
+    emailSignup: "Create account with email",
+    sentTo: (n) => <>Code sent to <b className="text-fg">{n}</b></>,
+    waitBox: `The code takes about ${CODE_WAIT} seconds. Please wait, don't ask for a new one yet.`,
+    verify: "Verify and continue", checking: "Checking…", noCode: "Didn't get it?", resendIn: "Resend in", resend: "Resend code",
+    otherNumber: "Use a different number", havePw: "Already have a password?", pwLogin: "Log in with password", consent: "Students under 18 need a parent or guardian's consent to join.",
+  },
+  kn: {
+    whatsappTitle: "ಸ್ವಾಗತ! 👋", whatsappSub: "ನಿಮ್ಮ WhatsApp ನಂಬರ್‌ನಿಂದ ಲಾಗಿನ್ ಆಗಿ ಅಥವಾ ಸೇರಿ.",
+    signupTitle: "ಖಾತೆ ತೆರೆಯಿರಿ", signupSub: "ವಿದ್ಯಾರ್ಥಿಯ ಇಮೇಲ್ ಮತ್ತು ಮೊಬೈಲ್ ನಂಬರ್ ಬಳಸಿ.",
+    forgotTitle: "ಪಾಸ್‌ವರ್ಡ್ ಮರೆತಿರಾ?", forgotSub: "ಸೇರುವಾಗ ಕೊಟ್ಟ ನಂಬರ್ ಅಥವಾ ಇಮೇಲ್ ಟೈಪ್ ಮಾಡಿ.",
+    addEmailTitle: "ನಿಮ್ಮ ಇಮೇಲ್ ಸೇರಿಸಿ", addEmailSub: "ಪಾವತಿ ರಸೀದಿ ಮತ್ತು ಕೋರ್ಸ್ ಸುದ್ದಿಗಾಗಿ.",
+    pickTitle: "ಯಾವ ವಿದ್ಯಾರ್ಥಿ?", signinTitle: "ಲಾಗಿನ್", signinSub: "Google, ಅಥವಾ ಫೋನ್ / ಇಮೇಲ್ ಮತ್ತು ಪಾಸ್‌ವರ್ಡ್ ಬಳಸಿ.",
+    codeTitle: "WhatsApp ನೋಡಿ", waLabel: "WhatsApp ನಂಬರ್", waPlaceholder: "10 ಅಂಕಿಯ ನಂಬರ್",
+    send: "WhatsAppನಲ್ಲಿ ಕೋಡ್ ಕಳುಹಿಸಿ", sending: "ಕಳುಹಿಸುತ್ತಿದೆ…", sendAgain: (s) => `${s} ಸೆಕೆಂಡ್ ನಂತರ ಮತ್ತೆ ಕಳುಹಿಸಿ`,
+    waitNote: `ಕೋಡ್ WhatsAppನಲ್ಲಿ ಬರುತ್ತದೆ. ಸುಮಾರು ${CODE_WAIT} ಸೆಕೆಂಡ್ ಕಾಯಿರಿ.`,
+    newHere: "ಹೊಸಬರೇ? ಇದರಿಂದ ನಿಮ್ಮ ಖಾತೆ ತೆರೆಯುತ್ತದೆ.", or: "ಅಥವಾ",
+    emailSignup: "ಇಮೇಲ್‌ನಿಂದ ಖಾತೆ ತೆರೆಯಿರಿ",
+    sentTo: (n) => <><b className="text-fg">{n}</b> ಗೆ ಕೋಡ್ ಕಳುಹಿಸಲಾಗಿದೆ</>,
+    waitBox: `ಕೋಡ್ ಬರಲು ಸುಮಾರು ${CODE_WAIT} ಸೆಕೆಂಡ್ ಬೇಕು. ಈಗಲೇ ಹೊಸ ಕೋಡ್ ಕೇಳಬೇಡಿ.`,
+    verify: "ಪರಿಶೀಲಿಸಿ ಮುಂದುವರಿಯಿರಿ", checking: "ಪರಿಶೀಲಿಸುತ್ತಿದೆ…", noCode: "ಕೋಡ್ ಬರಲಿಲ್ಲವೇ?", resendIn: "ಮತ್ತೆ ಕಳುಹಿಸಲು", resend: "ಮತ್ತೆ ಕಳುಹಿಸಿ",
+    otherNumber: "ಬೇರೆ ನಂಬರ್ ಬಳಸಿ", havePw: "ಪಾಸ್‌ವರ್ಡ್ ಇದೆಯೇ?", pwLogin: "ಪಾಸ್‌ವರ್ಡ್‌ನಿಂದ ಲಾಗಿನ್", consent: "18 ವರ್ಷದೊಳಗಿನ ವಿದ್ಯಾರ್ಥಿಗಳಿಗೆ ಪೋಷಕರ ಒಪ್ಪಿಗೆ ಬೇಕು.",
+  },
+};
 
 // Sign in: Google, phone or email + password (no code, Chirag 2026-11-14), or an email code.
 // Login code by WhatsApp (mobile; Supabase phone OTP → /api/auth/send-otp → AiSensy) when NEXT_PUBLIC_PHONE_LOGIN=1,
@@ -36,17 +79,17 @@ const friendly = (msg = "") => {
 };
 
 // Last line on the main and sign-up screens: for people who already made a password.
-function PasswordNote({ onClick }) {
+function PasswordNote({ onClick, t = T.en }) {
   return (
     <p className="mt-4 border-t border-border pt-4 text-center text-sm text-muted">
-      Already have a password? <button type="button" onClick={onClick} className="min-h-11 font-medium text-primary">Log in with password</button>
+      {t.havePw} <button type="button" onClick={onClick} className="min-h-11 font-medium text-primary">{t.pwLogin}</button>
     </p>
   );
 }
 
-function GoogleButton({ onClick, busy }) {
+function GoogleButton({ onClick, busy, className = "mt-6" }) {
   return (
-        <button onClick={onClick} disabled={busy} aria-live="polite" className="btn-secondary mt-6 min-h-12 w-full py-3">
+        <button onClick={onClick} disabled={busy} aria-live="polite" className={`btn-secondary ${className} min-h-12 w-full py-3`}>
           {busy ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>}
           {busy ? "Opening Google sign-in…" : "Continue with Google"}
         </button>
@@ -80,6 +123,13 @@ function LoginForm() {
   const [accounts, setAccounts] = useState([]);
   // Seconds until another WhatsApp code may be asked for (the server allows 1 per minute per number).
   const [wait, setWait] = useState(0);
+  const [lang, setLang] = useState("en");
+  const t = T[lang];
+  const changeLang = (l) => { setLang(l); saveLang(l); };
+  useEffect(() => {
+    const timer = window.setTimeout(() => setLang(readLang()), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
   useEffect(() => {
     if (wait <= 0) return;
     const t = setTimeout(() => setWait((w) => w - 1), 1000);
@@ -342,33 +392,31 @@ function LoginForm() {
         {copied ? "Link copied" : "Copy link"}
       </button>
     </div>}
+    <div className="mb-3 flex justify-end"><LangToggle lang={lang} onChange={changeLang} /></div>
     <div className="card p-6 shadow-xl shadow-black/5 sm:p-8">
-      <h1 className="text-2xl font-semibold">{mode === "addEmail" ? "Add your email" : mode === "pick" ? "Which student?" : mode === "signup" ? "Create your account" : mode === "forgot" ? "Forgot password" : mode === "whatsapp" ? "Sign in or join" : "Sign in"}</h1>
-      <p className="mt-1 text-sm text-muted">
-        {mode === "addEmail" ? "One last step: we send payment receipts and course updates here, and it lets you sign in with email too."
-          : mode === "signup" ? "Use the student's own email and mobile number. You can sign in with either."
-          : mode === "forgot" ? "Type the number or email you signed up with."
-          : mode === "whatsapp" ? "New or returning: get a code on WhatsApp, or use Google."
-          : "Use Google, or your phone number / email and password."}
-      </p>
+      {mode === "codeSent" && byWhatsApp && <div className="mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-[#25D366]/15"><WhatsAppIcon className="h-8 w-8" /></div>}
+      <h1 className="text-2xl font-semibold">{mode === "addEmail" ? t.addEmailTitle : mode === "pick" ? t.pickTitle : mode === "signup" ? t.signupTitle : mode === "forgot" ? t.forgotTitle : mode === "whatsapp" ? t.whatsappTitle : mode === "codeSent" && byWhatsApp ? t.codeTitle : t.signinTitle}</h1>
+      {mode !== "codeSent" && mode !== "pick" && <p className="mt-1 text-sm text-muted">
+        {mode === "addEmail" ? t.addEmailSub : mode === "signup" ? t.signupSub : mode === "forgot" ? t.forgotSub : mode === "whatsapp" ? t.whatsappSub : t.signinSub}
+      </p>}
 
       {mode === "whatsapp" && <>
         <form onSubmit={sendCode} className="mt-6 space-y-3">
-          <label className="label" htmlFor="wa-phone">Mobile number (WhatsApp)</label>
+          <label className="label flex items-center gap-1.5" htmlFor="wa-phone"><WhatsAppIcon className="h-4 w-4" /> {t.waLabel}</label>
           <div className="flex gap-2">
-            <span className="input grid w-16 shrink-0 place-items-center">+91</span>
+            <span className="input flex w-24 shrink-0 items-center justify-center gap-1.5"><WhatsAppIcon className="h-5 w-5" /> +91</span>
             <input id="wa-phone" className="input text-lg" type="tel" inputMode="numeric" value={contact} onChange={(e) => setContact(e.target.value)}
-              placeholder="10-digit mobile number" autoComplete="tel-national" required />
+              placeholder={t.waPlaceholder} autoComplete="tel-national" required />
           </div>
-          <button disabled={busy || wait > 0} className="btn-primary min-h-12 w-full py-3">{busy ? "Sending…" : wait > 0 ? `Send again in ${wait}s` : "Send code on WhatsApp"}</button>
-          <p className="text-xs text-muted">New here? This creates your account. Use the student&apos;s number, or a parent&apos;s.</p>
+          <button disabled={busy || wait > 0} className="btn-primary min-h-12 w-full py-3">{busy ? t.sending : wait > 0 ? t.sendAgain(wait) : <><WhatsAppIcon className="h-5 w-5 [&>path]:fill-white" /> {t.send}</>}</button>
+          <p className="text-center text-xs text-muted">⏱️ {t.waitNote}<br />{t.newHere}</p>
         </form>
         <div className="my-6 flex items-center gap-3 text-xs text-muted">
-          <div className="h-px flex-1 bg-border" /> or <div className="h-px flex-1 bg-border" />
+          <div className="h-px flex-1 bg-border" /> {t.or} <div className="h-px flex-1 bg-border" />
         </div>
-        <GoogleButton onClick={google} busy={googleBusy} />
-        <button type="button" onClick={() => go("signup")} className="mt-4 min-h-11 w-full text-sm font-medium text-primary">Create account with email</button>
-        <PasswordNote onClick={() => go("password")} />
+        <GoogleButton onClick={google} busy={googleBusy} className="" />
+        <button type="button" onClick={() => go("signup")} className="mt-4 min-h-11 w-full text-sm font-medium text-primary">{t.emailSignup}</button>
+        <PasswordNote t={t} onClick={() => go("password")} />
       </>}
 
       {(mode === "password" || mode === "signup") && <>
@@ -484,22 +532,24 @@ function LoginForm() {
 
       {mode === "codeSent" && (
         <form onSubmit={verify} className="mt-6 space-y-3">
-          <p className="text-sm text-muted">{byWhatsApp
-            ? <>We sent a {codeLength}-digit code on WhatsApp to <b className="text-fg">{showPhone(codeTo.phone)}</b>. It works for 10 minutes. It can take up to a minute to arrive, so please don&apos;t ask for another one straight away.</>
-            : <>We sent an {codeLength}-digit code to <b className="text-fg">{contact}</b>. You can also just tap the link in the email.</>}</p>
+          {byWhatsApp ? <>
+            <p className="text-sm text-muted">{t.sentTo(showPhone(codeTo.phone))}</p>
+            <p className="rounded-xl bg-warning-soft p-3 text-sm font-medium">⏱️ {t.waitBox}</p>
+          </> : <p className="text-sm text-muted">We sent an {codeLength}-digit code to <b className="text-fg">{contact}</b>. You can also just tap the link in the email.</p>}
           <input className="input text-center text-2xl tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={codeLength} value={code} onChange={(e) => onCode(e.target.value)} onPaste={(e) => { e.preventDefault(); onCode(e.clipboardData.getData("text")); }} placeholder={"•".repeat(codeLength)} aria-label={`${codeLength}-digit code`} autoFocus required />
-          <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? "Checking…" : "Verify and continue"}</button>
-          <p className="text-center text-sm text-muted">Didn&apos;t get the code?{" "}
+          <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? t.checking : t.verify}</button>
+          <p className="text-center text-sm text-muted">{t.noCode}{" "}
             {wait > 0
-              ? <span>Resend in <b className="tabular-nums text-fg">0:{String(wait).padStart(2, "0")}</b></span>
-              : <button type="button" disabled={busy} onClick={sendCode} className="font-semibold text-primary hover:underline">Resend code</button>}
+              ? <span>{t.resendIn} <b className="tabular-nums text-fg">{Math.floor(wait / 60)}:{String(wait % 60).padStart(2, "0")}</b></span>
+              : <button type="button" disabled={busy} onClick={sendCode} className="font-semibold text-primary hover:underline">{t.resend}</button>}
           </p>
-          <button type="button" onClick={() => go(byWhatsApp && mode === "codeSent" ? HOME : "code")} className="min-h-11 w-full text-sm text-muted hover:text-fg">{byWhatsApp ? "Use a different number" : "Use a different email"}</button>
+          <button type="button" onClick={() => go(byWhatsApp && mode === "codeSent" ? HOME : "code")} className="min-h-11 w-full text-sm text-muted hover:text-fg">{byWhatsApp ? t.otherNumber : "Use a different email"}</button>
         </form>
       )}
 
       {error && <p role="alert" className="mt-4 rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
     </div>
+    <p className="mt-6 text-center text-xs text-muted">{t.consent}</p>
     </>
   );
 }
@@ -512,7 +562,6 @@ export default function LoginPage() {
         <Suspense fallback={<div className="card"><FactLoader inline label="sign in" /></div>}>
           <LoginForm />
         </Suspense>
-        <p className="mt-6 text-center text-xs text-muted">Students under 18 need a parent or guardian&apos;s consent to join.</p>
         <SocialLinks className="mt-4 justify-center" />
       </div>
     </div>
