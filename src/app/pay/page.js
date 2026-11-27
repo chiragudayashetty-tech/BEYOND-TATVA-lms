@@ -8,7 +8,10 @@ export const metadata = { title: "Pay for the course · Beyond Tatva" };
 export const dynamic = "force-dynamic"; // payment keys and price read on each request
 
 // Public pay page: phone number → Razorpay → sign in with a WhatsApp code on that number → details → course.
-export default async function PayPage() {
+export default async function PayPage({ searchParams }) {
+  const sp = await searchParams;
+  const paidPhone = /^[6-9]\d{9}$/.test(String(sp?.paid || "")) ? String(sp.paid) : "";
+  const paidId = /^pay_[A-Za-z0-9]{6,30}$/.test(String(sp?.id || "")) ? String(sp.id) : "";
   const course = await getCourse();
   return (
     <main className="grid min-h-screen place-items-center bg-bg px-4 py-10">
@@ -23,6 +26,8 @@ export default async function PayPage() {
               title={course.title}
               price={course.price}
               enabled={Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)}
+              paidPhone={paidPhone}
+              paidId={paidId}
               whatsapp={(process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "").replace(/\D/g, "")}
             />
           </div>
