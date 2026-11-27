@@ -12,11 +12,3 @@ export default function PayLogos({ className = "" }) {
   );
 }
 
-// Razorpay window: UPI apps (Google Pay, PhonePe, Paytm…) first, then cards and the rest.
-export const RAZORPAY_DISPLAY = {
-  display: {
-    blocks: { upi: { name: "Pay with UPI apps", instruments: [{ method: "upi" }] } },
-    sequence: ["block.upi"],
-    preferences: { show_default_blocks: true },
-  },
-};

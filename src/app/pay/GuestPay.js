@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2, Lock, MessageCircle, ShieldCheck, Tag } from "lucide-react";
 import { isInApp } from "@/lib/android-app";
-import PayLogos, { RAZORPAY_DISPLAY } from "@/components/PayLogos";
+import PayLogos from "@/components/PayLogos";
 
 function loadCheckout() {
   if (window.Razorpay) return Promise.resolve(true);
@@ -25,14 +25,26 @@ async function post(url, body) {
   }
 }
 
-export default function GuestPay({ title, price, enabled, whatsapp }) {
+export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, paidId }) {
   const [mobile, setMobile] = useState("");
   const [code, setCode] = useState("");
   const [coupon, setCoupon] = useState(null); // { code, price }
   const [couponError, setCouponError] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null); // { tone, text, paymentId? }
-  const [paid, setPaid] = useState(null); // { phone, paymentId }
+  // After paying we load a fresh /pay?paid=… page (iPhone Safari could crash re-rendering under the Razorpay window).
+  const [paid] = useState(paidPhone ? { phone: paidPhone, paymentId: paidId } : null);
+  // The tab may also reload while the parent is in the UPI app: offer "already paid?" for that number.
+  const [lastPhone, setLastPhone] = useState("");
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      try {
+        if (paidPhone) sessionStorage.removeItem("bt_pay_phone");
+        else setLastPhone(sessionStorage.getItem("bt_pay_phone") || "");
+      } catch {}
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [paidPhone]);
 
   const waLink = (paymentId) => whatsapp
     ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(paymentId ? `Hi! I paid for the Beyond Tatva course. Payment ID: ${paymentId}` : "Hi! I want to pay for the Beyond Tatva AI course.")}`
@@ -56,6 +68,7 @@ export default function GuestPay({ title, price, enabled, whatsapp }) {
     if (!/^[6-9]\d{9}$/.test(mobile)) return setMsg({ tone: "error", text: "Enter your 10-digit WhatsApp number." });
     setBusy(true);
     setMsg(null);
+    try { sessionStorage.setItem("bt_pay_phone", mobile); } catch {}
     if (!(await loadCheckout())) return fail("Couldn't load the payment window.");
     const { ok, data: order } = await post("/api/guest-order", { phone: mobile, coupon: coupon?.code });
     if (!ok) return fail(order.error || "Couldn't start the payment.");
@@ -67,18 +80,16 @@ export default function GuestPay({ title, price, enabled, whatsapp }) {
       currency: order.currency,
       name: "Beyond Tatva",
       description: "AI course: full access",
-      image: `${window.location.origin}/brand/mark.png`,
       prefill: { contact: `+91${mobile}` },
       theme: { color: "#2563eb" },
-      config: RAZORPAY_DISPLAY,
       handler: async (resp) => {
         setMsg({ tone: "info", text: "Payment received. Saving it…" });
         const { ok: saved, data } = await post("/api/guest-verify", resp);
         // Even when saving is delayed the webhook records it, so the next step is the same.
         if (saved || data.paid) {
-          setBusy(false);
-          setMsg(data.delayed ? { tone: "info", text: data.error, paymentId: resp.razorpay_payment_id } : null);
-          return setPaid({ phone: data.phone || mobile, paymentId: resp.razorpay_payment_id });
+          const q = new URLSearchParams({ paid: data.phone || mobile, id: resp.razorpay_payment_id });
+          if (data.delayed) q.set("delayed", "1");
+          return window.location.replace(`/pay?${q}`);
         }
         fail(`${data.error || "We couldn't confirm the payment."} Don't worry, message us and we'll sort it out.`, resp.razorpay_payment_id);
       },
@@ -107,7 +118,7 @@ export default function GuestPay({ title, price, enabled, whatsapp }) {
         </ol>
         <a href={next} className="btn-primary mt-4 w-full">Continue</a>
         <p className="mt-2 text-xs text-muted">Always sign in with this number: your payment is saved on it.</p>
-        {msg && <p role="status" className="mt-3 rounded-xl bg-surface-2 p-3 text-sm text-muted">{msg.text}</p>}
+        
         {waLink(paid.paymentId) && <a href={waLink(paid.paymentId)} target="_blank" rel="noopener" className="btn-secondary mt-3 w-full"><MessageCircle className="h-4 w-4" /> Need help? WhatsApp us</a>}
       </div>
     );
@@ -125,6 +136,11 @@ export default function GuestPay({ title, price, enabled, whatsapp }) {
   const off = coupon ? price - coupon.price : 0;
   return (
     <>
+      {lastPhone && (
+        <a href={`/login?phone=${lastPhone}&next=${encodeURIComponent("/course")}`} className="mt-4 block rounded-xl bg-success-soft p-3 text-sm text-success">
+          Already paid with <b>{lastPhone}</b>? <u>Continue to the course</u>
+        </a>
+      )}
       <section className="mt-5 rounded-xl border border-border p-4">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">Order summary</h2>
         <div className="mt-3 flex items-start justify-between gap-3 text-sm">

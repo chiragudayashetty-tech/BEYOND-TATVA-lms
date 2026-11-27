@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Check, CreditCard, MessageCircle, ShieldCheck, Tag, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isInApp } from "@/lib/android-app";
-import PayLogos, { RAZORPAY_DISPLAY } from "@/components/PayLogos";
+import PayLogos from "@/components/PayLogos";
 
 // Razorpay Standard Checkout: create order on our server → Razorpay modal → our server checks the
 // signature and unlocks. If anything fails, the student gets a WhatsApp button to reach us.
@@ -78,7 +78,6 @@ export default function RazorpayPay({ price, listPrice, enabled, name, email, ph
       description: "AI course: full access",
       prefill: { name: name || "", email: email || "", contact: `+91${mobile}` },
       theme: { color: "#2563eb" },
-      config: RAZORPAY_DISPLAY,
       handler: async (resp) => {
         setMsg({ tone: "info", text: "Payment received. Unlocking your course…" });
         const { ok: verified, data } = await post("/api/verify-payment", resp);
