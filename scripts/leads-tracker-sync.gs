@@ -205,8 +205,12 @@ function onEditSync(e) {
 function pull() {
   locked_(function () {
     try { pull_(false); state_(null); } catch (err) { state_(err); throw err; }
-    automations_();   // after the sync, never instead of it
   });
+}
+
+// Every minute: the WhatsApp sender (login/enrol messages go out ~1 minute after the event).
+function sendWhatsApp() {
+  locked_(function () { automations_(); });
 }
 
 // ── Automations: start the LMS WhatsApp sender (AiSensy) and log results in the "Automations" tab ──
@@ -315,6 +319,7 @@ function timers_(reset) {
   var has = function (fn) { return ts.some(function (t) { return t.getHandlerFunction() === fn; }); };
   var made = [];
   if (!has('pull')) { ScriptApp.newTrigger('pull').timeBased().everyMinutes(5).create(); made.push('5-minute refresh'); }
+  if (!has('sendWhatsApp')) { ScriptApp.newTrigger('sendWhatsApp').timeBased().everyMinutes(1).create(); made.push('1-minute WhatsApp sender'); }
   if (!has('onEditSync')) { ScriptApp.newTrigger('onEditSync').forSpreadsheet(SpreadsheetApp.getActive()).onEdit().create(); made.push('on-edit push'); }
   return made;
 }
