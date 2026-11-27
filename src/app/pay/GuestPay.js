@@ -155,7 +155,7 @@ export default function GuestPay({ title, price, enabled, whatsapp }) {
         <div className="relative">
           <img src="/pay/whatsapp.svg" alt="" className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2" />
           <span className="pointer-events-none absolute left-11 top-1/2 -translate-y-1/2 text-lg text-muted">+91</span>
-          <input className="input !pl-[5.25rem] text-lg" type="tel" inputMode="numeric" maxLength={10} value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="98450 12345" autoComplete="tel-national" required />
+          <input className="input !pl-[5.25rem] text-lg" type="tel" inputMode="numeric" maxLength={10} value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="10-digit number" autoComplete="tel-national" required />
         </div>
         <span className="mt-1 block text-xs text-muted">Your login and course updates come on this number.</span>
       </label>
