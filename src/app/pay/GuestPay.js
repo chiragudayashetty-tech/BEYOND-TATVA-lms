@@ -207,6 +207,8 @@ function PaidVerify({ paid, help }) {
     setBusy(false);
     setWait(60);
     if (error) return setError(/rate|seconds|too many/i.test(error.message) ? "Please wait a minute before asking for another code." : "Couldn't send the code. Check the number is on WhatsApp and try again.");
+    // Remember the send only once it really worked, so a reload (common after a UPI app) sends again if it never did.
+    try { sessionStorage.setItem(`bt_pay_code_${paid.paymentId}`, String(Date.now())); } catch {}
     setSent(true);
     setEditing(false);
     setCode("");
@@ -216,10 +218,13 @@ function PaidVerify({ paid, help }) {
   useEffect(() => {
     if (auto.current) return;
     auto.current = true;
-    const key = `bt_pay_code_${paid.paymentId}`;
-    let first = true;
-    try { first = !sessionStorage.getItem(key); sessionStorage.setItem(key, "1"); } catch {}
-    const t = window.setTimeout(() => (first ? send(paid.phone) : setSent(true)), 0);
+    // A code sent less than 10 minutes ago is still valid: don't send another, just keep the resend timer.
+    let ago = Infinity;
+    try { ago = (Date.now() - Number(sessionStorage.getItem(`bt_pay_code_${paid.paymentId}`) || 0)) / 1000; } catch {}
+    const t = window.setTimeout(() => {
+      if (ago < 600) { setSent(true); setWait(Math.max(0, Math.ceil(60 - ago))); }
+      else send(paid.phone);
+    }, 0);
     return () => window.clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -278,6 +283,7 @@ function PaidVerify({ paid, help }) {
           <input className="input mt-3 text-center text-2xl tracking-[0.5em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => onCode(e.target.value)} placeholder="••••••" aria-label="6-digit code" autoFocus disabled={busy} />
           <button type="button" disabled={busy || code.length < 6} onClick={() => verify(code)} className="btn-primary mt-3 w-full">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Verify and continue</button>
           <button type="button" disabled={busy || wait > 0} onClick={() => send(phone)} className="mt-2 w-full py-2 text-sm text-muted underline disabled:no-underline">{wait > 0 ? `Resend code in ${wait}s` : "Resend code"}</button>
+          {sent && <p className="mt-1 text-center text-xs text-muted">No code? Check WhatsApp (not SMS) on this number. Still nothing after a resend? Tap &quot;WhatsApp us&quot; below and we&apos;ll unlock it for you.</p>}
         </div>
       )}
       {error && <p role="alert" className="mt-3 rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
