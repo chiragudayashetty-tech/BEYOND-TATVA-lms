@@ -3,6 +3,7 @@ import { readJson } from "@/lib/body";
 import { COURSE_ID } from "@/lib/catalog";
 import { createOrder, razorpayKeys } from "@/lib/razorpay";
 import { guestPrice, tenDigits, validMobile } from "@/lib/guest-pay";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // POST /api/guest-order { phone, coupon?, preview? } → { order_id, amount, currency, key_id } (or { amount } for preview)
 // No login: /pay. The parent's mobile goes in the order notes (guest_phone); guest-verify and the webhook read it back.
@@ -16,6 +17,10 @@ export async function POST(request) {
 
   const phone = tenDigits(body?.phone);
   if (!validMobile(phone)) return NextResponse.json({ error: "Enter a valid 10-digit mobile number" }, { status: 400 });
+  // Already paid with this number and not signed in yet: stop a second payment, send them to sign in.
+  // (A paid number whose payment is used can pay again: a parent paying for a second child.)
+  const { data: waiting } = await createAdminClient().from("purchases").select("id").eq("phone", `+91${phone}`).eq("status", "pending").limit(1).maybeSingle();
+  if (waiting) return NextResponse.json({ error: "You've already paid with this number. Sign in with it to open the course.", signin: `/login?phone=${phone}&next=%2Fcourse` }, { status: 409 });
   const keys = razorpayKeys();
   if (!keys) return NextResponse.json({ error: "Online payments aren't set up yet" }, { status: 500 });
   const amount = rupees * 100;
