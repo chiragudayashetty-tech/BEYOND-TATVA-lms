@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CircleCheck, CreditCard, KeyRound, School } from "lucide-react";
+import { ArrowRight, CircleCheck, CreditCard, KeyRound, School, Sparkles } from "lucide-react";
 import { IconTile } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { isInApp } from "@/lib/android-app";
@@ -58,6 +58,14 @@ export default function UnlockView({ price, listPrice, hasAccess, preview, pay }
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
+      <Link href="/course" className="group flex items-center gap-3 rounded-2xl border-2 border-warning bg-warning-soft p-4 shadow-sm transition hover:shadow-md lg:col-span-2">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-warning text-[#1e1b3a]"><Sparkles className="h-5 w-5" /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-bold">Explore more</span>
+          <span className="block text-sm text-muted">See all 5 modules and what you&apos;ll make before you unlock.</span>
+        </span>
+        <ArrowRight className="h-5 w-5 shrink-0 text-warning transition group-hover:translate-x-1" />
+      </Link>
       <AppNoPurchase className="self-start" />
       <section className="web-only card p-6">
         <IconTile icon={CreditCard} tone="success" />
