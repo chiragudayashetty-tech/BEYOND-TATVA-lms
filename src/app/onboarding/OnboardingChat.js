@@ -291,9 +291,12 @@ export default function OnboardingChat({ defaultName, next, signedInAs, loginPho
                 placeholder={ask === "name" ? (parent ? "Child's full name" : "Your full name") : ask === "gName" ? (parent ? "Your name" : "Parent's name") : "School name, town"} autoComplete={ask === "schoolOther" ? "off" : "name"} />
             )}
             {ask === "school" && (
-              <div className="max-h-72 space-y-2 overflow-y-auto">
-                {schools === null && <p className="text-sm text-muted">Loading schools…</p>}
-                {schools?.map((s) => <Chip key={s.id} onClick={() => pickSchool(s)} icon={School} en={s.name} />)}
+              <div className="space-y-2">
+                {/* Only the school list scrolls; "not here" always stays in view (it was cut off at 375px). */}
+                <div className="max-h-[50vh] space-y-2 overflow-y-auto">
+                  {schools === null && <p className="text-sm text-muted">Loading schools…</p>}
+                  {schools?.map((s) => <Chip key={s.id} onClick={() => pickSchool(s)} icon={School} en={s.name} />)}
+                </div>
                 <Chip onClick={() => pickSchool("other")} icon={School} en="My school isn't here" kn="ನನ್ನ ಶಾಲೆ ಇಲ್ಲಿಲ್ಲ" />
               </div>
             )}
