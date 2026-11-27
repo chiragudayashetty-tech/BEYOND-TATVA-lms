@@ -47,7 +47,7 @@ hand in assignments. Chirag runs everything from **Studio** (`/admin`).
 | Open WhatsApp button (2026-11-27) | Android often shows no notification for the code (tested by Chirag). `/login` and `/pay` show **"Open WhatsApp to see your code"** (`src/components/OpenCodeChat.js`, opens wa.me/917337645448 = AiSensy code number; env `NEXT_PUBLIC_CODE_WHATSAPP` overrides) + "only the newest code works". Resend stays 1 per minute. |
 | Skip the code after paying (2026-11-27) | Two parents paid on `/pay` but the WhatsApp code never came. `/pay` now shows **"Code not coming? Skip it"**: the parent chooses a password, `POST /api/guest-session` checks the paying browser's claim token, reads the phone from our purchase (pending, < 3 days old), creates the account (phone confirmed + that password, `app_metadata.signup = paid-no-code`), signs in, `claim_purchases` → `/onboarding`. **New numbers only**: a number that already has an account still needs the code (never signs into an existing account). **Signing in again:** `/login` with the mobile number + that password (shown on screen "Save this"), or the WhatsApp code; forgot it → Studio → People → New password. No migration. |
 | Sign-up chat (2026-11-27) | `/onboarding` is now a chat with Loki (`OnboardingChat.js`), like the website: who → class → name → school (tap list or "not here") → **course key only if Studio made unused keys for that school** (`signup_schools.has_keys`, `20261127000001`, applied 2026-11-27; key redeemed with `redeem_access_key` after sign-up, wrong key → `/unlock`) → parent name → parent WhatsApp (WhatsApp logo, prefilled for a parent on phone login) → parent sees "child must use this same login" → one-tap consent. Kannada line under every question. Section and student phone dropped from sign-up; school code (`p_code`) no longer asked. Teacher: name + teacher code + terms. |
-| WhatsApp journey v2 (2026-11-27) | `20261127000003` (replaces `…0002`), **neither applied yet**. Student (English, own WhatsApp from sign-up or the parent's) + parent (Kannada) messages: welcome 1 min after sign-up, follow-ups day 2/4/7 by Module 0 status, enrolled welcome + receipt 1 min after access, quest next day, module out / module complete (Sunday), Tue/Thu/Sat nudges, pending quiz/assignment Tue/Thu, parent 7 pm digest, course end + review + referral, newsletter. Nudges max 2/day/number; parent Do not contact silences the student. Sender every minute (Apps Script `sendWhatsApp`). Optional student WhatsApp step in the sign-up chat. Texts + setup: `docs/WHATSAPP-TEMPLATES.md`. |
+| WhatsApp journey v2 (2026-11-27) | `20261127000003` (replaces `…0002`), **both applied** (live 2026-11-27 as `course_whatsapp_journey` + `whatsapp_journey_v2`). Student (English, own WhatsApp from sign-up or the parent's) + parent (Kannada) messages: welcome 1 min after sign-up, follow-ups day 2/4/7 by Module 0 status, enrolled welcome + receipt 1 min after access, quest next day, module out / module complete (Sunday), Tue/Thu/Sat nudges, pending quiz/assignment Tue/Thu, parent 7 pm digest, course end + review + referral, newsletter. Nudges max 2/day/number; parent Do not contact silences the student. Sender every minute (Apps Script `sendWhatsApp`). Optional student WhatsApp step in the sign-up chat. Texts + setup: `docs/WHATSAPP-TEMPLATES.md`. |
 | Payment safety net | `POST /api/razorpay-webhook` (2026-11-09): Razorpay tells us about every captured payment even if the browser closed; records the purchase for the student in the order notes, safe to receive twice. **Needs Chirag:** Razorpay → Settings → Webhooks (URL `https://learn.beyondtatva.in/api/razorpay-webhook`, events `payment.captured`, `order.paid`) and the same secret as `RAZORPAY_WEBHOOK_SECRET` in Vercel. |
 | Limits (2026-11-09) | Uploads: 10 MB + photo/PDF only (bucket), max **15 files per assignment, 60 per student** (DB rule); files a student removes are deleted on save. WhatsApp login codes: 1/min, 5/hour per phone. Studio Assignments/Enrollments show "Show more" when a list hits its limit. |
 | Load test | `scripts/load-test.mjs`: N test accounts sign in and open dashboard/course/lesson at once, prints p50/p95/p99. Preview only (refuses production). Not run yet. |
@@ -122,6 +122,30 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - No open PRs (2026-11-09). ~35 stale branches from 2026-10-31 to 11-05 remain on GitHub (superseded work); clean up later.
 - **Before Sun 15 Nov 10:00 IST:** Module 1 video is uploaded (one 50 min lesson, title still "Module 1"; consider splitting into 10–15 min lessons). Modules 2–5 need videos by 29 Nov, 22 Nov, 6 Dec, 13 Dec (Batch 1).
 - **Next: Phase D testing** — real phones with 2–3 families on signup → lesson → progress, exercising the 2026-11-08 progress/resume and duplicate features.
+
+## Done 2026-11-27 (PRs #203–#222; migrations 20261127000001–03, all applied)
+- Sign-in in English/Kannada, first-time tour (#203).
+- **Guest pay page `/pay`** (no login): checkout design, coupon, logos, double-payment guard, iPhone crash fix, lead in Pipeline, code typed on `/pay`, resend only after a real send (#204–#209, #212, #214, #218).
+- Sign-up chat with Loki, one question at a time; course key only for schools with keys (#210, #211, `000001`).
+- Pipeline: Open / Closed / Bought tabs; paid-not-signed-in shows in Bought (#215, #216).
+- WhatsApp course journey v1 → v2: student + parent messages, 1-minute sender (#217, #219, `000002`, `000003`).
+- **After-payment login fixes:** "Code not coming? Skip it" on `/pay` (choose a password, sign in later with number + password) (#220); "Open WhatsApp to see your code" on `/login` and `/pay`, 1 code/minute (#221); "My school isn't here" always visible (#222).
+- Payments: 4 real ₹499; 3 signed in and unlocked, **1 paid but never finished sign-up** (see Studio → Reconciliation / Pipeline → Bought).
+- Finding: AiSensy delivers the codes but Android shows **no notification** (Chirag tested); parents asked for 5–7 codes each, each new one cancels the last.
+
+## Tomorrow (2026-11-28)
+**Chirag**
+1. Get the 1 paid-but-stuck family through sign-up (message them, or give Claude the details to set it up).
+2. AiSensy → `login_otp1`: check the button type; if One-tap / Zero-tap, change to **Copy code**.
+3. Android test: `/login` → Send code → "Open WhatsApp" → type code; and one `/pay` with a 100% coupon on a fresh number → "Skip it" → sign in again with number + password.
+4. Studio → School outreach: rename "Srvk" (and SVVN if needed) to full school names.
+5. Watch WhatsApp journey v2 sends (Studio → WhatsApp → History).
+6. SVVN batch starts Sun 29 Nov 10:00 IST: check Module 1 is ready.
+
+**Claude**
+1. Check every payment of the last 24 h has a signed-in, unlocked account; report.
+2. On "remove it": drop the yellow "wait 10 seconds" box on `/login`.
+3. Propose: alert Chirag when a purchase stays pending > 30 min after payment.
 
 ## Done 2026-11-01
 - `learn.beyondtatva.in` live (GoDaddy CNAME), Supabase Site URL + redirect, Google OAuth origin, Google app **In production**
