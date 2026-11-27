@@ -16,8 +16,9 @@ import LangToggle from "@/components/LangToggle";
 import WhatsAppIcon from "@/components/WhatsAppIcon";
 import { readLang, saveLang } from "@/lib/lang";
 
-// Seconds to wait for a WhatsApp code before "Send again" (Chirag 2026-11-27: tell people to wait 100 s).
-const CODE_WAIT = 100;
+// How long a WhatsApp code usually takes (Chirag 2026-11-27: "wait 10 sec"). "Send again" still waits 60 s:
+// the server allows 1 code per minute per number, so an earlier resend would only fail.
+const CODE_WAIT = 10;
 
 // Words on the sign-in screens, in English and ಕನ್ನಡ. Error messages stay English for now.
 const T = {
@@ -29,11 +30,11 @@ const T = {
     pickTitle: "Which student?", signinTitle: "Sign in", signinSub: "Use Google, or your phone / email and password.",
     codeTitle: "Check WhatsApp", waLabel: "WhatsApp number", waPlaceholder: "10-digit number",
     send: "Send code on WhatsApp", sending: "Sending…", sendAgain: (s) => `Send again in ${s}s`,
-    waitNote: `The code comes on WhatsApp. It can take up to ${CODE_WAIT} seconds.`,
+    waitNote: `The code comes on WhatsApp. Please wait about ${CODE_WAIT} seconds.`,
     newHere: "New here? This creates your account.", or: "or",
     emailSignup: "Create account with email",
     sentTo: (n) => <>Code sent to <b className="text-fg">{n}</b></>,
-    waitBox: `Please wait up to ${CODE_WAIT} seconds for the code. Don't ask for a new one yet.`,
+    waitBox: `The code takes about ${CODE_WAIT} seconds. Please wait, don't ask for a new one yet.`,
     verify: "Verify and continue", checking: "Checking…", noCode: "Didn't get it?", resendIn: "Resend in", resend: "Resend code",
     otherNumber: "Use a different number", havePw: "Already have a password?", pwLogin: "Log in with password", consent: "Students under 18 need a parent or guardian's consent to join.",
   },
@@ -45,11 +46,11 @@ const T = {
     pickTitle: "ಯಾವ ವಿದ್ಯಾರ್ಥಿ?", signinTitle: "ಲಾಗಿನ್", signinSub: "Google, ಅಥವಾ ಫೋನ್ / ಇಮೇಲ್ ಮತ್ತು ಪಾಸ್‌ವರ್ಡ್ ಬಳಸಿ.",
     codeTitle: "WhatsApp ನೋಡಿ", waLabel: "WhatsApp ನಂಬರ್", waPlaceholder: "10 ಅಂಕಿಯ ನಂಬರ್",
     send: "WhatsAppನಲ್ಲಿ ಕೋಡ್ ಕಳುಹಿಸಿ", sending: "ಕಳುಹಿಸುತ್ತಿದೆ…", sendAgain: (s) => `${s} ಸೆಕೆಂಡ್ ನಂತರ ಮತ್ತೆ ಕಳುಹಿಸಿ`,
-    waitNote: `ಕೋಡ್ WhatsAppನಲ್ಲಿ ಬರುತ್ತದೆ. ${CODE_WAIT} ಸೆಕೆಂಡ್‌ವರೆಗೆ ಆಗಬಹುದು.`,
+    waitNote: `ಕೋಡ್ WhatsAppನಲ್ಲಿ ಬರುತ್ತದೆ. ಸುಮಾರು ${CODE_WAIT} ಸೆಕೆಂಡ್ ಕಾಯಿರಿ.`,
     newHere: "ಹೊಸಬರೇ? ಇದರಿಂದ ನಿಮ್ಮ ಖಾತೆ ತೆರೆಯುತ್ತದೆ.", or: "ಅಥವಾ",
     emailSignup: "ಇಮೇಲ್‌ನಿಂದ ಖಾತೆ ತೆರೆಯಿರಿ",
     sentTo: (n) => <><b className="text-fg">{n}</b> ಗೆ ಕೋಡ್ ಕಳುಹಿಸಲಾಗಿದೆ</>,
-    waitBox: `ಕೋಡ್‌ಗಾಗಿ ${CODE_WAIT} ಸೆಕೆಂಡ್‌ವರೆಗೆ ಕಾಯಿರಿ. ಈಗಲೇ ಹೊಸ ಕೋಡ್ ಕೇಳಬೇಡಿ.`,
+    waitBox: `ಕೋಡ್ ಬರಲು ಸುಮಾರು ${CODE_WAIT} ಸೆಕೆಂಡ್ ಬೇಕು. ಈಗಲೇ ಹೊಸ ಕೋಡ್ ಕೇಳಬೇಡಿ.`,
     verify: "ಪರಿಶೀಲಿಸಿ ಮುಂದುವರಿಯಿರಿ", checking: "ಪರಿಶೀಲಿಸುತ್ತಿದೆ…", noCode: "ಕೋಡ್ ಬರಲಿಲ್ಲವೇ?", resendIn: "ಮತ್ತೆ ಕಳುಹಿಸಲು", resend: "ಮತ್ತೆ ಕಳುಹಿಸಿ",
     otherNumber: "ಬೇರೆ ನಂಬರ್ ಬಳಸಿ", havePw: "ಪಾಸ್‌ವರ್ಡ್ ಇದೆಯೇ?", pwLogin: "ಪಾಸ್‌ವರ್ಡ್‌ನಿಂದ ಲಾಗಿನ್", consent: "18 ವರ್ಷದೊಳಗಿನ ವಿದ್ಯಾರ್ಥಿಗಳಿಗೆ ಪೋಷಕರ ಒಪ್ಪಿಗೆ ಬೇಕು.",
   },
@@ -280,7 +281,7 @@ function LoginForm() {
       ? await supabase.auth.signInWithOtp({ phone: `+${codeTo.phone}`, options: { shouldCreateUser: true, channel: "sms" } })
       : await supabase.auth.signInWithOtp({ email: codeTo.email, options: { emailRedirectTo: callback } });
     setBusy(false);
-    setWait(byWhatsApp ? CODE_WAIT : 60); // server allows 1 code per minute; WhatsApp ones can take longer to arrive
+    setWait(60); // WhatsApp and email both allow 1 code per minute; a failed send may still use it up
     if (error) {
       const msg = friendly(error.message);
       setError(msg);
