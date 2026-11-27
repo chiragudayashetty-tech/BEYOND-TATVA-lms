@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { CheckCircle2, Loader2, Lock, MessageCircle, ShieldCheck, Tag } from "lucide-react";
 import { isInApp } from "@/lib/android-app";
 import PayLogos from "@/components/PayLogos";
@@ -25,7 +26,7 @@ async function post(url, body) {
   }
 }
 
-export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, paidId }) {
+export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, paidId, paidClaim }) {
   const [mobile, setMobile] = useState("");
   const [code, setCode] = useState("");
   const [coupon, setCoupon] = useState(null); // { code, price }
@@ -33,7 +34,7 @@ export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, p
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null); // { tone, text, paymentId? }
   // After paying we load a fresh /pay?paid=… page (iPhone Safari could crash re-rendering under the Razorpay window).
-  const [paid] = useState(paidPhone ? { phone: paidPhone, paymentId: paidId } : null);
+  const [paid] = useState(paidPhone ? { phone: paidPhone, paymentId: paidId, claim: paidClaim } : null);
   // The tab may also reload while the parent is in the UPI app: offer "already paid?" for that number.
   const [lastPhone, setLastPhone] = useState("");
   useEffect(() => {
@@ -88,6 +89,7 @@ export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, p
         // Even when saving is delayed the webhook records it, so the next step is the same.
         if (saved || data.paid) {
           const q = new URLSearchParams({ paid: data.phone || mobile, id: resp.razorpay_payment_id });
+          if (data.claim) q.set("c", data.claim);
           if (data.delayed) q.set("delayed", "1");
           return window.location.replace(`/pay?${q}`);
         }
@@ -105,24 +107,7 @@ export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, p
     rzp.open();
   }
 
-  if (paid) {
-    const next = `/login?phone=${paid.phone}&next=${encodeURIComponent("/course")}`;
-    return (
-      <div className="mt-5">
-        <p className="flex items-center gap-2 text-lg font-semibold text-success"><CheckCircle2 className="h-5 w-5" /> Payment done!</p>
-        <p className="mt-1 text-xs text-muted">Payment ID: {paid.paymentId}</p>
-        <ol className="mt-4 space-y-2 text-sm">
-          <li><b>1.</b> Confirm <b>{paid.phone}</b> with a WhatsApp code.</li>
-          <li><b>2.</b> Fill in the student&apos;s details.</li>
-          <li><b>3.</b> The course opens.</li>
-        </ol>
-        <a href={next} className="btn-primary mt-4 w-full">Continue</a>
-        <p className="mt-2 text-xs text-muted">Always sign in with this number: your payment is saved on it.</p>
-        
-        {waLink(paid.paymentId) && <a href={waLink(paid.paymentId)} target="_blank" rel="noopener" className="btn-secondary mt-3 w-full"><MessageCircle className="h-4 w-4" /> Need help? WhatsApp us</a>}
-      </div>
-    );
-  }
+  if (paid) return <PaidVerify paid={paid} help={waLink(paid.paymentId)} />;
 
   if (!enabled) {
     return (
@@ -189,5 +174,112 @@ export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, p
       <PayLogos className="mt-5" />
       <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted"><ShieldCheck className="h-3.5 w-3.5" /> 100% secure payment by Razorpay</p>
     </>
+  );
+}
+
+// After paying: the WhatsApp code goes to the number they paid with, typed right here. "Change number" signs in
+// with another number and moves the waiting payment to it (/api/guest-claim, needs this browser's claim token).
+// Then the sign-up box (/onboarding), or straight to the course for a number that already has an account.
+function PaidVerify({ paid, help }) {
+  const [phone, setPhone] = useState(paid.phone);
+  const [editing, setEditing] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [wait, setWait] = useState(0);
+  const auto = useRef(false);
+
+  useEffect(() => {
+    if (wait <= 0) return;
+    const t = window.setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => window.clearTimeout(t);
+  }, [wait]);
+
+  async function send(to = phone) {
+    if (!/^[6-9]\d{9}$/.test(to)) return setError("Enter a 10-digit WhatsApp number.");
+    setBusy(true);
+    setError("");
+    await fetch("/api/auth/phone-account", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ phone: `91${to}` }) }).catch(() => {});
+    const { error } = await createClient().auth.signInWithOtp({ phone: `+91${to}`, options: { shouldCreateUser: true, channel: "sms" } });
+    setBusy(false);
+    setWait(60);
+    if (error) return setError(/rate|seconds|too many/i.test(error.message) ? "Please wait a minute before asking for another code." : "Couldn't send the code. Check the number is on WhatsApp and try again.");
+    setSent(true);
+    setEditing(false);
+    setCode("");
+  }
+
+  // Send the code once, as soon as the payment is done (not again on every reload).
+  useEffect(() => {
+    if (auto.current) return;
+    auto.current = true;
+    const key = `bt_pay_code_${paid.paymentId}`;
+    let first = true;
+    try { first = !sessionStorage.getItem(key); sessionStorage.setItem(key, "1"); } catch {}
+    const t = window.setTimeout(() => (first ? send(paid.phone) : setSent(true)), 0);
+    return () => window.clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function verify(token) {
+    setBusy(true);
+    setError("");
+    const res = await fetch("/api/auth/phone-accounts", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "verify", phone: `91${phone}`, token }) }).then((x) => x.json()).catch(() => ({ error: "Couldn't check the code. Try again." }));
+    if (res.error) { setBusy(false); return setError(/expired|invalid/i.test(res.error) ? "That code is wrong or expired. Check WhatsApp, or send a new one." : res.error); }
+    await fetch("/api/auth/settle", { method: "POST" }).catch(() => {});
+    if (phone !== paid.phone && paid.claim) {
+      await fetch("/api/guest-claim", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ payment_id: paid.paymentId, claim: paid.claim }) }).catch(() => {});
+    }
+    try { sessionStorage.removeItem("bt_pay_phone"); } catch {}
+    await createClient().rpc("claim_purchases");
+    // Several accounts on one number ("Which student?") are handled on the login page.
+    const many = await fetch("/api/auth/phone-accounts").then((x) => (x.ok ? x.json() : null)).catch(() => null);
+    window.location.replace(many?.accounts?.length > 1 ? "/login?next=%2Fcourse" : "/onboarding?next=%2Fcourse");
+  }
+
+  function onCode(v) {
+    const d = v.replace(/\D/g, "").slice(0, 6);
+    setCode(d);
+    if (d.length === 6 && !busy) verify(d);
+  }
+
+  return (
+    <div className="mt-5">
+      <div className="flex items-center gap-3 rounded-xl bg-success-soft p-3">
+        <CheckCircle2 className="h-6 w-6 shrink-0 text-success" />
+        <div><p className="font-semibold text-success">Payment done!</p><p className="text-xs text-muted">Payment ID: {paid.paymentId}</p></div>
+      </div>
+      <div className="mt-3 flex gap-1.5" aria-hidden="true">
+        {["Pay", "Code", "Details"].map((s, i) => <span key={s} className={`h-1.5 flex-1 rounded-full ${i === 0 ? "bg-success" : i === 1 ? "bg-primary" : "bg-border"}`} />)}
+      </div>
+      <p className="mt-1 text-xs text-muted">Step 2 of 3 · verify your number</p>
+
+      {editing ? (
+        <form onSubmit={(e) => { e.preventDefault(); send(phone); }} className="mt-4">
+          <span className="label">New WhatsApp number</span>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <img src="/pay/whatsapp.svg" alt="" className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2" />
+              <span className="pointer-events-none absolute left-11 top-1/2 -translate-y-1/2 text-lg text-muted">+91</span>
+              <input className="input !pl-[5.25rem] text-lg" type="tel" inputMode="numeric" maxLength={10} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="10-digit number" autoFocus />
+            </div>
+          </div>
+          <button disabled={busy || wait > 0} className="btn-primary mt-3 w-full">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{wait > 0 ? `Send code in ${wait}s` : "Send code"}</button>
+          <p className="mt-2 text-xs text-muted">Your payment moves to this number. Always sign in with it.</p>
+        </form>
+      ) : (
+        <div className="mt-4">
+          <p className="text-sm">{sent ? <>We sent a 6-digit code on WhatsApp to</> : <>Sending a code on WhatsApp to</>} <b>+91 {phone}</b>
+            <button type="button" onClick={() => { setEditing(true); setError(""); setWait(0); setPhone(""); }} className="ml-2 font-semibold text-primary underline">Change number</button></p>
+          <input className="input mt-3 text-center text-2xl tracking-[0.5em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => onCode(e.target.value)} placeholder="••••••" aria-label="6-digit code" autoFocus disabled={busy} />
+          <button type="button" disabled={busy || code.length < 6} onClick={() => verify(code)} className="btn-primary mt-3 w-full">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Verify and continue</button>
+          <button type="button" disabled={busy || wait > 0} onClick={() => send(phone)} className="mt-2 w-full py-2 text-sm text-muted underline disabled:no-underline">{wait > 0 ? `Resend code in ${wait}s` : "Resend code"}</button>
+        </div>
+      )}
+      {error && <p role="alert" className="mt-3 rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
+      {help && <a href={help} target="_blank" rel="noopener" className="btn-secondary mt-4 w-full"><MessageCircle className="h-4 w-4" /> Need help? WhatsApp us</a>}
+    </div>
   );
 }
