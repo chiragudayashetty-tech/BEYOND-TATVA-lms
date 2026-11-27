@@ -19,11 +19,21 @@ export async function guestPrice(code) {
   return Number.isInteger(data?.price_inr) ? data.price_inr : null;
 }
 
-// Safe to call many times (verify + webhook): the payment id is the purchase reference.
-export function recordGuestPurchase(paymentId, phone, amountPaise) {
-  return createAdminClient().rpc("record_purchase", {
+// Safe to call many times (verify + webhook): the payment id is the purchase and lead reference.
+// Also saves a lead (source "pay-page") so the payer shows in Pipeline before they sign in.
+export async function recordGuestPurchase(paymentId, phone, amountPaise) {
+  const admin = createAdminClient();
+  const result = await admin.rpc("record_purchase", {
     p_reference: paymentId,
     p_phone: `+91${phone}`,
     p_amount_paise: Number.isInteger(amountPaise) ? amountPaise : null,
   });
+  const { error } = await admin.rpc("record_lead", {
+    p_reference: `pay:${paymentId}`,
+    p_phone: `+91${phone}`,
+    p_source: "pay-page",
+    p_details: { paid: true, payment_id: paymentId, amount_inr: Number.isInteger(amountPaise) ? amountPaise / 100 : null },
+  });
+  if (error) console.error("guest lead failed", paymentId, error.message); // the payment is what matters
+  return result;
 }
