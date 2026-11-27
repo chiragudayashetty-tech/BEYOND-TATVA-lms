@@ -2,6 +2,7 @@ import Logo from "@/components/Logo";
 import AppNoPurchase from "@/components/AppNoPurchase";
 import { getCourse } from "@/lib/data";
 import GuestPay from "./GuestPay";
+import { Lock } from "lucide-react";
 
 export const metadata = { title: "Pay for the course · Beyond Tatva" };
 export const dynamic = "force-dynamic"; // payment keys and price read on each request
@@ -14,13 +15,13 @@ export default async function PayPage() {
       <div className="w-full max-w-md">
         <div className="mb-6 flex justify-center"><Logo /></div>
         <section className="card p-6">
-          <h1 className="text-xl font-semibold">{course.title}</h1>
-          <p className="web-only mt-1 text-sm text-muted">Just your WhatsApp number to pay. Fill in the student&apos;s details after paying.</p>
+          <h1 className="flex items-center gap-2 text-xl font-semibold"><Lock className="h-5 w-5 text-success" /> Secure checkout</h1>
+          <p className="web-only mt-1 text-sm text-muted">No account needed. Fill in the student&apos;s details after paying.</p>
           <AppNoPurchase className="mt-4" />
           <div className="web-only">
             <GuestPay
+              title={course.title}
               price={course.price}
-              listPrice={course.listPrice}
               enabled={Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)}
               whatsapp={(process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "").replace(/\D/g, "")}
             />
