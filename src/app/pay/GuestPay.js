@@ -191,6 +191,9 @@ function PaidVerify({ paid, help }) {
   const [error, setError] = useState("");
   const [wait, setWait] = useState(0);
   const auto = useRef(false);
+  const [skip, setSkip] = useState(false); // "Code not coming?" → choose a password instead
+  const [pw, setPw] = useState("");
+  const [signin, setSignin] = useState(false);
 
   useEffect(() => {
     if (wait <= 0) return;
@@ -246,6 +249,18 @@ function PaidVerify({ paid, help }) {
     window.location.replace(many?.accounts?.length > 1 ? "/login?next=%2Fcourse" : "/onboarding?next=%2Fcourse");
   }
 
+  // Skip the code: the paying browser's claim token proves the payment (/api/guest-session). New numbers only.
+  async function skipCode(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const { ok, data } = await post("/api/guest-session", { payment_id: paid.paymentId, claim: paid.claim, password: pw });
+    if (!ok) { setBusy(false); setSignin(Boolean(data.signin)); return setError(data.error || "Couldn't continue. Message us and we'll unlock it."); }
+    try { sessionStorage.removeItem("bt_pay_phone"); } catch {}
+    await createClient().rpc("claim_purchases");
+    window.location.replace("/onboarding?next=%2Fcourse");
+  }
+
   function onCode(v) {
     const d = v.replace(/\D/g, "").slice(0, 6);
     setCode(d);
@@ -283,10 +298,23 @@ function PaidVerify({ paid, help }) {
           <input className="input mt-3 text-center text-2xl tracking-[0.5em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => onCode(e.target.value)} placeholder="••••••" aria-label="6-digit code" autoFocus disabled={busy} />
           <button type="button" disabled={busy || code.length < 6} onClick={() => verify(code)} className="btn-primary mt-3 w-full">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Verify and continue</button>
           <button type="button" disabled={busy || wait > 0} onClick={() => send(phone)} className="mt-2 w-full py-2 text-sm text-muted underline disabled:no-underline">{wait > 0 ? `Resend code in ${wait}s` : "Resend code"}</button>
-          {sent && <p className="mt-1 text-center text-xs text-muted">No code? Check WhatsApp (not SMS) on this number. Still nothing after a resend? Tap &quot;WhatsApp us&quot; below and we&apos;ll unlock it for you.</p>}
+          {sent && <p className="mt-1 text-center text-xs text-muted">No code? Check WhatsApp (not SMS) on this number.</p>}
+          {paid.claim && phone === paid.phone && (skip ? (
+            <form onSubmit={skipCode} className="mt-4 rounded-xl border border-border p-3">
+              <p className="text-sm font-semibold">Skip the code: choose a password</p>
+              <input className="input mt-2" type="password" autoComplete="new-password" minLength={8} maxLength={72} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="At least 8 letters and numbers" aria-label="New password" required />
+              <p className="mt-2 rounded-lg bg-surface-2 p-2 text-xs">
+                <b>Save this.</b> To sign in again later, open <b>learn.beyondtatva.in/login</b>, type <b>{phone}</b> and this password. (The WhatsApp code works too, once it arrives.)
+              </p>
+              <button disabled={busy || pw.length < 8} className="btn-primary mt-3 w-full">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Continue without code</button>
+            </form>
+          ) : (
+            <button type="button" onClick={() => { setSkip(true); setError(""); }} className="mt-3 w-full rounded-xl bg-surface-2 py-3 text-sm font-semibold">Code not coming? Skip it</button>
+          ))}
         </div>
       )}
       {error && <p role="alert" className="mt-3 rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
+      {signin && <a href={`/login?phone=${phone}&next=%2Fcourse`} className="btn-primary mt-3 w-full">Sign in and open the course</a>}
       {help && <a href={help} target="_blank" rel="noopener" className="btn-secondary mt-4 w-full"><MessageCircle className="h-4 w-4" /> Need help? WhatsApp us</a>}
     </div>
   );
