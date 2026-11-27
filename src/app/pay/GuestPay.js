@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { CheckCircle2, Loader2, Lock, MessageCircle, ShieldCheck, Tag } from "lucide-react";
 import { isInApp } from "@/lib/android-app";
 import PayLogos from "@/components/PayLogos";
+import OpenCodeChat from "@/components/OpenCodeChat";
 
 function loadCheckout() {
   if (window.Razorpay) return Promise.resolve(true);
@@ -295,10 +296,11 @@ function PaidVerify({ paid, help }) {
         <div className="mt-4">
           <p className="text-sm">{sent ? <>We sent a 6-digit code on WhatsApp to</> : <>Sending a code on WhatsApp to</>} <b>+91 {phone}</b>
             <button type="button" onClick={() => { setEditing(true); setError(""); setWait(0); setPhone(""); }} className="ml-2 font-semibold text-primary underline">Change number</button></p>
+          {sent && <OpenCodeChat className="mt-3" />}
           <input className="input mt-3 text-center text-2xl tracking-[0.5em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => onCode(e.target.value)} placeholder="••••••" aria-label="6-digit code" autoFocus disabled={busy} />
           <button type="button" disabled={busy || code.length < 6} onClick={() => verify(code)} className="btn-primary mt-3 w-full">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Verify and continue</button>
           <button type="button" disabled={busy || wait > 0} onClick={() => send(phone)} className="mt-2 w-full py-2 text-sm text-muted underline disabled:no-underline">{wait > 0 ? `Resend code in ${wait}s` : "Resend code"}</button>
-          {sent && <p className="mt-1 text-center text-xs text-muted">No code? Check WhatsApp (not SMS) on this number.</p>}
+          {sent && <p className="mt-1 text-center text-xs text-muted">Only the newest code works. A new code can be asked once a minute.</p>}
           {paid.claim && phone === paid.phone && (skip ? (
             <form onSubmit={skipCode} className="mt-4 rounded-xl border border-border p-3">
               <p className="text-sm font-semibold">Skip the code: choose a password</p>

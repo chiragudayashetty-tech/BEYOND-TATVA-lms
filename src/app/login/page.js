@@ -14,6 +14,7 @@ import { cleanEmail, indianMobile, parseLoginId, passwordProblem, showPhone } fr
 import { supportWhatsApp } from "@/lib/social";
 import LangToggle from "@/components/LangToggle";
 import WhatsAppIcon from "@/components/WhatsAppIcon";
+import OpenCodeChat from "@/components/OpenCodeChat";
 import { readLang, saveLang } from "@/lib/lang";
 
 // How long a WhatsApp code usually takes (Chirag 2026-11-27: "wait 10 sec"). "Send again" still waits 60 s:
@@ -536,6 +537,7 @@ function LoginForm() {
           {byWhatsApp ? <>
             <p className="text-sm text-muted">{t.sentTo(showPhone(codeTo.phone))}</p>
             <p className="rounded-xl bg-warning-soft p-3 text-sm font-medium">⏱️ {t.waitBox}</p>
+            <OpenCodeChat kn={lang === "kn"} />
           </> : <p className="text-sm text-muted">We sent an {codeLength}-digit code to <b className="text-fg">{contact}</b>. You can also just tap the link in the email.</p>}
           <input className="input text-center text-2xl tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={codeLength} value={code} onChange={(e) => onCode(e.target.value)} onPaste={(e) => { e.preventDefault(); onCode(e.clipboardData.getData("text")); }} placeholder={"•".repeat(codeLength)} aria-label={`${codeLength}-digit code`} autoFocus required />
           <button disabled={busy} className="btn-primary min-h-12 w-full py-3">{busy ? t.checking : t.verify}</button>
