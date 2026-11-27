@@ -68,6 +68,10 @@ const waEvent = (track, outcome, msg, error) => track(`whatsapp_${outcome}`, `wh
 export async function runAutomations(db, { now = new Date(), force = false, send = sendAisensy, track = trackServer } = {}) {
   if (!force && !inSendWindow(now)) return { waiting: true, sent: 0, failed: 0 };
   if (!process.env.AISENSY_API_KEY && send === sendAisensy) return { off: true, sent: 0, failed: 0 };
+  // Queue the time-based course messages that are due now (m0 nudges, weekly modules, reports…). A failure here
+  // must not stop the sending of messages already queued.
+  const { error: tickError } = await db.rpc("automation_tick");
+  if (tickError) console.error("automation_tick failed", tickError.message);
   const { data: batch, error } = await db.rpc("automation_claim", { p_limit: PER_RUN });
   if (error) throw new Error(error.message);
   let sent = 0, failed = 0;

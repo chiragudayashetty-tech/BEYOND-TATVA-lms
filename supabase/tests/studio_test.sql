@@ -1353,3 +1353,59 @@ select 'K2 unused key shows the key question' t, (select has_keys from public.si
 update public.access_keys set redeemed_by = '5c000000-0000-0000-0000-0000000000a1' where code = 'KODI-KEY-1';
 select 'K3 all keys used: no key question' t, (select not has_keys from public.signup_schools() where name = 'Kodi School') as pass;
 delete from public.access_keys where code = 'KODI-KEY-1';
+
+-- WhatsApp course journey (20261127000002): automation_tick queues due messages once, never for test accounts.
+reset role;
+update public.automation_rules set campaign = 'c_' || key, enabled = true
+  where key in ('m0_welcome', 'm0_nudge_offer', 'enrolled_congrats', 'course_overview', 'newsletter');
+insert into auth.users (id, email) values ('a7000000-0000-0000-0000-000000000001', 'j1@x.in'), ('a7000000-0000-0000-0000-000000000002', 'j2@x.in');
+insert into public.profiles (id, role, full_name, grade, guardian_name, guardian_phone, guardian_consent_at, consent_by, created_at)
+values ('a7000000-0000-0000-0000-000000000001', 'student', 'Journey Kid', 9, 'Mum', '+919845066601', now(), 'student', now() - interval '10 minutes'),
+       ('a7000000-0000-0000-0000-000000000002', 'student', 'Test Kid', 9, 'Mum', '+919845066602', now(), 'student', now() - interval '10 minutes');
+update public.profiles set is_test = true where id = 'a7000000-0000-0000-0000-000000000002';
+select public.automation_tick();
+select public.automation_tick();
+select 'W1 new student gets the Module 0 welcome once' t,
+  (select count(*) = 1 from public.message_queue where rule_key = 'm0_welcome' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+select 'W2 its params: first name, Module 0 link, pay link' t,
+  (select params = '["Journey", "https://learn.beyondtatva.in/course", "https://learn.beyondtatva.in/pay"]'::jsonb
+   from public.message_queue where rule_key = 'm0_welcome' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+select 'W3 test accounts get nothing' t,
+  (select count(*) = 0 from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000002') as pass;
+update public.profiles set created_at = now() - interval '30 hours' where id = 'a7000000-0000-0000-0000-000000000001';
+update public.coupons set active = false;
+select public.automation_tick();
+select 'W4 no offer message without a coupon end date' t,
+  (select count(*) = 0 from public.message_queue where rule_key = 'm0_nudge_offer') as pass;
+insert into public.course_access (student_id, course_id, source, granted_at) values ('a7000000-0000-0000-0000-000000000001', 'ai-for-students', 'admin', now() - interval '3 hours');
+select public.automation_tick();
+select 'W5 enrolled: congratulations and overview, once each' t,
+  (select count(*) filter (where rule_key = 'enrolled_congrats') = 1 and count(*) filter (where rule_key = 'course_overview') = 1
+   from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+insert into public.newsletters (title, file_path, mime, size_bytes) values ('November news', '2026-11/journey-news.pdf', 'application/pdf', 100);
+select 'W6 newsletter goes to enrolled students only' t,
+  (select count(*) filter (where student_id = 'a7000000-0000-0000-0000-000000000001') = 1
+      and count(*) filter (where student_id = 'a7000000-0000-0000-0000-000000000002') = 0
+      and bool_and(exists (select 1 from public.course_access a where a.student_id = q.student_id))
+   from public.message_queue q where rule_key = 'newsletter') as pass;
+set role authenticated;
+do $$ begin perform public.automation_tick(); raise exception 'W7 FAIL';
+exception when others then if sqlerrm like 'W7%' then raise; end if; raise notice 'W7 pass: only the sender can run the tick'; end $$;
+reset role;
+-- Weekly module messages: a module that opened 11 h ago, nothing watched → open + 8 pm reminder; a week-old one with an unpassed quiz → work_due.
+update public.automation_rules set campaign = 'c_' || key, enabled = true where key in ('module_open', 'module_reminder_1', 'work_due');
+update public.course_access set unlock_all = true where student_id = 'a7000000-0000-0000-0000-000000000001';
+insert into public.courses (id, title) values ('ai-for-students', 'AI') on conflict (id) do nothing;
+insert into public.chapters (id, course_id, title, position, release_at, is_free) values
+  ('a7c00000-0000-0000-0000-000000000001', 'ai-for-students', 'Wk new', 4, now() - interval '11 hours', false),
+  ('a7c00000-0000-0000-0000-000000000002', 'ai-for-students', 'Wk old', 5, now() - interval '7 days 3 hours', false);
+insert into public.lessons (course_id, chapter_id, title, position) values
+  ('ai-for-students', 'a7c00000-0000-0000-0000-000000000001', 'L new', 901), ('ai-for-students', 'a7c00000-0000-0000-0000-000000000002', 'L old', 902);
+insert into public.quizzes (chapter_id, title, published) values ('a7c00000-0000-0000-0000-000000000002', 'Quiz old', true);
+update public.course_access set granted_at = now() - interval '9 days' where student_id = 'a7000000-0000-0000-0000-000000000001';
+select public.automation_tick();
+select 'W8 module opened 11 h ago, not watched: 8 pm reminder' t,
+  (select count(*) = 1 from public.message_queue where rule_key = 'module_reminder_1' and dedupe = 'rem1:a7000000-0000-0000-0000-000000000001:a7c00000-0000-0000-0000-000000000001') as pass;
+select 'W9 quiz not passed a week later: work_due names the quiz' t,
+  (select params ->> 2 = 'quiz' from public.message_queue where rule_key = 'work_due' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+delete from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000001';
