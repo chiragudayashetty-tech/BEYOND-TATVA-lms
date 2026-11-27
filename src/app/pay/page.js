@@ -4,6 +4,7 @@ import { getCourse } from "@/lib/data";
 import GuestPay from "./GuestPay";
 
 export const metadata = { title: "Pay for the course · Beyond Tatva" };
+export const dynamic = "force-dynamic"; // payment keys and price read on each request
 
 // Public pay page: phone number → Razorpay → sign in with a WhatsApp code on that number → details → course.
 export default async function PayPage() {
@@ -14,7 +15,7 @@ export default async function PayPage() {
         <div className="mb-6 flex justify-center"><Logo /></div>
         <section className="card p-6">
           <h1 className="text-xl font-semibold">{course.title}</h1>
-          <p className="web-only mt-1 text-sm text-muted">Pay first, no account needed. After paying, confirm your number with a WhatsApp code, fill in a few details and the course opens.</p>
+          <p className="web-only mt-1 text-sm text-muted">Just your WhatsApp number to pay. Fill in the student&apos;s details after paying.</p>
           <AppNoPurchase className="mt-4" />
           <div className="web-only">
             <GuestPay
