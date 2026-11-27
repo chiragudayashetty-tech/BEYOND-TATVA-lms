@@ -35,7 +35,7 @@ function groupRows(rows) {
 export default async function PipelinePage({ searchParams }) {
   const sp = await searchParams;
   const { stage: stageParam, stalled, view: viewParam, followups, tab: tabParam } = sp;
-  const tab = ["closed", "test"].includes(tabParam) ? tabParam : "open";
+  const tab = ["closed", "bought", "test"].includes(tabParam) ? tabParam : "open";
   const f = parseFilters(sp);
   const today = todayIST();
   const view = viewParam === "schools" ? "schools" : "parents";
@@ -63,15 +63,19 @@ export default async function PipelinePage({ searchParams }) {
   // School / class / section / status / source / siblings / due / search (src/lib/crm.js). Stage cards count after these.
   const filteredAll = applyFilters(everyone, f, today, isDue);
   const realFiltered = tab === "test" ? applyFilters(inView.filter((r) => !r.is_test), f, today, isDue) : filteredAll;
-  const openCount = realFiltered.filter((r) => !isClosed(r)).length, closedCount = realFiltered.length - openCount;
+  // Tabs: Open, Closed (lost / do not contact), Bought (has the course, stage 5), Test accounts.
+  const isBought = (r) => r.stage === 5;
+  const notBought = realFiltered.filter((r) => !isBought(r));
+  const openCount = notBought.filter((r) => !isClosed(r)).length, closedCount = notBought.length - openCount;
+  const boughtCount = realFiltered.length - notBought.length;
   // Open / Closed tabs (closed = won, lost or do not contact). A status filter picks its own tab.
-  // Buyers are marked Won (Closed), but the Bought card should still list them: it ignores the Open/Closed tab.
-  const all = f.outcome || tab === "test" || stage === 5 ? filteredAll : filteredAll.filter((r) => isClosed(r) === (tab === "closed"));
+  const all = tab === "test" ? filteredAll : tab === "bought" ? filteredAll.filter(isBought)
+    : (f.outcome ? filteredAll : filteredAll.filter((r) => isClosed(r) === (tab === "closed"))).filter((r) => !isBought(r));
   const rows = sortRows(all.filter((r) => (stage ? r.stage === stage : true) && (stalled ? r.stalled : true) && (followups ? isDue(r) : true)));
   const bySchool = f.group === "school" && !f.school ? groupBySchool(all) : null;
   const breakdown = f.school ? classSections(all) : null;
   const filtered = Boolean(filterQuery({ ...f, group: null }));
-  const count = (id) => (id === 5 && tab !== "test" ? filteredAll : all).filter((r) => r.stage === id).length;
+  const count = (id) => all.filter((r) => r.stage === id).length;
   const stalledCount = all.filter((r) => r.stalled).length;
   const dueCount = all.filter(isDue).length;
   const href = (q, change = {}) => {
@@ -123,8 +127,8 @@ export default async function PipelinePage({ searchParams }) {
       </form>
 
       {(!f.outcome || tab === "test") && (
-        <div className="mb-4 flex gap-2" role="tablist" aria-label="Open or closed leads">
-          {[["open", `Open (${openCount})`], ["closed", `Closed (${closedCount})`], ["test", `Test accounts (${testRows.length})`]].map(([id, label]) => (
+        <div className="mb-4 flex gap-2" role="tablist" aria-label="Open, closed or bought">
+          {[["open", `Open (${openCount})`], ["closed", `Closed (${closedCount})`], ["bought", `Bought (${boughtCount})`], ["test", `Test accounts (${testRows.length})`]].map(([id, label]) => (
             <Link key={id} role="tab" aria-selected={tab === id} className={`${tab === id ? "btn-primary" : "btn-secondary"} min-h-11`}
               href={`/admin/pipeline?${[view === "schools" && "view=schools", id !== "open" && `tab=${id}`, filterQuery(f)].filter(Boolean).join("&")}`}>{label}</Link>
           ))}
@@ -176,8 +180,8 @@ export default async function PipelinePage({ searchParams }) {
         </Card>
       )}
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {STAGES.map((s) => (
+      {tab !== "bought" && <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {STAGES.filter((s) => s.id !== 5).map((s) => (
           <Link key={s.id} href={href(stage === s.id ? "" : `stage=${s.id}`)}
             className={`card p-4 transition hover:bg-surface-2 ${stage === s.id ? "ring-4 ring-primary/20 border-primary" : ""}`}>
             <div className="text-xs text-muted">{s.id}. {s.label}</div>
@@ -185,10 +189,10 @@ export default async function PipelinePage({ searchParams }) {
             <div className="mt-1 text-xs text-subtle">{s.body}</div>
           </Link>
         ))}
-      </div>
+      </div>}
 
       <Card pad={false}
-        title={`${stage ? STAGES[stage - 1].label : "Everyone"}${stalled ? " · stopped" : ""} (${rows.length})`}
+        title={`${tab === "bought" ? "Bought" : stage ? STAGES[stage - 1].label : "Everyone"}${stalled ? " · stopped" : ""} (${rows.length})`}
         action={
           <Link href={href(stalled ? (stage ? `stage=${stage}` : "") : `stalled=1${stage ? `&stage=${stage}` : ""}`)} className="inline-flex min-h-11 items-center gap-1 text-xs text-primary">
             <Filter size={14} /> {stalled ? "Show all" : `Stopped watching > ${STALL_HOURS}h (${stalledCount})`}
