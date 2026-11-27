@@ -1,131 +1,155 @@
-# WhatsApp course journey: AiSensy templates
+# WhatsApp journey: AiSensy templates (v2)
 
-Built 2026-11-27 (migration `20261127000002_course_whatsapp_journey`). Every message goes to the **parent's WhatsApp**.
-Test accounts never get them. Reminders are capped at 2 per number per day. Sending runs 9:00–21:00 IST only.
+Built 2026-11-27 (migration `20261127000003_whatsapp_journey_v2`, replaces `20261127000002`). Plan reviewed with Chirag.
+
+- `_s` messages go to the **student** (English): their own WhatsApp from sign-up, or the parent's if they gave none.
+- `_p` messages go to the **parent** (Kannada).
+- Parent on Do not contact → the student gets nothing either.
+- Test and duplicate accounts never get messages. Nudges are capped at 2 per number per day.
+- The sender runs **every minute**, 9:00–21:00 IST (Leads Tracker Apps Script trigger `sendWhatsApp`).
+- Lead broadcasts after a workshop (photo, price, offer ends) and the newsletter text are manual: Studio → Pipeline → "WhatsApp these N".
 
 ## Setup (Chirag, once per template)
-1. AiSensy → Manage → Templates → **New**. Paste the name, category, language **English** and the body below.
-   `{{1}}`, `{{2}}`… must stay exactly as written (same order). Submit; Meta approves in minutes to a day.
-2. AiSensy → Campaigns → **API campaign** → pick the approved template → name it the **same as the template** → Go live.
-3. LMS Studio → **WhatsApp** → Messages → **Add**: the campaign name, **no placeholders** (the LMS fills them).
-   Then Auto-send → pick that message for the rule → **On**.
-   Each rule stays silent until it is On, so you can switch them on one by one.
+1. AiSensy → Templates → **New**: name = the key below, the category, language (English for `_s`, Kannada for `_p`), body below.
+   Keep `{{1}}`, `{{2}}`… exactly. Buttons: a **URL button** to `https://learn.beyondtatva.in` where noted. Submit.
+2. AiSensy → Campaigns → **API campaign** → that template → name it the **same as the key** → Go live.
+3. LMS Studio → **WhatsApp** → Auto-send → the rule with that key → set the campaign → **On**.
+   Every rule is Off until you switch it on, so you can go one by one.
 
-Links are sent as text inside the message (no button setup needed).
+The LMS fills every `{{n}}` itself. You never type them.
 
 ---
 
-### 1. `m0_welcome` · Utility · right after sign-up (not bought)
-```
-Hi! {{1}} has joined Beyond Tatva 🎉
+## Logged in, not enrolled
 
-Module 0 is free and ready now (about 20 minutes). Ask {{1}} to start here:
+### `j_welcome_s` · Utility · 1 min after sign-up · header: Module 0 PDF · button "Watch Module 0"
+```
+Hi {{1}}, welcome to Beyond Tatva! Your free Module 0 is unlocked.
+Watch it, take the quiz, and keep the attached guide handy.
+```
+### `j_welcome_p` · Utility · 1 min after sign-up
+```
+ನಮಸ್ಕಾರ! {{1}} ಇಂದು Beyond Tatva ಗೆ ಲಾಗಿನ್ ಆಗಿ ಉಚಿತ Module 0 ಆರಂಭಿಸಿದ್ದಾರೆ.
+ಅವರ ಪ್ರಗತಿಯನ್ನು ನಾವು ನಿಮಗೆ ತಿಳಿಸುತ್ತೇವೆ. – Beyond Tatva ತಂಡ
+```
+### `j_follow1_s` · Marketing · day 2, 6 pm · button "Join now" · {{2}} = status line
+```
+Knock knock. 🚪 Who's there? Your future self, asking why you haven't levelled up yet, {{1}}. 😄
 {{2}}
-
-Liked it? Unlock all 5 modules here: {{3}}
-
-ಮಾಡ್ಯೂಲ್ 0 ಉಚಿತ, ಈಗಲೇ ನೋಡಿ.
+```
+### `j_follow1_p` · Marketing · day 2, 6 pm · button "ಈಗಲೇ ಸೇರಿ" · {{2}} = status (Kannada)
+```
+ನಿಮ್ಮ ಮಗು AI ಪ್ರಪಂಚದ ಬಾಗಿಲಲ್ಲಿ ನಿಂತಿದೆ! 🚪 {{1}} ಸ್ಥಿತಿ: {{2}}. ಒಂದು ಹೆಜ್ಜೆ ಮುಂದೆ ಇಡಲು ಪ್ರೋತ್ಸಾಹಿಸಿ.
+```
+### `j_follow2_s` · Marketing · day 4, 6 pm · button "Join now"
+```
+Real talk, {{1}}. 🎯 Right now someone your age is using AI to finish a week of notes in 10 minutes. The gap starts small and grows fast.
+{{2}}
+```
+### `j_follow2_p` · Marketing · day 4, 6 pm · button "ಈಗಲೇ ಸೇರಿ"
+```
+ಒಂದು ಸತ್ಯ: ಇಂದು AI ಕಲಿಯದ ಮಕ್ಕಳು ನಾಳೆ ಸ್ಪರ್ಧೆಯಲ್ಲಿ ಹಿಂದೆ ಉಳಿಯುತ್ತಾರೆ. 📉 ಹಳೆಯ ರೀತಿಯ ಓದು ಸಮಯ ವ್ಯರ್ಥ. {{1}} ಸ್ಮಾರ್ಟ್ ಆಗಿ ಕಲಿಯಲಿ.
+```
+### `j_follow3_s` · Marketing · day 7, 6 pm · buttons "Join now", "Call me"
+```
+Last ping from us, {{1}}. 👋 Your seat in AI Superpowers is still saved. Grab it before the batch fills up. 🎟️
+```
+### `j_follow3_p` · Marketing · day 7, 6 pm · buttons "ಈಗಲೇ ಸೇರಿ", "ಕರೆ ಮಾಡಿ"
+```
+{{1}} ಗೆ ಸೀಟು ಇನ್ನೂ ಕಾಯ್ದಿರಿಸಲಾಗಿದೆ. 🎟️ ಏನಾದರೂ ಪ್ರಶ್ನೆ ಇದ್ದರೆ ಒಂದು ಕರೆ ಸಾಕು. 📞
 ```
 
-### 2. `m0_nudge_offer` · Marketing · 24 h later, only while a coupon with an end date is active
+## Enrolled
+
+### `j_enrolled_s` · Utility · 1 min after enrolling · header: course overview PDF · button "Open course"
 ```
-Hi! Has {{1}} watched Module 0 yet?
-
-The full AI course is ₹{{2}} with code {{3}} till {{4}}. After that it goes back to the normal price.
-Enroll: {{5}}
-
-ಆಫರ್ {{4}} ವರೆಗೆ ಮಾತ್ರ.
+🎉 You're IN, {{1}}! Welcome to the top 1% of students your age learning AI.
+📘 Your guide is attached: modules, XP, leaderboard, how it all works.
+📅 Module 1 drops {{2}}. Watch any day after.
 ```
-
-### 3. `enrolled_congrats` · Utility · right after payment
+### `j_enrolled_p` · Utility · 1 min after paying (payments only)
 ```
-Congratulations! 🎉 {{1}} is now enrolled in the Beyond Tatva AI course.
-
-Open the course: {{2}}
-
-Always sign in with this same WhatsApp number to watch.
-ಅಭಿನಂದನೆಗಳು! ಕೋರ್ಸ್ ಈಗ ತೆರೆದಿದೆ.
+ನಮಸ್ಕಾರ! ✅ {{1}} ಅವರ ನೋಂದಣಿ ಯಶಸ್ವಿ. ಪಾವತಿ ₹{{2}}, ರಸೀದಿ {{3}}. ಪ್ರತಿ ವಾರ ಪ್ರಗತಿ ವರದಿ ಕಳುಹಿಸುತ್ತೇವೆ. ನಂಬಿಕೆಗೆ ಧನ್ಯವಾದಗಳು! 🙏
+```
+### `j_quest_s` · Utility · next day, 6 pm · button "Open course"
+```
+Quick quest, {{1}}: {{2}} ⚡ Module 1 is coming {{3}}, be ready.
 ```
 
-### 4. `course_overview` · Utility · 2 h after payment
+## Weekly loop (same templates for all 5 modules)
+
+### `j_module_open_s` · Utility · module opens (Sunday 10 am) · header: module thumbnail · button "Watch now"
 ```
-Here is how {{1}}'s course works 📚
-
-• 5 modules, one opens every Sunday at 10 AM
-• Each module: short videos, a quiz and one small assignment
-• Every Saturday you get a progress report here
-• Finish all 5 → certificate
-
-First module opens: {{2}}
-Course: {{3}}
-
-ಪ್ರತಿ ಭಾನುವಾರ ಬೆಳಿಗ್ಗೆ 10ಕ್ಕೆ ಹೊಸ ಮಾಡ್ಯೂಲ್.
+🎬 New episode alert! Module {{2}} "{{3}}" just dropped, {{1}}. Watch any day this week, finish quiz + assignment for up to {{4}} XP. Current rank: #{{5}} 🏆
 ```
-
-### 5. `module_open` · Utility · Sunday 10 AM, each module
+### `j_module_open_p` · Utility · same time
 ```
-Module {{2}} is open now: {{3}} 🚀
-
-{{1}} can watch it here: {{4}}
-
-ಮಾಡ್ಯೂಲ್ {{2}} ಈಗ ತೆರೆದಿದೆ.
+📢 ಹೊಸ Module {{2}} "{{3}}" ಬಿಡುಗಡೆ! ಈ ವಾರ {{1}} ಕಲಿಯುವುದು: {{4}}.
 ```
-
-### 6. `module_reminder_1` · Utility · same day 8 PM, under 20 % watched
+### `j_module_done_s` · Utility · instead of module_open when last week's module is fully done
 ```
-Reminder: {{1}} hasn't started Module {{2}} yet.
-20 minutes tonight is enough to begin 👉 {{3}}
-
-ಇಂದು ರಾತ್ರಿ 20 ನಿಮಿಷ ಸಾಕು.
+Boss level cleared! 🏆 Module {{2}} done, {{1}}. Module {{3}} "{{4}}" is live. Keep the streak 🔥
 ```
-
-### 7. `module_reminder_2` · Utility · next day 7 PM, still under 20 %
+### `j_module_done_p` · Utility
 ```
-{{1}} is a little behind on Module {{2}}. A short session today keeps them on track for Sunday's next module.
-Watch: {{3}}
-
-ಮುಂದಿನ ಭಾನುವಾರದ ಮೊದಲು ಮುಗಿಸಿ.
+ಅಭಿನಂದನೆಗಳು! 🎉 {{1}} Module {{2}} ಪೂರ್ಣಗೊಳಿಸಿದ್ದಾರೆ (ವೀಡಿಯೊ, ಕ್ವಿಜ್, ಅಸೈನ್‌ಮೆಂಟ್). ಹೊಸ Module {{3}} ಇಂದು ಬಿಡುಗಡೆ.
 ```
-
-### 8. `parent_progress` · Utility · Saturday 6 PM, enrolled only
+### `j_nudge_tue_s` · Utility · Tuesday 6 pm, video not finished · button "Continue"
 ```
-Weekly report for {{1}} 📊
-
-Modules finished: {{2}}
-This week's module watched: {{3}}
-Quizzes passed: {{4}}
-
-See details: {{5}}
-
-ವಾರದ ಪ್ರಗತಿ ವರದಿ.
+Psst {{1}}... 👀 Module {{2}} is still waiting for you. 40 minutes, go!
+```
+### `j_nudge_thu_s` · Utility · Thursday 6 pm
+```
+📊 {{3}} classmates have already finished Module {{2}}. You're one video away from catching up, {{1}}.
+```
+### `j_nudge_sat_s` · Utility · Saturday 6 pm
+```
+⏰ Final whistle this week, {{1}}! Finish Module {{2}} today, a new module drops tomorrow.
+```
+### `j_pending_tue_s` · Utility · Tuesday 6 pm, watched but quiz/assignment left
+```
+Video ✅ Nice, {{1}}! Now the fun part of Module {{2}}: finish {{4}} for +{{3}} XP. 🧠
+```
+### `j_pending_thu_s` · Utility · Thursday 6 pm
+```
+So close, {{1}}! 🔥 Just {{3}} left on Module {{2}}. Finish it and climb the leaderboard.
+```
+### `j_parent_digest_p` · Utility · 7 pm, only on days the child finished something
+```
+📊 ಇಂದು {{1}} ಅವರ ಪ್ರಗತಿ (Module {{2}}): ವೀಡಿಯೊ {{3}} | ಕ್ವಿಜ್ {{4}} | ಅಸೈನ್‌ಮೆಂಟ್ {{5}}
 ```
 
-### 9. `work_due` · Utility · the next Sunday 12 PM, if pending
+## Course end
+
+### `j_course_done_s` · Utility · all modules finished · header: certificate image · button "Get certificate"
 ```
-{{1}} still has the Module {{2}} {{3}} to finish ✍️
-It takes about 15 minutes: {{4}}
-
-ಕ್ವಿಜ್ / ಅಸೈನ್‌ಮೆಂಟ್ ಬಾಕಿ ಇದೆ.
+🏅 ACHIEVEMENT UNLOCKED: AI Superpowers Graduate
+{{1}}, you passed {{2}} quizzes and handed in {{3}} assignments, finishing with {{4}} XP (rank #{{5}}).
+You now use AI for studies, creativity, life and building. Your certificate is ready. Be proud. 🎓
+```
+### `j_course_done_p` · Utility
+```
+🏅 ಹೆಮ್ಮೆಯ ಕ್ಷಣ!
+{{1}} AI Superpowers ಕೋರ್ಸ್ ಯಶಸ್ವಿಯಾಗಿ ಪೂರ್ಣಗೊಳಿಸಿದ್ದಾರೆ: 5 ಮಾಡ್ಯೂಲ್, {{2}} ಕ್ವಿಜ್, {{3}} ಅಸೈನ್‌ಮೆಂಟ್.
+ಓದು, ಸೃಜನಶೀಲತೆ ಮತ್ತು ಭವಿಷ್ಯಕ್ಕೆ ಬೇಕಾದ AI ಕೌಶಲ್ಯ ಈಗ ಅವರ ಕೈಯಲ್ಲಿದೆ. 🎓
+```
+### `j_review_s` / `j_review_p` · Utility · next day, 6 pm · button "Give feedback"
+```
+One last quest, {{1}}: rate the course in 2 minutes ⭐
+```
+```
+{{1}} ಅವರ ಕೋರ್ಸ್ ಬಗ್ಗೆ ನಿಮ್ಮ ಅಭಿಪ್ರಾಯ ನಮಗೆ ಮುಖ್ಯ 🙏
+```
+### `j_referral_s` · Marketing · 3 days after finishing · keep **Off** until referral rewards exist
+```
+Final boss, {{1}}: bring your squad. 🤝 Share your invite code {{2}} with friends and climb to #1 on the leaderboard together. 🏆
 ```
 
-### 10. `certificate_ready` · Utility · all modules finished
+## Newsletter (sent when a newsletter is uploaded in Studio → Content; enrolled only)
+### `j_newsletter_s` / `j_newsletter_p` · Utility · button "Read now"
 ```
-🎓 {{1}} has finished the Beyond Tatva AI course!
-
-Claim the certificate here: {{2}}
-
-ಅಭಿನಂದನೆಗಳು! ಪ್ರಮಾಣಪತ್ರ ಪಡೆಯಿರಿ.
+📰 Fresh from the AI world, {{1}}: {{2}}
 ```
-
-### 11. `newsletter` · Marketing · when you upload a newsletter in Studio → Content (enrolled only)
 ```
-This month's Beyond Tatva newsletter is out: {{2}} 📰
-
-{{1}} can read it here: {{3}}
-
-ಈ ತಿಂಗಳ ಸುದ್ದಿಪತ್ರ ಬಂದಿದೆ.
+📰 {{1}} ಗಾಗಿ ಈ ತಿಂಗಳ Beyond Tatva AI ನ್ಯೂಸ್‌ಲೆಟರ್: {{2}}
 ```
-
----
-
-Turn **off** the old rule "New student: how to log in" (`student_welcome`) once `m0_welcome` and `enrolled_congrats` are on, or parents get two welcomes.

@@ -1354,67 +1354,87 @@ update public.access_keys set redeemed_by = '5c000000-0000-0000-0000-0000000000a
 select 'K3 all keys used: no key question' t, (select not has_keys from public.signup_schools() where name = 'Kodi School') as pass;
 delete from public.access_keys where code = 'KODI-KEY-1';
 
--- WhatsApp course journey (20261127000002): automation_tick queues due messages once, never for test accounts.
+-- WhatsApp journey v2 (20261127000003): student (_s) + parent (_p) messages, queued once, never for test accounts.
 reset role;
-update public.automation_rules set campaign = 'c_' || key, enabled = true
-  where key in ('m0_welcome', 'm0_nudge_offer', 'enrolled_congrats', 'course_overview', 'newsletter');
-insert into auth.users (id, email) values ('a7000000-0000-0000-0000-000000000001', 'j1@x.in'), ('a7000000-0000-0000-0000-000000000002', 'j2@x.in');
-insert into public.profiles (id, role, full_name, grade, guardian_name, guardian_phone, guardian_consent_at, consent_by, created_at)
-values ('a7000000-0000-0000-0000-000000000001', 'student', 'Journey Kid', 9, 'Mum', '+919845066601', now(), 'student', now() - interval '10 minutes'),
-       ('a7000000-0000-0000-0000-000000000002', 'student', 'Test Kid', 9, 'Mum', '+919845066602', now(), 'student', now() - interval '10 minutes');
+update public.automation_rules set campaign = 'c_' || key, enabled = true where key like 'j\_%';
+insert into auth.users (id, email) values ('a7000000-0000-0000-0000-000000000001', 'j1@x.in'), ('a7000000-0000-0000-0000-000000000002', 'j2@x.in'),
+  ('a7000000-0000-0000-0000-000000000003', 'j3@x.in');
+insert into public.profiles (id, role, full_name, grade, guardian_name, guardian_phone, student_phone, guardian_consent_at, consent_by, created_at)
+values ('a7000000-0000-0000-0000-000000000001', 'student', 'Journey Kid', 9, 'Mum', '+919845066601', null, now(), 'student', now() - interval '10 minutes'),
+       ('a7000000-0000-0000-0000-000000000002', 'student', 'Test Kid', 9, 'Mum', '+919845066602', null, now(), 'student', now() - interval '10 minutes'),
+       ('a7000000-0000-0000-0000-000000000003', 'student', 'Own Phone', 8, 'Dad', '+919845066603', '+919845066613', now(), 'student', now() - interval '10 minutes');
 update public.profiles set is_test = true where id = 'a7000000-0000-0000-0000-000000000002';
 select public.automation_tick();
 select public.automation_tick();
-select 'W1 new student gets the Module 0 welcome once' t,
-  (select count(*) = 1 from public.message_queue where rule_key = 'm0_welcome' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
-select 'W2 its params: first name, Module 0 link, pay link' t,
-  (select params = '["Journey", "https://learn.beyondtatva.in/course", "https://learn.beyondtatva.in/pay"]'::jsonb
-   from public.message_queue where rule_key = 'm0_welcome' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+select 'W1 new student: one student + one parent welcome' t,
+  (select count(*) filter (where rule_key = 'j_welcome_s') = 1 and count(*) filter (where rule_key = 'j_welcome_p') = 1
+   from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+select 'W2 no student phone: student message goes to the parent' t,
+  (select phone = '+919845066601' and params = '["Journey"]'::jsonb from public.message_queue where rule_key = 'j_welcome_s' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+select 'W2b own student phone: student message goes there, parent''s to the parent' t,
+  (select bool_and(case rule_key when 'j_welcome_s' then phone = '+919845066613' else phone = '+919845066603' end) and count(*) = 2
+   from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000003') as pass;
 select 'W3 test accounts get nothing' t,
   (select count(*) = 0 from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000002') as pass;
-update public.profiles set created_at = now() - interval '30 hours' where id = 'a7000000-0000-0000-0000-000000000001';
-update public.coupons set active = false;
+-- Parent on Do not contact: the student's own number is silenced too.
+delete from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000003';
+insert into public.leads (reference, phone, source, do_not_contact) values ('j-dnc', '+919845066603', 'manual', true);
 select public.automation_tick();
-select 'W4 no offer message without a coupon end date' t,
-  (select count(*) = 0 from public.message_queue where rule_key = 'm0_nudge_offer') as pass;
-insert into public.course_access (student_id, course_id, source, granted_at) values ('a7000000-0000-0000-0000-000000000001', 'ai-for-students', 'admin', now() - interval '3 hours');
+select 'W4 parent opted out: student gets nothing, parent message skipped' t,
+  (select count(*) filter (where rule_key = 'j_welcome_s') = 0 and bool_and(status = 'skipped' or rule_key <> 'j_welcome_p')
+   from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000003') as pass;
+-- Enrolled by payment: welcome + receipt to the parent.
+insert into public.courses (id, title) values ('ai-for-students', 'AI') on conflict (id) do nothing;
+insert into public.purchases (course_id, reference, phone, amount_paise, status, claimed_by, claimed_at)
+values ('ai-for-students', 'pay_JOURNEY1', '+919845066601', 49900, 'claimed', 'a7000000-0000-0000-0000-000000000001', now());
+insert into public.course_access (student_id, course_id, source, reference, granted_at)
+values ('a7000000-0000-0000-0000-000000000001', 'ai-for-students', 'payment', 'pay_JOURNEY1', now() - interval '5 minutes');
 select public.automation_tick();
-select 'W5 enrolled: congratulations and overview, once each' t,
-  (select count(*) filter (where rule_key = 'enrolled_congrats') = 1 and count(*) filter (where rule_key = 'course_overview') = 1
-   from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+select 'W5 enrolled: student welcome once' t,
+  (select count(*) = 1 from public.message_queue where rule_key = 'j_enrolled_s' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+select 'W5b parent receipt carries amount and payment id' t,
+  (select params = '["Journey", "499", "pay_JOURNEY1"]'::jsonb from public.message_queue where rule_key = 'j_enrolled_p' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
 insert into public.newsletters (title, file_path, mime, size_bytes) values ('November news', '2026-11/journey-news.pdf', 'application/pdf', 100);
-select 'W6 newsletter goes to enrolled students only' t,
-  (select count(*) filter (where student_id = 'a7000000-0000-0000-0000-000000000001') = 1
-      and count(*) filter (where student_id = 'a7000000-0000-0000-0000-000000000002') = 0
-      and bool_and(exists (select 1 from public.course_access a where a.student_id = q.student_id))
-   from public.message_queue q where rule_key = 'newsletter') as pass;
+select 'W6 newsletter: student + parent, enrolled only' t,
+  (select count(*) filter (where student_id = 'a7000000-0000-0000-0000-000000000001') = 2
+      and count(*) filter (where student_id::text like 'a7000000-%' and student_id <> 'a7000000-0000-0000-0000-000000000001') = 0
+   from public.message_queue q where rule_key in ('j_newsletter_s', 'j_newsletter_p')) as pass;
 set role authenticated;
 do $$ begin perform public.automation_tick(); raise exception 'W7 FAIL';
 exception when others then if sqlerrm like 'W7%' then raise; end if; raise notice 'W7 pass: only the sender can run the tick'; end $$;
+do $$ begin perform public.journey_rank('a7000000-0000-0000-0000-000000000001'); raise exception 'W7b FAIL';
+exception when others then if sqlerrm like 'W7b%' then raise; end if; raise notice 'W7b pass: journey helpers are not callable by users'; end $$;
 reset role;
--- Weekly module messages: a module that opened 11 h ago, nothing watched → open + 8 pm reminder; a week-old one with an unpassed quiz → work_due.
-update public.automation_rules set campaign = 'c_' || key, enabled = true where key in ('module_open', 'module_reminder_1', 'work_due');
-update public.course_access set unlock_all = true where student_id = 'a7000000-0000-0000-0000-000000000001';
-insert into public.courses (id, title) values ('ai-for-students', 'AI') on conflict (id) do nothing;
-insert into public.chapters (id, course_id, title, position, release_at, is_free) values
-  ('a7c00000-0000-0000-0000-000000000001', 'ai-for-students', 'Wk new', 4, now() - interval '11 hours', false),
-  ('a7c00000-0000-0000-0000-000000000002', 'ai-for-students', 'Wk old', 5, now() - interval '7 days 3 hours', false);
-insert into public.lessons (course_id, chapter_id, title, position) values
-  ('ai-for-students', 'a7c00000-0000-0000-0000-000000000001', 'L new', 901), ('ai-for-students', 'a7c00000-0000-0000-0000-000000000002', 'L old', 902);
-insert into public.quizzes (chapter_id, title, published) values ('a7c00000-0000-0000-0000-000000000002', 'Quiz old', true);
-update public.course_access set granted_at = now() - interval '9 days' where student_id = 'a7000000-0000-0000-0000-000000000001';
+-- Weekly: a module opened 11 h ago → Module out (student + parent) with XP and rank.
+update public.course_access set unlock_all = true, granted_at = now() - interval '9 days' where student_id = 'a7000000-0000-0000-0000-000000000001';
+update public.chapters set position = position + 100 where course_id = 'ai-for-students' and not is_free;  -- only the two test modules count
+insert into public.chapters (id, course_id, title, blurb, position, release_at, is_free) values
+  ('a7c00000-0000-0000-0000-000000000001', 'ai-for-students', 'Wk old', null, 3, now() - interval '7 days 11 hours', false),
+  ('a7c00000-0000-0000-0000-000000000002', 'ai-for-students', 'Wk new', 'Make posters', 4, now() - interval '11 hours', false);
+insert into public.lessons (id, course_id, chapter_id, title, position) values
+  ('a7d00000-0000-0000-0000-000000000001', 'ai-for-students', 'a7c00000-0000-0000-0000-000000000001', 'L old', 901),
+  ('a7d00000-0000-0000-0000-000000000002', 'ai-for-students', 'a7c00000-0000-0000-0000-000000000002', 'L new', 902);
+insert into public.quizzes (id, chapter_id, title, published) values ('a7e00000-0000-0000-0000-000000000001', 'a7c00000-0000-0000-0000-000000000001', 'Quiz old', true);
+insert into public.quiz_questions (quiz_id, prompt, options, correct_index) values ('a7e00000-0000-0000-0000-000000000001', 'Q', array['a', 'b'], 0);
 select public.automation_tick();
-select 'W8 module opened 11 h ago, not watched: 8 pm reminder' t,
-  (select count(*) = 1 from public.message_queue where rule_key = 'module_reminder_1' and dedupe = 'rem1:a7000000-0000-0000-0000-000000000001:a7c00000-0000-0000-0000-000000000001') as pass;
-select 'W9 quiz not passed a week later: work_due names the quiz' t,
-  (select params ->> 2 = 'quiz' from public.message_queue where rule_key = 'work_due' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
-delete from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000001';
--- A journey rule linked to a Studio message with no placeholders keeps its own params.
-insert into public.wa_templates (key, title, campaign, language, category, params) values ('m0w_msg', 'M0 welcome', 'm0_welcome', 'en', 'utility', '{}');
-update public.automation_rules set template_key = 'm0w_msg' where key = 'm0_welcome';
-insert into auth.users (id, email) values ('a7000000-0000-0000-0000-000000000003', 'j3@x.in');
-insert into public.profiles (id, role, full_name, grade, guardian_name, guardian_phone, guardian_consent_at, consent_by, created_at)
-values ('a7000000-0000-0000-0000-000000000003', 'student', 'Linked Kid', 8, 'Dad', '+919845066603', now(), 'student', now() - interval '10 minutes');
+select 'W8 module out: student gets number, title, XP and rank' t,
+  (select params ->> 1 = '4' and params ->> 2 = 'Wk new' and (params ->> 4)::int >= 1
+   from public.message_queue where rule_key = 'j_module_open_s' and dedupe = 'o:a7000000-0000-0000-0000-000000000001:a7c00000-0000-0000-0000-000000000002') as pass;
+select 'W8b module out: parent gets what they learn' t,
+  (select params ->> 3 = 'Make posters' from public.message_queue where rule_key = 'j_module_open_p' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+select 'W9 quiz not passed: module state says quiz pending with 10 XP' t,
+  (select not quiz_ok and asg_ok and xp_left = 10 from public.journey_module_state('a7000000-0000-0000-0000-000000000001', 'a7c00000-0000-0000-0000-000000000001')) as pass;
+-- Previous module fully done → "module complete" version instead of "module out".
+delete from public.message_queue where rule_key like 'j\_module%';
+insert into public.lesson_progress (student_id, lesson_id, completed_at, watched_pct) values ('a7000000-0000-0000-0000-000000000001', 'a7d00000-0000-0000-0000-000000000001', now(), 100);
+insert into public.quiz_attempts (quiz_id, student_id, answers, score, total, passed) values ('a7e00000-0000-0000-0000-000000000001', 'a7000000-0000-0000-0000-000000000001', '{0}', 1, 1, true);
 select public.automation_tick();
-select 'W10 message without placeholders keeps the journey params' t,
-  (select params ->> 0 = 'Linked' and params ->> 2 = 'https://learn.beyondtatva.in/pay' from public.message_queue where rule_key = 'm0_welcome' and student_id = 'a7000000-0000-0000-0000-000000000003') as pass;
+select 'W10 previous module done: module complete message, no plain module out' t,
+  (select count(*) filter (where rule_key = 'j_module_done_s') = 1 and count(*) filter (where rule_key = 'j_module_done_p') = 1
+      and count(*) filter (where rule_key like 'j\_module\_open%') = 0
+   from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+select 'W11 Module 0 status helper: not started' t, public.journey_m0_status('a7000000-0000-0000-0000-000000000003') = 'none' as pass;
+select 'W12 nudge cap: a number with 2 nudges today gets no third' t,
+  (with s as (select * from public.journey_students() where id = 'a7000000-0000-0000-0000-000000000001')
+   select public.journey_send('j_nudge_tue_s', 'cap1', s, '["a","1"]', true) + public.journey_send('j_nudge_thu_s', 'cap2', s, '["a","1","0"]', true)
+        + public.journey_send('j_nudge_sat_s', 'cap3', s, '["a","1"]', true) = 2 from s) as pass;

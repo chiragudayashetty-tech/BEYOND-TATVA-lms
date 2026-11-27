@@ -141,6 +141,18 @@ export default function OnboardingChat({ defaultName, next, signedInAs, loginPho
     if (!/^[6-9]\d{9}$/.test(p)) return setError("Enter a 10-digit WhatsApp number.");
     me(`+91 ${p}`);
     setA((x) => ({ ...x, gPhone: p }));
+    await say(parent ? `Does ${first(a.name)} have their own WhatsApp? Course tips and XP updates go there. (Optional)` : "Do you have your own WhatsApp? Course tips and XP updates come here. (Optional)",
+      "ವಿದ್ಯಾರ್ಥಿಯ ಸ್ವಂತ WhatsApp ನಂಬರ್ (ಐಚ್ಛಿಕ)");
+    go("sPhone");
+  }
+
+  async function sendStudentPhone(e) {
+    e?.preventDefault();
+    const p = digits(field);
+    if (p && !/^[6-9]\d{9}$/.test(p)) return setError("Enter a 10-digit WhatsApp number, or tap Skip.");
+    const own = p && p !== a.gPhone ? p : "";
+    me(own ? `+91 ${own}` : "Skip");
+    setA((x) => ({ ...x, sPhone: own }));
     if (parent) {
       await say(`Important: ${first(a.name)} must watch the course signed in with this same login.`, "ಮಗು ಇದೇ ನಂಬರ್/ಲಾಗಿನ್ ಬಳಸಿ ಕೋರ್ಸ್ ನೋಡಬೇಕು.", signedInAs);
     }
@@ -171,6 +183,7 @@ export default function OnboardingChat({ defaultName, next, signedInAs, loginPho
           p_grade: Number(a.grade),
           p_guardian_name: a.gName,
           p_guardian_phone: a.gPhone,
+          p_student_phone: a.sPhone || null,
           p_school_name: a.schoolPick ? null : a.school || null,
           p_school_pick: a.schoolPick || null,
           p_signed_up_by: a.who,
@@ -208,7 +221,7 @@ export default function OnboardingChat({ defaultName, next, signedInAs, loginPho
     (async () => { await say("No problem, let's start again. Who is setting up?", "ಮತ್ತೆ ಆರಂಭಿಸೋಣ. ಯಾರು ಸೈನ್ ಅಪ್ ಮಾಡುತ್ತಿದ್ದೀರಿ?"); go("who"); })();
   }
 
-  const steps = teacher ? ["who", "tName", "terms"] : ["who", "grade", "name", "school", "gName", "phone", "consent"];
+  const steps = teacher ? ["who", "tName", "terms"] : ["who", "grade", "name", "school", "gName", "phone", "sPhone", "consent"];
   const at = Math.max(0, steps.indexOf(ask === "schoolOther" || ask === "key" ? "school" : ask));
 
   // One question at a time in one box (like the website): only Loki's newest lines, then the answer controls.
@@ -305,6 +318,20 @@ export default function OnboardingChat({ defaultName, next, signedInAs, loginPho
                   <input className="input !pl-[5.25rem] text-lg" type="tel" inputMode="numeric" maxLength={10} value={field} onChange={(e) => setField(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="WhatsApp number" autoComplete="tel-national" autoFocus />
                 </div>
                 <button className="btn-primary px-4" aria-label="Send"><ArrowRight className="h-5 w-5" /></button>
+              </form>
+            )}
+            {ask === "sPhone" && (
+              <form onSubmit={sendStudentPhone} className="space-y-2">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/pay/whatsapp.svg" alt="" className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2" />
+                    <span className="pointer-events-none absolute left-11 top-1/2 -translate-y-1/2 text-lg text-muted">+91</span>
+                    <input className="input !pl-[5.25rem] text-lg" type="tel" inputMode="numeric" maxLength={10} value={field} onChange={(e) => setField(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="Student's WhatsApp" autoComplete="off" autoFocus />
+                  </div>
+                  <button className="btn-primary px-4" aria-label="Send"><ArrowRight className="h-5 w-5" /></button>
+                </div>
+                <button type="button" onClick={() => { setField(""); sendStudentPhone(); }} className="btn-secondary w-full">Skip · ಬೇಡ</button>
               </form>
             )}
             {ask === "consent" && (

@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sheetsKeyValid } from "@/lib/sheets-key";
 import { runAutomations } from "@/lib/automations";
 
-// Sends queued WhatsApp messages through AiSensy. Started every 5 minutes by the School Leads Tracker Apps Script
+// Sends queued WhatsApp messages through AiSensy. Started every minute by the School Leads Tracker Apps Script
 // (scripts/leads-tracker-sync.gs, header x-sheets-key = SHEETS_SYNC_SECRET), so no paid cron is needed.
 //   POST /api/automations/run?since=<ISO>  → { sent, failed, waiting?, off?, log: [...finished since <since>] }
 // The log feeds the sheet's "Automations" tab.
@@ -15,9 +15,9 @@ export async function POST(request) {
   const db = createAdminClient();
   let result;
   try {
-    // Sentry cron monitor: alerts if the 5-minute sender stops running or keeps failing.
+    // Sentry cron monitor: alerts if the 1-minute sender stops running or keeps failing.
     result = await Sentry.withMonitor("whatsapp-automations", () => runAutomations(db), {
-      schedule: { type: "interval", value: 5, unit: "minute" }, checkinMargin: 10, maxRuntime: 5, timezone: "Asia/Kolkata",
+      schedule: { type: "interval", value: 1, unit: "minute" }, checkinMargin: 5, maxRuntime: 5, timezone: "Asia/Kolkata",
     });
   } catch (e) {
     console.error("automations run failed", e.message);
