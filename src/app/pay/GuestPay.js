@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CheckCircle2, Loader2, Lock, MessageCircle, ShieldCheck, Tag } from "lucide-react";
 import { isInApp } from "@/lib/android-app";
+import PayLogos, { RAZORPAY_DISPLAY } from "@/components/PayLogos";
 
 function loadCheckout() {
   if (window.Razorpay) return Promise.resolve(true);
@@ -69,6 +70,7 @@ export default function GuestPay({ title, price, enabled, whatsapp }) {
       image: `${window.location.origin}/brand/mark.png`,
       prefill: { contact: `+91${mobile}` },
       theme: { color: "#2563eb" },
+      config: RAZORPAY_DISPLAY,
       handler: async (resp) => {
         setMsg({ tone: "info", text: "Payment received. Saving it…" });
         const { ok: saved, data } = await post("/api/guest-verify", resp);
@@ -168,11 +170,7 @@ export default function GuestPay({ title, price, enabled, whatsapp }) {
         </div>
       )}
 
-      <div className="mt-5 flex flex-wrap items-center justify-center gap-1.5" aria-label="Pay with UPI, Google Pay, PhonePe, Paytm, Visa or Mastercard">
-        {[["upi", "UPI", "w-10"], ["googlepay", "Google Pay"], ["phonepe", "PhonePe"], ["paytm", "Paytm"], ["visa", "Visa"], ["mastercard", "Mastercard"]].map(([f, alt, w]) => (
-          <span key={f} className="grid h-9 place-items-center rounded-lg border border-border bg-white px-2"><img src={`/pay/${f}.svg`} alt={alt} className={`h-5 ${w || "w-5"}`} /></span>
-        ))}
-      </div>
+      <PayLogos className="mt-5" />
       <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted"><ShieldCheck className="h-3.5 w-3.5" /> 100% secure payment by Razorpay</p>
     </>
   );
