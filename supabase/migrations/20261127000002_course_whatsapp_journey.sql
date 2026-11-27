@@ -35,6 +35,34 @@ insert into public.automation_rules (key, title, description, position) values
  ('newsletter', 'New monthly newsletter', 'A newsletter is uploaded in Studio → Content; enrolled students only. {{1}} student first name, {{2}} newsletter title, {{3}} link.', 20)
 on conflict (key) do nothing;
 
+create or replace function public._automation_enqueue(
+  p_rule text, p_dedupe text, p_phone text, p_name text, p_params jsonb,
+  p_lead uuid default null, p_student uuid default null
+) returns text
+language plpgsql security definer set search_path = '' as $$
+declare v_phone text := public.automation_phone(p_phone); r public.automation_rules; t public.wa_templates; w record; v_params jsonb := p_params;
+begin
+  select * into r from public.automation_rules where key = p_rule and enabled;
+  if r.key is null then return 'off'; end if;
+  if v_phone is null then return 'no_phone'; end if;
+  select * into w from public.wa_person(p_lead, p_student);
+  select * into t from public.wa_templates where key = r.template_key;
+  -- A message's own placeholders win over the rule's params, but only if it has some: a journey message added in
+  -- Studio with no placeholders keeps the rule's own values (names, dates and links from automation_tick).
+  if t.key is not null and w.phone is not null and cardinality(t.params) > 0 then
+    select coalesce(jsonb_agg(public.wa_fill(p, w.parent_name, w.student_name, w.school, w.grade, w.stage) order by i), '[]') into v_params from unnest(t.params) with ordinality u(p, i);
+  end if;
+  insert into public.message_queue (rule_key, template_key, dedupe, phone, name, params, lead_id, student_id, status, error, media_url, tags, attributes)
+  values (p_rule, t.key, left(p_dedupe, 120), v_phone, left(coalesce(trim(p_name), ''), 80), coalesce(v_params, '[]'), p_lead, p_student,
+          case when public.automation_dnc(v_phone) then 'skipped' else 'queued' end,
+          case when public.automation_dnc(v_phone) then 'Do not contact' end,
+          t.media_url, array_remove(array[nullif(w.school, ''), w.stage, 'lms'], null),
+          coalesce(jsonb_strip_nulls(jsonb_build_object('student', nullif(w.student_name, ''), 'school', nullif(w.school, ''), 'grade', w.grade, 'stage', w.stage)), '{}'))
+  on conflict do nothing;
+  return case when found then 'queued' else 'duplicate' end;
+end;
+$$;
+
 -- Real students for messaging: student role, not a test or duplicate account, with a parent WhatsApp.
 create or replace function public.journey_students()
 returns table (id uuid, first_name text, phone text, created_at timestamptz, granted_at timestamptz)

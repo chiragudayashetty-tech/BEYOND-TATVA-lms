@@ -1409,3 +1409,12 @@ select 'W8 module opened 11 h ago, not watched: 8 pm reminder' t,
 select 'W9 quiz not passed a week later: work_due names the quiz' t,
   (select params ->> 2 = 'quiz' from public.message_queue where rule_key = 'work_due' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
 delete from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000001';
+-- A journey rule linked to a Studio message with no placeholders keeps its own params.
+insert into public.wa_templates (key, title, campaign, language, category, params) values ('m0w_msg', 'M0 welcome', 'm0_welcome', 'en', 'utility', '{}');
+update public.automation_rules set template_key = 'm0w_msg' where key = 'm0_welcome';
+insert into auth.users (id, email) values ('a7000000-0000-0000-0000-000000000003', 'j3@x.in');
+insert into public.profiles (id, role, full_name, grade, guardian_name, guardian_phone, guardian_consent_at, consent_by, created_at)
+values ('a7000000-0000-0000-0000-000000000003', 'student', 'Linked Kid', 8, 'Dad', '+919845066603', now(), 'student', now() - interval '10 minutes');
+select public.automation_tick();
+select 'W10 message without placeholders keeps the journey params' t,
+  (select params ->> 0 = 'Linked' and params ->> 2 = 'https://learn.beyondtatva.in/pay' from public.message_queue where rule_key = 'm0_welcome' and student_id = 'a7000000-0000-0000-0000-000000000003') as pass;

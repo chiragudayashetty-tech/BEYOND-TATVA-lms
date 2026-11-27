@@ -7,7 +7,8 @@ Test accounts never get them. Reminders are capped at 2 per number per day. Send
 1. AiSensy → Manage → Templates → **New**. Paste the name, category, language **English** and the body below.
    `{{1}}`, `{{2}}`… must stay exactly as written (same order). Submit; Meta approves in minutes to a day.
 2. AiSensy → Campaigns → **API campaign** → pick the approved template → name it the **same as the template** → Go live.
-3. LMS Studio → **WhatsApp** → Auto-send: paste the campaign name next to the rule → **On**.
+3. LMS Studio → **WhatsApp** → Messages → **Add**: the campaign name, **no placeholders** (the LMS fills them).
+   Then Auto-send → pick that message for the rule → **On**.
    Each rule stays silent until it is On, so you can switch them on one by one.
 
 Links are sent as text inside the message (no button setup needed).
