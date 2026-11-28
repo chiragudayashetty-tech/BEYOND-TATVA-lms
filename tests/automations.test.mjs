@@ -29,7 +29,8 @@ test("run claims, sends and records each result", async () => {
   const db = { rpc: async (fn, args) => { calls.push([fn, args]); return fn === "automation_claim" ? { data: [{ id: "a" }, { id: "b" }] } : { data: "ok" }; } };
   const r = await runAutomations(db, { force: true, send: async (m) => ({ ok: m.id === "a", error: "x" }) });
   assert.deepEqual(r, { sent: 1, failed: 1 });
-  assert.deepEqual(calls.slice(1).map((c) => c[1].p_ok), [true, false]);
+  assert.equal(calls[0][0], "automation_tick"); // due course messages are queued first
+  assert.deepEqual(calls.filter((c) => c[0] === "automation_done").map((c) => c[1].p_ok), [true, false]);
   assert.deepEqual(await runAutomations(db, { now: new Date("2026-11-16T20:00:00Z") }), { waiting: true, sent: 0, failed: 0 });
 });
 
@@ -47,7 +48,7 @@ test("AiSensy opt-out refusals are recognised and recorded, not counted as faile
   const db = { rpc: async (fn, a) => { calls.push(fn); return fn === "automation_claim" ? { data: [{ id: "x" }] } : { data: "ok" }; } };
   const r = await runAutomations(db, { force: true, send: async () => ({ ok: false, error: "Contact opted out" }) });
   assert.deepEqual(r, { sent: 0, failed: 0 });
-  assert.deepEqual(calls, ["automation_claim", "automation_opted_out"]);
+  assert.deepEqual(calls, ["automation_tick", "automation_custom_tick", "automation_claim", "automation_opted_out"]);
 });
 
 test("each WhatsApp outcome becomes one analytics event, without the phone or name", async () => {

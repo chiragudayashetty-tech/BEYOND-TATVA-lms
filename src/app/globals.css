@@ -203,3 +203,19 @@ html:not(.in-app) .app-only { display: none !important; }
   .cert-sheet, .cert-sheet * { visibility: visible; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .cert-sheet { position: fixed; inset: 0; width: 100vw; }
 }
+
+/* Sign-up chat with Loki (onboarding) */
+@keyframes chat-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+@keyframes loki-bob { 50% { transform: translateY(-3px) rotate(-3deg); } }
+@media (prefers-reduced-motion: reduce) { [class*="animate-[chat-in"], [class*="animate-[loki-bob"] { animation: none !important; } }
+
+/* "Open WhatsApp to see your code" button: gentle pulse ring + shine so parents see it's tappable. */
+@keyframes bt-wa-ring { 0% { box-shadow: 0 0 0 0 rgb(37 211 102 / .55); } 70%, 100% { box-shadow: 0 0 0 14px rgb(37 211 102 / 0); } }
+@keyframes bt-wa-shine { 0%, 60% { transform: translateX(-120%) skewX(-20deg); } 100% { transform: translateX(260%) skewX(-20deg); } }
+@keyframes bt-wa-nudge { 0%, 85%, 100% { transform: translateX(0); } 90% { transform: translateX(4px); } 95% { transform: translateX(0); } }
+.bt-wa-btn { position: relative; overflow: hidden; animation: bt-wa-ring 1.8s ease-out infinite; transition: transform .12s ease, filter .12s ease; }
+.bt-wa-btn:hover { filter: brightness(1.05); }
+.bt-wa-btn:active { transform: scale(.96); }
+.bt-wa-btn::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; background: linear-gradient(90deg, transparent, rgb(255 255 255 / .35), transparent); animation: bt-wa-shine 2.8s ease-in-out infinite; pointer-events: none; }
+.bt-wa-arrow { animation: bt-wa-nudge 2.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .bt-wa-btn, .bt-wa-btn::after, .bt-wa-arrow { animation: none; } }

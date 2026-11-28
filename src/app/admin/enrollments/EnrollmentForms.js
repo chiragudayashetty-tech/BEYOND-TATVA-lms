@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { Plus, Undo2, UserCheck } from "lucide-react";
+import { ExternalLink, Plus, Undo2, UserCheck } from "lucide-react";
 import FormStatus from "@/components/FormStatus";
 import { addEnrollment, approveSuggestion, assignEnrollment, revokeEnrollment } from "../actions";
 
@@ -28,16 +28,26 @@ export function RevokeButton({ reference, amountPaise }) {
   const [state, setState] = useState(null);
   const online = typeof reference === "string" && reference.startsWith("pay_");
   const rupees = amountPaise != null ? `₹${(amountPaise / 100).toLocaleString("en-IN")}` : "the full amount";
+  // Razorpay hasn't enabled refunds through the API on this account yet, so website payments are refunded
+  // in the Razorpay dashboard; the refund webhook then removes access on its own.
+  if (online) {
+    return (
+      <div className="flex flex-col items-end gap-1">
+        <a href={`https://dashboard.razorpay.com/app/payments/${encodeURIComponent(reference)}`} target="_blank" rel="noopener noreferrer" className="btn-ghost px-2 py-1 text-xs text-danger">
+          <ExternalLink className="h-3.5 w-3.5" /> Refund {rupees} in Razorpay
+        </a>
+        <p className="max-w-56 text-right text-xs text-muted">Access is removed automatically once Razorpay finishes the refund.</p>
+      </div>
+    );
+  }
   const ask = () => {
-    if (online) {
-      if (prompt(`This sends ${rupees} back to the parent through Razorpay and removes the course. It can't be undone.\n\nType REFUND to confirm.`)?.trim() !== "REFUND") return;
-    } else if (!confirm("Remove access? Return the money yourself first (UPI/cash). This removes the course from the student's account.")) return;
+    if (!confirm("Remove access? Return the money yourself first (UPI/cash). This removes the course from the student's account.")) return;
     start(async () => setState(await revokeEnrollment(reference)));
   };
   return (
     <div className="flex flex-col items-end gap-1">
       <button disabled={pending} onClick={ask} className="btn-ghost px-2 py-1 text-xs text-danger">
-        <Undo2 className="h-3.5 w-3.5" /> {pending ? (online ? "Refunding…" : "Removing…") : online ? `Refund ${rupees}` : "Remove access"}
+        <Undo2 className="h-3.5 w-3.5" /> {pending ? "Removing…" : "Remove access"}
       </button>
       <FormStatus state={state} />
     </div>

@@ -59,3 +59,28 @@ export async function sendTemplate(template, targets) {
   const parts = [`${r.queued} queued`, r.duplicate && `${r.duplicate} already sent today`, r.skipped && `${r.skipped} do not contact`, r.no_phone && `${r.no_phone} no phone`];
   return { ok: true, message: `${parts.filter(Boolean).join(", ")}. Goes out within 5 minutes (9am–9pm).` };
 }
+
+// ── Your rules (custom automations built in Studio) ──────────────────────────
+// p: { key?, title, trigger, delay_minutes, from_hour, to_hour, run_at, recipient, aud_stage, aud_school, aud_grade, aud_module, aud_m0, include_past, template_key }
+export async function saveCustomRule(p) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_save_custom_rule", { p });
+  if (error?.message.includes("automation_custom_shape")) return { ok: false, error: "Check the times: it must start before it ends, and a fixed date needs a date." };
+  return error ? done(error) : { ...done(null), key: data };
+}
+
+export async function deleteCustomRule(key) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_delete_custom_rule", { p_key: key });
+  if (error?.message.includes("rule_has_history")) return { ok: false, error: "This rule has already sent messages. Turn it Off instead; its history stays." };
+  return done(error);
+}
+
+// How many people the rule reaches: in total, right now, and already messaged.
+export async function previewCustomRule(key) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_custom_preview", { p_key: key });
+  if (error) return { ok: false, error: error.message };
+  const r = data?.[0] ?? { total: 0, due_now: 0, already: 0 };
+  return { ok: true, total: r.total, dueNow: r.due_now, already: r.already };
+}

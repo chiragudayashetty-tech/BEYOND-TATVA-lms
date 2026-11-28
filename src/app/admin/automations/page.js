@@ -3,14 +3,17 @@ import { CheckCircle2, Clock, MessageCircle, XCircle } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle, StatCard } from "@/components/ui";
 import { createClient, isPreview, requireRole } from "@/lib/supabase/server";
-import { MessageForm, Retry, RuleSwitch, SendNow, blankLabel } from "./AutomationControls";
+import { MessageForm, Retry, RuleSwitch, SendNow } from "./AutomationControls";
+import { blankLabel } from "@/lib/wa-blanks";
+import { CustomRuleForm, DeleteRule, RulePreview } from "./CustomRules";
+import { describeRule } from "@/lib/custom-rules";
 
 // Studio → WhatsApp. Templates are written and approved in AiSensy; here: which AiSensy campaign is which
 // message, what is sent automatically, and what happened (sent / failed; delivered, read and replies stay in AiSensy).
 export const metadata = { title: "WhatsApp · Studio · Beyond Tatva" };
 export const dynamic = "force-dynamic";
 
-const TABS = [["messages", "Messages"], ["auto", "Auto-send"], ["history", "History"]];
+const TABS = [["messages", "Messages"], ["auto", "Auto-send"], ["rules", "Your rules"], ["history", "History"]];
 const STATUS = { sent: ["success", "Sent"], failed: ["danger", "Failed"], skipped: ["neutral", "Not sent"], optout: ["warning", "Opted out"], queued: ["warning", "Waiting"], sending: ["primary", "Sending"] };
 const FILTERS = [["", "All"], ["sent", "Sent"], ["failed", "Failed"], ["optout", "Opted out"], ["waiting", "Waiting"], ["skipped", "Not sent"]];
 const TRIGGER = {
@@ -38,13 +41,16 @@ export default async function WhatsAppPage({ searchParams }) {
   if (filter === "waiting") history = history.in("status", ["queued", "sending"]);
   else if (filter === "optout") history = history.eq("status", "skipped").like("error", "Opted out%");
   else if (filter) history = history.eq("status", filter);
-  const [{ data: messages, error: setupError }, { data: rules }, { data: week }, { data: rows }, { data: optin }] = await Promise.all([
+  const [{ data: messages, error: setupError }, { data: allRules }, { data: schools }, { data: week }, { data: rows }, { data: optin }] = await Promise.all([
     supabase.from("wa_templates").select("*").order("title"),
-    supabase.from("automation_rules").select("key, title, enabled, template_key").order("position"),
+    supabase.from("automation_rules").select("*").order("position"),
+    tab === "rules" ? supabase.from("schools").select("id, name").order("name") : Promise.resolve({ data: [] }),
     supabase.from("message_queue").select("status, template_key").gte("created_at", daysAgo(7)).limit(5000),
     tab === "history" ? history : Promise.resolve({ data: [] }),
     supabase.rpc("wa_optin_stats"),
   ]);
+  const rules = (allRules ?? []).filter((r) => !r.custom);
+  const customRules = (allRules ?? []).filter((r) => r.custom).sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
   const opt = optin?.[0] ?? { opted_in: 0, opted_out: 0, opted_out_whatsapp: 0 };
   const notReady = Boolean(setupError);
   const count = (s, key) => (week ?? []).filter((m) => (Array.isArray(s) ? s.includes(m.status) : m.status === s) && (!key || m.template_key === key)).length;
@@ -102,12 +108,30 @@ export default async function WhatsAppPage({ searchParams }) {
       {tab === "auto" && (
         <div className="space-y-3">
           {!active.length && !notReady && <Card><p className="text-sm text-muted">Add a message first (Messages tab).</p></Card>}
-          {(rules ?? []).map((r) => (
+          {rules.map((r) => (
             <Card key={r.key} title={TRIGGER[r.key] ?? r.title}>
               <RuleSwitch rule={r} messages={active} />
             </Card>
           ))}
           <p className="text-xs text-muted">Each person gets each automatic message once. Nothing goes to Do not contact numbers or between 9pm and 9am.</p>
+        </div>
+      )}
+
+      {tab === "rules" && (
+        <div className="space-y-3">
+          <Card>
+            <p className="text-sm text-muted">Build your own automatic messages: choose <b>when</b> it fires, <b>how long after</b>, <b>which hours</b>, <b>who</b> gets it and <b>which message</b>.
+              New rules start Off. Each person gets a rule&apos;s message once. The built-in journey stays in the <Link href="/admin/automations?tab=auto" className="text-primary underline">Auto-send</Link> tab; switch a built-in Off if your rule replaces it.</p>
+          </Card>
+          {customRules.map((r) => (
+            <Card key={r.key} title={r.title} action={<Badge tone={r.enabled ? "success" : "neutral"}>{r.enabled ? "On" : "Off"}</Badge>}>
+              <p className="mb-2 text-sm">{describeRule(r, (schools ?? []).find((s) => s.id === r.aud_school)?.name)}</p>
+              <RuleSwitch rule={r} messages={active} />
+              <div className="mt-2 flex flex-wrap items-center gap-3"><RulePreview ruleKey={r.key} /><DeleteRule ruleKey={r.key} /></div>
+              <div className="mt-2"><CustomRuleForm rule={r} messages={active} schools={schools ?? []} /></div>
+            </Card>
+          ))}
+          {!notReady && <Card title="Add a rule"><CustomRuleForm messages={active} schools={schools ?? []} /></Card>}
         </div>
       )}
 

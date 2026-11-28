@@ -60,14 +60,14 @@ select 'T2 school code' t, school_id is not null as pass from public.profiles wh
 select pg_temp.as_user('55555555-5555-5555-5555-555555555555');
 do $$ begin perform public.complete_onboarding('student', 'X', 'NOPE', 8::smallint, 'D', '9900011223', p_consent => true); raise exception 'T3a FAIL';
 exception when others then if sqlerrm like 'T3a%' then raise; end if; raise notice 'T3a pass: %', sqlerrm; end $$;
-do $$ begin perform public.complete_onboarding('student', 'X', null, 8::smallint, 'D', '12345', p_consent => true); raise exception 'T3b FAIL';
+do $$ begin perform public.complete_onboarding('student', 'X', null, 8::smallint, 'D', '12345', p_school_name => 'Test School', p_consent => true); raise exception 'T3b FAIL';
 exception when others then if sqlerrm like 'T3b%' then raise; end if; raise notice 'T3b pass: %', sqlerrm; end $$;
 select pg_temp.as_user('66666666-6666-6666-6666-666666666666');
-select public.complete_onboarding('student', 'Sibling One', null, 8::smallint, 'Same Parent', '9876500000', p_consent => true);
+select public.complete_onboarding('student', 'Sibling One', null, 8::smallint, 'Same Parent', '9876500000', p_school_name => 'Test School', p_consent => true);
 select pg_temp.as_user('77777777-7777-7777-7777-777777777777');
-select public.complete_onboarding('student', 'Sibling Two', null, 10::smallint, 'Same Parent', '9876500000', p_consent => true);
+select public.complete_onboarding('student', 'Sibling Two', null, 10::smallint, 'Same Parent', '9876500000', p_school_name => 'Test School', p_consent => true);
 select pg_temp.as_user('88888888-8888-8888-8888-888888888888');
-select public.complete_onboarding('student', 'Phone Login Kid', null, 9::smallint, 'P', '9811111111', p_consent => true);
+select public.complete_onboarding('student', 'Phone Login Kid', null, 9::smallint, 'P', '9811111111', p_school_name => 'Test School', p_consent => true);
 reset role;
 
 -- ── Website enrollments ──────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ reset role;
 -- The buyer of pay_2 signs up later with that email: access appears on first sign-in.
 insert into auth.users (id, email) values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'newkid@gmail.com');
 set role authenticated; select pg_temp.as_user('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
-select public.complete_onboarding('student', 'New Kid', null, 9::smallint, 'P', '9845077777', p_consent => true);
+select public.complete_onboarding('student', 'New Kid', null, 9::smallint, 'P', '9845077777', p_school_name => 'Test School', p_consent => true);
 select 'P9a claim on sign-in' t, public.claim_purchases() = 1 as pass;
 select 'P9b course unlocked' t, public.has_course_access('ai-for-students') as pass;
 select 'P10 nothing left to claim' t, public.claim_purchases() = 0 as pass;
@@ -239,7 +239,7 @@ reset role;
 -- ── H2: unverified email never unlocks ───────────────────────────────────────
 insert into auth.users (id, email, email_confirmed_at) values ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'unverified@x.in', null);
 set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
-select public.complete_onboarding('student', 'Unverified', null, 9::smallint, 'P', '9811122233', p_consent => true);
+select public.complete_onboarding('student', 'Unverified', null, 9::smallint, 'P', '9811122233', p_school_name => 'Test School', p_consent => true);
 reset role; set role service_role;
 select 'H2c unverified email stays pending' t, public.record_purchase('pay_unv', 'unverified@x.in') = 'pending' as pass;
 reset role; set role authenticated; select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
@@ -254,17 +254,17 @@ insert into auth.users (id, email, phone) values
  ('f1111111-1111-1111-1111-111111111111', 'mom@x.in', null),
  ('f2222222-2222-2222-2222-222222222222', 'kid2@x.in', null);
 set role authenticated; select pg_temp.as_user('f1111111-1111-1111-1111-111111111111');
-do $$ begin perform public.complete_onboarding('student', 'Kid', null, 9::smallint, 'Mom', '9845011111'); raise exception 'O1 FAIL';
+do $$ begin perform public.complete_onboarding('student', 'Kid', null, 9::smallint, 'Mom', '9845011111', p_school_name => 'Test School'); raise exception 'O1 FAIL';
 exception when others then if sqlerrm like 'O1%' then raise; end if; raise notice 'O1 pass: %', sqlerrm; end $$;
 do $$ begin perform public.complete_onboarding('parent', 'Mom', 'ABC123'); raise exception 'O2 FAIL';
 exception when others then if sqlerrm like 'O2%' then raise; end if; raise notice 'O2 pass: %', sqlerrm; end $$;
-do $$ begin perform public.complete_onboarding('student', 'Kid', null, 9::smallint, 'Mom', '9845011111', null, 'parent', '12345', true); raise exception 'O3 FAIL';
+do $$ begin perform public.complete_onboarding('student', 'Kid', null, 9::smallint, 'Mom', '9845011111', 'Test School', 'parent', '12345', true); raise exception 'O3 FAIL';
 exception when others then if sqlerrm like 'O3%' then raise; end if; raise notice 'O3 pass: %', sqlerrm; end $$;
-select public.complete_onboarding('student', 'Kid Rao', null, 9::smallint, 'Mom Rao', '9845011111', null, 'parent', '98450 22222', true);
+select public.complete_onboarding('student', 'Kid Rao', null, 9::smallint, 'Mom Rao', '9845011111', 'Test School', 'parent', '98450 22222', true);
 select 'O4 parent sets up the child account' t, (select role = 'student' and signed_up_by = 'parent' and consent_by = 'parent' and guardian_consent_at is not null
   and student_phone = '+919845022222' and guardian_phone = '+919845011111' and invite_code is null from public.profiles where id = auth.uid()) as pass;
 select pg_temp.as_user('f2222222-2222-2222-2222-222222222222');
-select public.complete_onboarding('student', 'Kid Two', null, 8::smallint, 'Dad', '9845033333', null, 'student', null, true);
+select public.complete_onboarding('student', 'Kid Two', null, 8::smallint, 'Dad', '9845033333', 'Test School', 'student', null, true);
 select 'O5 student signs up, child phone optional' t, (select signed_up_by = 'student' and student_phone is null and consent_by = 'student' from public.profiles where id = auth.uid()) as pass;
 reset role;
 select 'O6 no invite codes left' t, not exists (select 1 from public.profiles where invite_code is not null) as pass;
@@ -493,6 +493,17 @@ exception when insufficient_privilege then raise notice 'R5 pass: students canno
 do $$ begin insert into storage.objects (bucket_id, name) values ('module-resources', pg_temp.chapter(0) || '/evil.pdf'); raise exception 'R6 FAIL';
 exception when insufficient_privilege then raise notice 'R6 pass: students cannot upload module files'; end $$;
 reset role;
+
+-- ── WhatsApp media bucket ────────────────────────────────────────────────────
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+insert into storage.objects (bucket_id, name) values ('whatsapp-media', '11111111-1111-4111-8111-111111111111/promo.mp4');
+select 'Z9201 admin uploads WhatsApp media' t, (select count(*) from storage.objects where bucket_id = 'whatsapp-media') = 1 as pass;
+select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+select 'Z9202 student cannot list WhatsApp media' t, (select count(*) from storage.objects where bucket_id = 'whatsapp-media') = 0 as pass;
+do $$ begin insert into storage.objects (bucket_id, name) values ('whatsapp-media', '11111111-1111-4111-8111-111111111111/evil.pdf'); raise exception 'Z9203 FAIL';
+exception when insufficient_privilege then raise notice 'Z9203 pass: students cannot upload WhatsApp media'; end $$;
+reset role;
+select 'Z9204 bucket is public, 16 MB, 4 file types' t, (select public and file_size_limit = 16777216 and cardinality(allowed_mime_types) = 4 from storage.buckets where id = 'whatsapp-media') as pass;
 
 -- ── UPI claims (interim payments) ────────────────────────────────────────────
 insert into storage.objects (bucket_id, name) values
@@ -792,7 +803,7 @@ reset role;
 -- Parts really played (20261115000002): skipping doesn't count, parts can't arrive faster than real time.
 insert into auth.users (id, email) values ('abababab-0000-0000-0000-000000000002', 'seen@x.in');
 set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000002');
-select public.complete_onboarding('student', 'Seer', null, 9::smallint, 'Mum', '9811122244', null, p_consent => true);
+select public.complete_onboarding('student', 'Seer', null, 9::smallint, 'Mum', '9811122244', 'Test School', p_consent => true);
 select 'Z17 first save: 9 parts of 60 = 15%' t, public.save_progress(pg_temp.lesson(0), 90, null, 90, 600, array(select generate_series(0, 8))) = 15 as pass;
 select 'Z17b skipping to the end with no parts played does not complete' t,
   public.save_progress(pg_temp.lesson(0), 590, null, 590, 600, '{}') = 15
@@ -815,7 +826,7 @@ reset role;
 reset role;
 insert into auth.users (id, email) values ('abababab-0000-0000-0000-000000000003', 'old@x.in');
 set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000003');
-select public.complete_onboarding('student', 'Old Row', null, 9::smallint, 'Mum', '9811122255', null, p_consent => true);
+select public.complete_onboarding('student', 'Old Row', null, 9::smallint, 'Mum', '9811122255', 'Test School', p_consent => true);
 select public.save_progress(pg_temp.lesson(0), 400, null, 400, 600);
 select 'Z18 old-style save (no parts) adds no %' t, (select watched_pct = 0 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
 select 'Z18b first real parts replace the estimate' t, public.save_progress(pg_temp.lesson(0), 30, null, 30, 600, '{0,1,2}') = 5 as pass;
@@ -824,7 +835,7 @@ reset role;
 -- Faked video length (20261115000008)
 insert into auth.users (id, email) values ('abababab-0000-0000-0000-000000000004', 'len@x.in');
 set role authenticated; select pg_temp.as_user('abababab-0000-0000-0000-000000000004');
-select public.complete_onboarding('student', 'Short Claim', null, 9::smallint, 'Mum', '9811122266', null, p_consent => true);
+select public.complete_onboarding('student', 'Short Claim', null, 9::smallint, 'Mum', '9811122266', 'Test School', p_consent => true);
 select public.save_progress(pg_temp.lesson(0), 30, null, 30, 30, '{0,1,2}');
 select 'Z19 a 30-second length claim for a longer lesson is ignored (3 parts of a 6-min lesson = 8%)' t,
   (select watched_pct = 8 and completed_at is null and video_seconds is distinct from 30 from public.lesson_progress where student_id = auth.uid() and lesson_id = pg_temp.lesson(0)) as pass;
@@ -857,7 +868,7 @@ select 'Q53 filled lead fields are not overwritten' t,
   (select student_name = 'Asha Rao' and parent_name = 'Lead Parent' from public.leads where reference = 'sl-1') as pass;
 set role authenticated; select pg_temp.as_user('5c000000-0000-0000-0000-0000000000a2');
 select 'Q54 signup list shows only listed schools' t, (select array_agg(name) = array['Kodi School'] from public.signup_schools()) as pass;
-select public.complete_onboarding('student', 'Picker', null, 8::smallint, 'Dad', '9822200002', null, p_consent => true,
+select public.complete_onboarding('student', 'Picker', null, 8::smallint, 'Dad', '9822200002', 'Test School', p_consent => true,
   p_school_pick => '5c000000-0000-0000-0000-000000000001');
 reset role;
 select 'Q55 picking a listed school sets it without class enrollment' t,
@@ -869,7 +880,7 @@ select 'Q56 a lead added later links and fills its blanks' t,
        from public.leads where reference = 'sl-2') as pass;
 reset role; insert into auth.users (id, email) values ('5c000000-0000-0000-0000-0000000000a3', 'nolist@x.in');
 set role authenticated; select pg_temp.as_user('5c000000-0000-0000-0000-0000000000a3');
-do $$ begin perform public.complete_onboarding('student', 'X', null, 8::smallint, 'D', '9822200003', null, p_consent => true,
+do $$ begin perform public.complete_onboarding('student', 'X', null, 8::smallint, 'D', '9822200003', 'Test School', p_consent => true,
   p_school_pick => '5c000000-0000-0000-0000-000000000099'); raise exception 'Q57x FAIL';
 exception when others then if sqlerrm like 'Q57%' then raise; end if; raise notice 'Q57 pass: %', sqlerrm; end $$;
 reset role;
@@ -935,6 +946,21 @@ update public.course_access set unlock_all = true where student_id = 'ba000000-0
 select 'K9 unlock_all skips the batch schedule but not Coming soon' t,
   pg_temp.rel('ba000000-0000-0000-0000-000000000003', 3) = '2026-11-01'
   and pg_temp.rel('ba000000-0000-0000-0000-000000000003', 4) = '2099-12-31' as pass;
+-- School batches (20261126000002): a school's batch_start decides, whenever the student joined.
+update public.course_access set unlock_all = false where student_id = 'ba000000-0000-0000-0000-000000000003';
+insert into public.schools (name, code, teacher_code, batch_start) values ('Batch School', 'BATCH-1', 'BATCH-T-1', '2026-11-29 10:00 Asia/Kolkata');
+update public.profiles set school_id = (select id from public.schools where code = 'BATCH-1')
+  where id in ('ba000000-0000-0000-0000-000000000001', 'ba000000-0000-0000-0000-000000000003');
+select 'K10 school batch: Module 1 on the school date, in order, for an early joiner' t,
+  pg_temp.rel('ba000000-0000-0000-0000-000000000001', 1) = '2026-11-29 10:00 Asia/Kolkata'
+  and pg_temp.rel('ba000000-0000-0000-0000-000000000001', 3) = '2026-12-13 10:00 Asia/Kolkata' as pass;
+select 'K11 same dates for a student who joined at another time' t,
+  pg_temp.rel('ba000000-0000-0000-0000-000000000003', 1) = '2026-11-29 10:00 Asia/Kolkata'
+  and pg_temp.rel('ba000000-0000-0000-0000-000000000003', 2) = pg_temp.rel('ba000000-0000-0000-0000-000000000001', 2) as pass;
+select 'K12 Coming soon still closed; no-school student keeps the old batch' t,
+  pg_temp.rel('ba000000-0000-0000-0000-000000000003', 4) = '2099-12-31'
+  and pg_temp.rel('ba000000-0000-0000-0000-000000000002', 1) = '2026-11-15 10:00 Asia/Kolkata' as pass;
+update public.profiles set school_id = null where id::text like 'ba000000%';
 
 -- ── WhatsApp OTP send limits (audit 2026-11-09) ──────────────────────────────
 set role authenticated;
@@ -1248,9 +1274,259 @@ set role authenticated;
 select 'R801b module 0 leader' t, public.school_race() ->> 'watched' = 'Class 9 B' as pass;
 select 'R802 section saved, leader by class, no counts' t, public.school_race() ->> 'section' = 'B'
   and public.school_race() ->> 'enrolled' = 'Class 9 B'
-  and (select count(*) from jsonb_object_keys(public.school_race())) = 6 as pass;
+  and public.school_race() -> 'enrolled_top' = '["Class 9 B"]' and public.school_race() ->> 'my_class' = 'Class 9 B'
+  and public.school_race() ->> 'school' = 'St Test'
+  and not exists (select 1 from jsonb_each(public.school_race()) e where jsonb_typeof(e.value) = 'number') as pass;
 select public.set_my_section('');
 select 'R803 no section' t, public.school_race() ->> 'enrolled' = 'Class 9' as pass;
 reset role;
 select 'R804 higher signup limit during race' t, bool_and(public.password_signup_allowed('race-ip') = 'ok') as pass from generate_series(1, 30);
 delete from public.school_races;
+-- Races from Studio (20261125000003)
+set role authenticated;
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+do $$ begin perform public.admin_start_race((select id from public.schools limit 1), now(), 48); raise exception 'R805 FAIL'; exception when insufficient_privilege then raise notice 'R805 pass: students cannot start a race'; end $$;
+select 'R806 students see no race list' t, not exists (select 1 from public.admin_races()) as pass;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_start_race((select school_id from public.profiles where id = '11111111-1111-1111-1111-111111111111'), now() - interval '1 minute', 48);
+select 'R807 admin starts a 48h race' t, (select status = 'live' and ends_at - starts_at = interval '48 hours' from public.admin_races()) as pass;
+select public.admin_start_race((select school_id from public.profiles where id = '11111111-1111-1111-1111-111111111111'), now() - interval '1 minute', 24);
+select 'R808 starting again replaces it' t, (select count(*) = 1 and bool_and(ends_at - starts_at = interval '24 hours') from public.admin_races()) as pass;
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+select 'R809 the student sees it' t, public.school_race() is not null as pass;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_end_race((select school_id from public.profiles where id = '11111111-1111-1111-1111-111111111111'));
+select 'R810 end now keeps the final result' t, (select status = 'ended' from public.admin_races()) as pass;
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+select 'R811 student sees the final result' t, (public.school_race() ->> 'ended')::boolean as pass;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_end_race((select school_id from public.profiles where id = '11111111-1111-1111-1111-111111111111'));
+select 'R812 ending an ended race removes it' t, not exists (select 1 from public.admin_races()) as pass;
+do $$ begin perform public.admin_start_race((select id from public.schools limit 1), now(), 0); raise exception 'R813 FAIL'; exception when others then if sqlerrm like '%1 hour%' then raise notice 'R813 pass: duration checked'; else raise; end if; end $$;
+select public.admin_start_race((select school_id from public.profiles where id = '11111111-1111-1111-1111-111111111111'), now() - interval '1 minute', 24);
+reset role;
+update public.school_races set by_section = false;
+update public.profiles set section = 'B' where id = '11111111-1111-1111-1111-111111111111';
+set role authenticated;
+select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+select 'R814 no-section race: class only, no picker' t, public.school_race() ->> 'my_class' = 'Class 9'
+  and public.school_race() -> 'enrolled_top' = '["Class 9"]' and not (public.school_race() ->> 'student')::boolean as pass;
+reset role;
+delete from public.school_races;
+reset role;
+
+-- ── Test accounts out of Studio numbers (20261125000002) ─────────────────────
+set role authenticated;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+create temp table t_before as select
+  jsonb_array_length(public.admin_student_scores(null, 3650)) scores,
+  (public.admin_stats() ->> 'students')::int students, (public.admin_stats() ->> 'unlocked')::int unlocked,
+  (public.admin_student_scores(null, 3650) @> '[{"student_id":"11111111-1111-1111-1111-111111111111","paid":true}]')::int had_access,
+  (select count(*) from public.admin_pipeline() where student_id = '11111111-1111-1111-1111-111111111111') pipe,
+  (public.admin_insights(30) -> 'engagement' ->> 'students')::int insights;
+select public.admin_set_test('11111111-1111-1111-1111-111111111111', true);
+select public.admin_set_test_paid('11111111-1111-1111-1111-111111111111', true);
+select 'T901 test account gone from scores' t, jsonb_array_length(public.admin_student_scores(null, 3650)) = scores - 1 as pass from t_before;
+select 'T902 not counted as a student' t, (public.admin_stats() ->> 'students')::int = students - 1 as pass from t_before;
+select 'T903 free test access is not "unlocked"' t, (public.admin_stats() ->> 'unlocked')::int = unlocked - had_access as pass from t_before;
+select 'T904 in the pipeline, flagged as test' t, (select is_test from public.admin_pipeline() where student_id = '11111111-1111-1111-1111-111111111111') as pass;
+select 'T905 not in insights' t, (public.admin_insights(30) -> 'engagement' ->> 'students')::int = insights - 1 as pass from t_before;
+select public.admin_set_test_paid('11111111-1111-1111-1111-111111111111', false);
+select public.admin_set_test('11111111-1111-1111-1111-111111111111', false);
+select 'T908 real student not flagged' t, not (select is_test from public.admin_pipeline() where student_id = '11111111-1111-1111-1111-111111111111') as pass;
+select 'T906 back as a real student' t, jsonb_array_length(public.admin_student_scores(null, 3650)) = scores as pass from t_before;
+select pg_temp.as_user('99999999-9999-9999-9999-999999999999');
+do $$ begin perform public.admin_set_test('11111111-1111-1111-1111-111111111111', true); raise exception 'T907 FAIL'; exception when insufficient_privilege then raise notice 'T907 pass: only admins mark test accounts'; end $$;
+reset role;
+
+-- ── School required + Studio batch start (20261126000003) ───────────────────
+reset role;
+insert into auth.users (id, email) values ('5c000000-0000-0000-0000-000000000001', 'noschool@x.in');
+set role authenticated;
+select pg_temp.as_user('5c000000-0000-0000-0000-000000000001');
+do $$ begin perform public.complete_onboarding('student', 'No School', null, 9::smallint, 'Mum', '9811100001', p_consent => true); raise exception 'B901 FAIL';
+exception when others then if sqlerrm like '%Choose your school%' then raise notice 'B901 pass: school is required'; else raise; end if; end $$;
+select 'B902 typed school name is enough' t, public.complete_onboarding('student', 'Has School', null, 9::smallint, 'Mum', '9811100001', 'Some School', p_consent => true) = 'student' as pass;
+do $$ begin perform public.admin_set_school_batch((select id from public.schools limit 1), now()); raise exception 'B903 FAIL';
+exception when insufficient_privilege then raise notice 'B903 pass: only admins set a batch'; end $$;
+select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_set_school_batch((select id from public.admin_school_batches() where name = 'St Test'), '2026-12-06 10:00 Asia/Kolkata');
+select 'B904 admin sets and sees the batch start' t, (select batch_start = '2026-12-06 10:00 Asia/Kolkata' from public.admin_school_batches() where name = 'St Test') as pass;
+select public.admin_set_school_batch((select id from public.admin_school_batches() where name = 'St Test'), null);
+select 'B905 and clears it' t, (select batch_start is null from public.admin_school_batches() where name = 'St Test') as pass;
+reset role;
+
+-- Sign-up chat: has_keys only when the school has an unused key (20261127000001).
+reset role;
+select 'K1 no keys for Kodi yet' t, (select not has_keys from public.signup_schools() where name = 'Kodi School') as pass;
+insert into public.access_keys (code, course_id, school_id, label) values ('KODI-KEY-1', 'ai-for-students', '5c000000-0000-0000-0000-000000000001', 'test');
+select 'K2 unused key shows the key question' t, (select has_keys from public.signup_schools() where name = 'Kodi School') as pass;
+update public.access_keys set redeemed_by = '5c000000-0000-0000-0000-0000000000a1' where code = 'KODI-KEY-1';
+select 'K3 all keys used: no key question' t, (select not has_keys from public.signup_schools() where name = 'Kodi School') as pass;
+delete from public.access_keys where code = 'KODI-KEY-1';
+
+-- WhatsApp journey v2 (20261127000003): student (_s) + parent (_p) messages, queued once, never for test accounts.
+reset role;
+update public.automation_rules set campaign = 'c_' || key, enabled = true where key like 'j\_%';
+insert into auth.users (id, email) values ('a7000000-0000-0000-0000-000000000001', 'j1@x.in'), ('a7000000-0000-0000-0000-000000000002', 'j2@x.in'),
+  ('a7000000-0000-0000-0000-000000000003', 'j3@x.in');
+insert into public.profiles (id, role, full_name, grade, guardian_name, guardian_phone, student_phone, guardian_consent_at, consent_by, created_at)
+values ('a7000000-0000-0000-0000-000000000001', 'student', 'Journey Kid', 9, 'Mum', '+919845066601', null, now(), 'student', now() - interval '10 minutes'),
+       ('a7000000-0000-0000-0000-000000000002', 'student', 'Test Kid', 9, 'Mum', '+919845066602', null, now(), 'student', now() - interval '10 minutes'),
+       ('a7000000-0000-0000-0000-000000000003', 'student', 'Own Phone', 8, 'Dad', '+919845066603', '+919845066613', now(), 'student', now() - interval '10 minutes');
+update public.profiles set is_test = true where id = 'a7000000-0000-0000-0000-000000000002';
+select public.automation_tick();
+select public.automation_tick();
+select 'W1 new student: one student + one parent welcome' t,
+  (select count(*) filter (where rule_key = 'j_welcome_s') = 1 and count(*) filter (where rule_key = 'j_welcome_p') = 1
+   from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+select 'W2 no student phone: student message goes to the parent' t,
+  (select phone = '+919845066601' and params = '["Journey"]'::jsonb from public.message_queue where rule_key = 'j_welcome_s' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+select 'W2b own student phone: student message goes there, parent''s to the parent' t,
+  (select bool_and(case rule_key when 'j_welcome_s' then phone = '+919845066613' else phone = '+919845066603' end) and count(*) = 2
+   from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000003') as pass;
+select 'W3 test accounts get nothing' t,
+  (select count(*) = 0 from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000002') as pass;
+-- Parent on Do not contact: the student's own number is silenced too.
+delete from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000003';
+insert into public.leads (reference, phone, source, do_not_contact) values ('j-dnc', '+919845066603', 'manual', true);
+select public.automation_tick();
+select 'W4 parent opted out: student gets nothing, parent message skipped' t,
+  (select count(*) filter (where rule_key = 'j_welcome_s') = 0 and bool_and(status = 'skipped' or rule_key <> 'j_welcome_p')
+   from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000003') as pass;
+-- Enrolled by payment: welcome + receipt to the parent.
+insert into public.courses (id, title) values ('ai-for-students', 'AI') on conflict (id) do nothing;
+insert into public.purchases (course_id, reference, phone, amount_paise, status, claimed_by, claimed_at)
+values ('ai-for-students', 'pay_JOURNEY1', '+919845066601', 49900, 'claimed', 'a7000000-0000-0000-0000-000000000001', now());
+insert into public.course_access (student_id, course_id, source, reference, granted_at)
+values ('a7000000-0000-0000-0000-000000000001', 'ai-for-students', 'payment', 'pay_JOURNEY1', now() - interval '5 minutes');
+select public.automation_tick();
+select 'W5 enrolled: student welcome once' t,
+  (select count(*) = 1 from public.message_queue where rule_key = 'j_enrolled_s' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+select 'W5b parent receipt carries amount and payment id' t,
+  (select params = '["Journey", "499", "pay_JOURNEY1"]'::jsonb from public.message_queue where rule_key = 'j_enrolled_p' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+insert into public.newsletters (title, file_path, mime, size_bytes) values ('November news', '2026-11/journey-news.pdf', 'application/pdf', 100);
+select 'W6 newsletter: student + parent, enrolled only' t,
+  (select count(*) filter (where student_id = 'a7000000-0000-0000-0000-000000000001') = 2
+      and count(*) filter (where student_id::text like 'a7000000-%' and student_id <> 'a7000000-0000-0000-0000-000000000001') = 0
+   from public.message_queue q where rule_key in ('j_newsletter_s', 'j_newsletter_p')) as pass;
+set role authenticated;
+do $$ begin perform public.automation_tick(); raise exception 'W7 FAIL';
+exception when others then if sqlerrm like 'W7%' then raise; end if; raise notice 'W7 pass: only the sender can run the tick'; end $$;
+do $$ begin perform public.journey_rank('a7000000-0000-0000-0000-000000000001'); raise exception 'W7b FAIL';
+exception when others then if sqlerrm like 'W7b%' then raise; end if; raise notice 'W7b pass: journey helpers are not callable by users'; end $$;
+reset role;
+-- Weekly: a module opened 11 h ago → Module out (student + parent) with XP and rank.
+update public.course_access set unlock_all = true, granted_at = now() - interval '9 days' where student_id = 'a7000000-0000-0000-0000-000000000001';
+update public.chapters set position = position + 100 where course_id = 'ai-for-students' and not is_free;  -- only the two test modules count
+insert into public.chapters (id, course_id, title, blurb, position, release_at, is_free) values
+  ('a7c00000-0000-0000-0000-000000000001', 'ai-for-students', 'Wk old', null, 3, now() - interval '7 days 11 hours', false),
+  ('a7c00000-0000-0000-0000-000000000002', 'ai-for-students', 'Wk new', 'Make posters', 4, now() - interval '11 hours', false);
+insert into public.lessons (id, course_id, chapter_id, title, position) values
+  ('a7d00000-0000-0000-0000-000000000001', 'ai-for-students', 'a7c00000-0000-0000-0000-000000000001', 'L old', 901),
+  ('a7d00000-0000-0000-0000-000000000002', 'ai-for-students', 'a7c00000-0000-0000-0000-000000000002', 'L new', 902);
+insert into public.quizzes (id, chapter_id, title, published) values ('a7e00000-0000-0000-0000-000000000001', 'a7c00000-0000-0000-0000-000000000001', 'Quiz old', true);
+insert into public.quiz_questions (quiz_id, prompt, options, correct_index) values ('a7e00000-0000-0000-0000-000000000001', 'Q', array['a', 'b'], 0);
+select public.automation_tick();
+select 'W8 module out: student gets number, title, XP and rank' t,
+  (select params ->> 1 = '4' and params ->> 2 = 'Wk new' and (params ->> 4)::int >= 1
+   from public.message_queue where rule_key = 'j_module_open_s' and dedupe = 'o:a7000000-0000-0000-0000-000000000001:a7c00000-0000-0000-0000-000000000002') as pass;
+select 'W8b module out: parent gets what they learn' t,
+  (select params ->> 3 = 'Make posters' from public.message_queue where rule_key = 'j_module_open_p' and student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+select 'W9 quiz not passed: module state says quiz pending with 10 XP' t,
+  (select not quiz_ok and asg_ok and xp_left = 10 from public.journey_module_state('a7000000-0000-0000-0000-000000000001', 'a7c00000-0000-0000-0000-000000000001')) as pass;
+-- Previous module fully done → "module complete" version instead of "module out".
+delete from public.message_queue where rule_key like 'j\_module%';
+insert into public.lesson_progress (student_id, lesson_id, completed_at, watched_pct) values ('a7000000-0000-0000-0000-000000000001', 'a7d00000-0000-0000-0000-000000000001', now(), 100);
+insert into public.quiz_attempts (quiz_id, student_id, answers, score, total, passed) values ('a7e00000-0000-0000-0000-000000000001', 'a7000000-0000-0000-0000-000000000001', '{0}', 1, 1, true);
+select public.automation_tick();
+select 'W10 previous module done: module complete message, no plain module out' t,
+  (select count(*) filter (where rule_key = 'j_module_done_s') = 1 and count(*) filter (where rule_key = 'j_module_done_p') = 1
+      and count(*) filter (where rule_key like 'j\_module\_open%') = 0
+   from public.message_queue where student_id = 'a7000000-0000-0000-0000-000000000001') as pass;
+select 'W11 Module 0 status helper: not started' t, public.journey_m0_status('a7000000-0000-0000-0000-000000000003') = 'none' as pass;
+select 'W12 nudge cap: a number with 2 nudges today gets no third' t,
+  (with s as (select * from public.journey_students() where id = 'a7000000-0000-0000-0000-000000000001')
+   select public.journey_send('j_nudge_tue_s', 'cap1', s, '["a","1"]', true) + public.journey_send('j_nudge_thu_s', 'cap2', s, '["a","1","0"]', true)
+        + public.journey_send('j_nudge_sat_s', 'cap3', s, '["a","1"]', true) = 2 from s) as pass;
+
+-- ── Custom automations (20261128000002): rules built in Studio ───────────────
+reset role;
+insert into public.wa_templates (key, title, campaign, params) values ('ct_hello', 'Custom hello', 'ct_hello', array['{student_first}']);
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+-- Window = this hour (IST) so the test works at any time of day.
+select public.admin_save_custom_rule(jsonb_build_object('title', 'CT signup', 'trigger', 'signup', 'recipient', 'parent', 'aud_stage', 'not_enrolled',
+  'template_key', 'ct_hello', 'from_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int, 'to_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int + 1));
+reset role;
+select 'Z9101 new custom rule is Off and sends nothing' t,
+  (select not enabled and custom from public.automation_rules where title = 'CT signup') and public.automation_custom_tick() = 0 as pass;
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_set_automation((select key from public.automation_rules where title = 'CT signup'), '', true, 'ct_hello');
+reset role;
+select public.automation_custom_tick();
+select 'Z9102 switching On is not retroactive: students from before are left alone' t,
+  (select count(*) = 0 from public.message_queue where rule_key = (select key from public.automation_rules where title = 'CT signup')) as pass;
+update public.automation_rules set include_past = true where title = 'CT signup';
+select public.automation_custom_tick();
+select public.automation_custom_tick();
+select 'Z9103 include past: not-enrolled student gets it once; enrolled and test accounts do not' t,
+  (select count(*) filter (where student_id = 'a7000000-0000-0000-0000-000000000003' and phone = '+919845066603' and params = '["Own"]'::jsonb) = 1
+      and count(*) filter (where student_id::text like 'a7000000-%' and student_id <> 'a7000000-0000-0000-0000-000000000003') = 0
+   from public.message_queue where rule_key = (select key from public.automation_rules where title = 'CT signup')) as pass;
+-- Outside the send window nothing is queued.
+delete from public.message_queue where rule_key = (select key from public.automation_rules where title = 'CT signup');
+update public.automation_rules set from_hour = (extract(hour from now() at time zone 'Asia/Kolkata')::int + 2) % 22,
+  to_hour = (extract(hour from now() at time zone 'Asia/Kolkata')::int + 2) % 22 + 1 where title = 'CT signup';
+select 'Z9104 outside the send window: nothing queued' t, public.automation_custom_tick() = 0 as pass;
+-- A fixed date + time to one class, once.
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+do $$ begin perform public.admin_save_custom_rule('{"title":"CT past","trigger":"date","run_at":"2020-01-01T10:00:00+05:30","template_key":"ct_hello"}');
+  raise exception 'Z9105 FAIL'; exception when others then if sqlerrm like 'Z9105%' then raise; end if; raise notice 'Z9105 pass: a date in the past is refused'; end $$;
+select public.admin_save_custom_rule(jsonb_build_object('title', 'CT date', 'trigger', 'date', 'run_at', now() + interval '1 hour', 'aud_grade', 8,
+  'template_key', 'ct_hello', 'from_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int, 'to_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int + 1));
+select public.admin_set_automation((select key from public.automation_rules where title = 'CT date'), '', true, 'ct_hello');
+reset role;
+update public.automation_rules set run_at = now() - interval '1 minute', enabled_at = now() - interval '2 minutes' where title = 'CT date';
+select public.automation_custom_tick();
+select public.automation_custom_tick();
+select 'Z9106 date rule: only the class asked for, once' t,
+  (select count(*) filter (where student_id = 'a7000000-0000-0000-0000-000000000003') = 1
+      and count(*) filter (where student_id = 'a7000000-0000-0000-0000-000000000001') = 0
+   from public.message_queue where rule_key = (select key from public.automation_rules where title = 'CT date')) as pass;
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'Z9107 preview counts who it reaches and who already got it' t,
+  (select total >= 1 and already >= 1 from public.admin_custom_preview((select key from public.automation_rules where title = 'CT date'))) as pass;
+-- A module opening: one message per student per module, to the student's number.
+select public.admin_save_custom_rule(jsonb_build_object('title', 'CT module', 'trigger', 'module_open', 'aud_module', 4, 'recipient', 'student', 'include_past', true,
+  'template_key', 'ct_hello', 'from_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int, 'to_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int + 1));
+select public.admin_set_automation((select key from public.automation_rules where title = 'CT module'), '', true, 'ct_hello');
+reset role;
+select public.automation_custom_tick();
+select public.automation_custom_tick();
+select 'Z9108 module opens: the student gets it once' t,
+  (select count(*) = 1 and bool_and(params = '["Journey"]'::jsonb)
+   from public.message_queue where rule_key = (select key from public.automation_rules where title = 'CT module') and student_id::text like 'a7000000-%') as pass;
+-- A new lead with no account.
+insert into public.leads (reference, phone, source, grade, parent_name) values ('ct-lead-1', '+919845066699', 'manual', 8, 'Lead Parent');
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_save_custom_rule(jsonb_build_object('title', 'CT lead', 'trigger', 'lead_added', 'include_past', true, 'template_key', 'ct_hello',
+  'from_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int, 'to_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int + 1));
+select public.admin_set_automation((select key from public.automation_rules where title = 'CT lead'), '', true, 'ct_hello');
+reset role;
+select public.automation_custom_tick();
+select 'Z9109 new lead: queued to the lead parent; do-not-contact leads are left out' t,
+  (select count(*) filter (where phone = '+919845066699' and lead_id is not null) = 1 and count(*) filter (where phone = '+919845066603') = 0
+   from public.message_queue where rule_key = (select key from public.automation_rules where title = 'CT lead')) as pass;
+-- Delete only a rule that never sent anything.
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+do $$ begin perform public.admin_delete_custom_rule((select key from public.automation_rules where title = 'CT lead'));
+  raise exception 'Z9110 FAIL'; exception when others then if sqlerrm like 'Z9110%' then raise; end if; raise notice 'Z9110 pass: a rule with history cannot be deleted'; end $$;
+select public.admin_delete_custom_rule(public.admin_save_custom_rule('{"title":"CT blank","trigger":"signup"}'));
+select 'Z9111 a rule that never sent can be deleted' t, (select count(*) = 0 from public.automation_rules where title = 'CT blank') as pass;
+-- Students cannot touch any of it.
+select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+do $$ begin perform public.admin_save_custom_rule('{"title":"evil","trigger":"signup"}'); raise exception 'Z9112 FAIL';
+exception when others then if sqlerrm like 'Z9112%' then raise; end if; raise notice 'Z9112 pass: students cannot create rules'; end $$;
+do $$ begin perform public.automation_custom_tick(); raise exception 'Z9113 FAIL';
+exception when others then if sqlerrm like 'Z9113%' then raise; end if; raise notice 'Z9113 pass: only the sender can run the custom tick'; end $$;
+reset role;

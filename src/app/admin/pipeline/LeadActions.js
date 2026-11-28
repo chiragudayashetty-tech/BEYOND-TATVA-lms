@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CopyX, Merge, RotateCcw, Trash2 } from "lucide-react";
-import { clearLeads, dedupeLeads, deleteLeads, mergeLeads, restoreLead } from "@/app/admin/actions";
+import { CopyX, FlaskConical, Merge, RotateCcw, Trash2 } from "lucide-react";
+import { clearLeads, dedupeLeads, deleteLeads, mergeLeads, restoreLead, setTestAccount } from "@/app/admin/actions";
 
 function useAction() {
   const [pending, start] = useTransition();
@@ -82,6 +82,21 @@ export function RestoreLeadButton({ id }) {
     <>
       <button type="button" disabled={pending} className="btn-secondary min-h-11 px-3" onClick={() => go(() => restoreLead(id))}>
         <RotateCcw size={16} /> {pending ? "Restoring…" : "Restore"}
+      </button>
+      {msg && <span role="status" className="text-[11px] text-muted">{msg}</span>}
+    </>
+  );
+}
+
+// Signed-in students only: move between the real pipeline and the Test accounts tab.
+export function TestAccountButton({ studentId, isTest, name }) {
+  const { pending, msg, go } = useAction();
+  if (!studentId) return null;
+  return (
+    <>
+      <button type="button" disabled={pending} className="btn-secondary min-h-11 px-3"
+        onClick={() => { if (confirm(isTest ? `Count "${name}" as a real student again?` : `Mark "${name}" as a test account? It moves to the Test accounts tab and stops counting in Studio numbers.`)) go(() => setTestAccount(studentId, !isTest)); }}>
+        <FlaskConical size={16} /> {pending ? "Saving…" : isTest ? "Not a test" : "Mark as test"}
       </button>
       {msg && <span role="status" className="text-[11px] text-muted">{msg}</span>}
     </>

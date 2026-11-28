@@ -121,7 +121,7 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
     if (correct) setXp((x) => x + 10);
     if (!canSave || !userId) return;
     const { error } = await createClient().rpc("save_answer", { p_lesson: lesson.id, p_question: question, p_correct: correct });
-    if (!error) router.refresh(); // XP and leaderboard
+    if (!error) router.refresh(); // AI points and leaderboard
   }
   const noteKey = `notes:${lesson.id}`;
   // The Notes tab is never server-rendered (Overview opens first), so reading storage here is safe.
@@ -205,7 +205,7 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
                 <div className="font-medium">Chirag Shetty</div>
                 <div className="text-xs text-muted">Founder, Beyond Tatva</div>
               </div>
-              {xp > 0 && <Badge tone="warning"><Zap className="h-3 w-3" /> +{xp} XP earned</Badge>}
+              {xp > 0 && <Badge tone="warning"><Zap className="h-3 w-3" /> +{xp} AI points earned</Badge>}
             </div>
           </div>
           <div role="status" className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium ${done ? "bg-success-soft text-success" : "bg-surface-2 text-muted"}`}>
@@ -229,7 +229,7 @@ export default function LessonView({ course, lesson, hasAccess, video, activitie
             <div className="max-w-2xl space-y-3 text-sm leading-relaxed text-muted">
               <RichText text={lesson.description} />
               {autoTracked
-                ? <p>Your progress saves as you watch. The lesson completes automatically after you watch 90%. Quick questions inside the video earn 10 XP each, and finishing every video in a module earns 100 XP.</p>
+                ? <p>Your progress saves as you watch. The lesson completes automatically after you watch 90%. Quick questions inside the video earn 10 AI points each, and finishing every video in a module earns 100 AI points.</p>
                 : video ? <p>This video can&apos;t be tracked on its own yet, so the lesson won&apos;t tick itself off. You can still watch it and move on.</p>
                 : <p>The video for this lesson is being uploaded. Check back soon.</p>}
             </div>

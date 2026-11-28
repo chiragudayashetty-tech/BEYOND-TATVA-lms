@@ -8,7 +8,7 @@ import { OUTCOMES, applyFilters, classSections, facets, filterQuery, groupByScho
 import { todayIST } from "@/lib/outreach";
 import { createClient } from "@/lib/supabase/server";
 import { NotesButton } from "./CrmNotes";
-import { ClearLeadsButton, DeleteLeadButton } from "./LeadActions";
+import { ClearLeadsButton, DeleteLeadButton, TestAccountButton } from "./LeadActions";
 import AddLeads from "./AddLeads";
 import SendWhatsApp from "@/components/whatsapp/SendWhatsApp";
 import PersonLink from "../PersonLink";
@@ -35,17 +35,26 @@ function groupRows(rows) {
 export default async function PipelinePage({ searchParams }) {
   const sp = await searchParams;
   const { stage: stageParam, stalled, view: viewParam, followups, tab: tabParam } = sp;
-  const tab = tabParam === "closed" ? "closed" : "open";
+  const tab = ["closed", "bought", "test"].includes(tabParam) ? tabParam : "open";
   const f = parseFilters(sp);
   const today = todayIST();
   const view = viewParam === "schools" ? "schools" : "parents";
   const stage = STAGES.find((s) => String(s.id) === stageParam)?.id ?? null;
   const supabase = await createClient();
-  const [{ data, error }, { data: notes }, { data: templates }] = await Promise.all([
+  const [{ data: raw, error }, { data: notes }, { data: templates }, { data: waiting }] = await Promise.all([
     supabase.rpc("admin_pipeline", { p_course: COURSE_ID, p_stall_hours: STALL_HOURS }),
     supabase.from("crm_notes").select("*").order("created_at", { ascending: false }),
     supabase.from("wa_templates").select("key, title, language, category, params, body, active").order("key"),
+    supabase.from("purchases").select("phone, created_at").eq("status", "pending").eq("course_id", COURSE_ID),
   ]);
+  // Paid (e.g. on /pay) but not signed in yet: the payment waits on their phone and gives no access, so
+  // admin_pipeline still says "Lead". Show them as Bought with a "Paid · not signed in yet" note to follow up.
+  const ten = (p) => String(p || "").replace(/\D/g, "").slice(-10);
+  const paidAt = new Map((waiting ?? []).map((w) => [ten(w.phone), w.created_at]));
+  const data = (raw ?? []).map((r) => {
+    const at = r.stage < 5 && !r.student_id && paidAt.get(ten(r.phone));
+    return at ? { ...r, stage: 5, bought_at: at, paid_waiting: true } : r;
+  });
   const byPerson = new Map();
   // A note may carry a student id, a lead id or both; index it under each so it follows the person after sign-up.
   for (const note of notes ?? []) {
@@ -55,13 +64,22 @@ export default async function PipelinePage({ searchParams }) {
   const now = new Date();
   const isDue = (r) => notesFor(r).some((n) => !n.done_at && n.follow_up_at && new Date(n.follow_up_at) <= now);
   // School enquiries (principals from the /schools form) are counted apart from parents and students.
-  const everyone = (data ?? []).filter((r) => (view === "schools") === (r.source === "schools"));
+  // Test accounts live on their own tab and never count in Open/Closed or the stage cards.
+  const inView = (data ?? []).filter((r) => (view === "schools") === (r.source === "schools"));
+  const testRows = inView.filter((r) => r.is_test);
+  const everyone = tab === "test" ? testRows : inView.filter((r) => !r.is_test);
   const choices = facets(everyone);
   // School / class / section / status / source / siblings / due / search (src/lib/crm.js). Stage cards count after these.
   const filteredAll = applyFilters(everyone, f, today, isDue);
-  const openCount = filteredAll.filter((r) => !isClosed(r)).length, closedCount = filteredAll.length - openCount;
+  const realFiltered = tab === "test" ? applyFilters(inView.filter((r) => !r.is_test), f, today, isDue) : filteredAll;
+  // Tabs: Open, Closed (lost / do not contact), Bought (has the course, stage 5), Test accounts.
+  const isBought = (r) => r.stage === 5;
+  const notBought = realFiltered.filter((r) => !isBought(r));
+  const openCount = notBought.filter((r) => !isClosed(r)).length, closedCount = notBought.length - openCount;
+  const boughtCount = realFiltered.length - notBought.length;
   // Open / Closed tabs (closed = won, lost or do not contact). A status filter picks its own tab.
-  const all = f.outcome ? filteredAll : filteredAll.filter((r) => isClosed(r) === (tab === "closed"));
+  const all = tab === "test" ? filteredAll : tab === "bought" ? filteredAll.filter(isBought)
+    : (f.outcome ? filteredAll : filteredAll.filter((r) => isClosed(r) === (tab === "closed"))).filter((r) => !isBought(r));
   const rows = sortRows(all.filter((r) => (stage ? r.stage === stage : true) && (stalled ? r.stalled : true) && (followups ? isDue(r) : true)));
   const bySchool = f.group === "school" && !f.school ? groupBySchool(all) : null;
   const breakdown = f.school ? classSections(all) : null;
@@ -70,7 +88,7 @@ export default async function PipelinePage({ searchParams }) {
   const stalledCount = all.filter((r) => r.stalled).length;
   const dueCount = all.filter(isDue).length;
   const href = (q, change = {}) => {
-    const qs = [view === "schools" && "view=schools", tab === "closed" && "tab=closed", filterQuery(f, change), q].filter(Boolean).join("&");
+    const qs = [view === "schools" && "view=schools", tab !== "open" && `tab=${tab}`, filterQuery(f, change), q].filter(Boolean).join("&");
     return `/admin/pipeline${qs ? `?${qs}` : ""}`;
   };
 
@@ -96,7 +114,7 @@ export default async function PipelinePage({ searchParams }) {
       <form method="get" action="/admin/pipeline" className="card mb-4 grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-6" aria-label="Filters">
         {view === "schools" && <input type="hidden" name="view" value="schools" />}
         {f.group && <input type="hidden" name="group" value={f.group} />}
-        {tab === "closed" && <input type="hidden" name="tab" value="closed" />}
+        {tab !== "open" && <input type="hidden" name="tab" value={tab} />}
         <label className="col-span-2 sm:col-span-3 lg:col-span-2"><span className="label">School</span>
           <select name="school" defaultValue={f.school ?? ""} className="input"><option value="">All schools</option>{[...(f.school && !choices.schools.some((x) => x.toLowerCase() === f.school.toLowerCase()) ? [f.school] : []), ...choices.schools].map((x) => <option key={x}>{x}</option>)}</select></label>
         <label><span className="label">Class</span>
@@ -117,11 +135,11 @@ export default async function PipelinePage({ searchParams }) {
         </div>
       </form>
 
-      {!f.outcome && (
-        <div className="mb-4 flex gap-2" role="tablist" aria-label="Open or closed leads">
-          {[["open", `Open (${openCount})`], ["closed", `Closed (${closedCount})`]].map(([id, label]) => (
+      {(!f.outcome || tab === "test") && (
+        <div className="mb-4 flex gap-2" role="tablist" aria-label="Open, closed or bought">
+          {[["open", `Open (${openCount})`], ["closed", `Closed (${closedCount})`], ["bought", `Bought (${boughtCount})`], ["test", `Test accounts (${testRows.length})`]].map(([id, label]) => (
             <Link key={id} role="tab" aria-selected={tab === id} className={`${tab === id ? "btn-primary" : "btn-secondary"} min-h-11`}
-              href={`/admin/pipeline?${[view === "schools" && "view=schools", id === "closed" && "tab=closed", filterQuery(f)].filter(Boolean).join("&")}`}>{label}</Link>
+              href={`/admin/pipeline?${[view === "schools" && "view=schools", id !== "open" && `tab=${id}`, filterQuery(f)].filter(Boolean).join("&")}`}>{label}</Link>
           ))}
         </div>
       )}
@@ -171,8 +189,8 @@ export default async function PipelinePage({ searchParams }) {
         </Card>
       )}
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {STAGES.map((s) => (
+      {tab !== "bought" && <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {STAGES.filter((s) => s.id !== 5).map((s) => (
           <Link key={s.id} href={href(stage === s.id ? "" : `stage=${s.id}`)}
             className={`card p-4 transition hover:bg-surface-2 ${stage === s.id ? "ring-4 ring-primary/20 border-primary" : ""}`}>
             <div className="text-xs text-muted">{s.id}. {s.label}</div>
@@ -180,10 +198,10 @@ export default async function PipelinePage({ searchParams }) {
             <div className="mt-1 text-xs text-subtle">{s.body}</div>
           </Link>
         ))}
-      </div>
+      </div>}
 
       <Card pad={false}
-        title={`${stage ? STAGES[stage - 1].label : "Everyone"}${stalled ? " · stopped" : ""} (${rows.length})`}
+        title={`${tab === "bought" ? "Bought" : stage ? STAGES[stage - 1].label : "Everyone"}${stalled ? " · stopped" : ""} (${rows.length})`}
         action={
           <Link href={href(stalled ? (stage ? `stage=${stage}` : "") : `stalled=1${stage ? `&stage=${stage}` : ""}`)} className="inline-flex min-h-11 items-center gap-1 text-xs text-primary">
             <Filter size={14} /> {stalled ? "Show all" : `Stopped watching > ${STALL_HOURS}h (${stalledCount})`}
@@ -206,6 +224,7 @@ export default async function PipelinePage({ searchParams }) {
                   <li key={r.student_id ?? r.lead_id} className="flex flex-wrap items-start gap-3 px-5 py-3 text-sm">
                     <div className="min-w-0 flex-1">
                       <PersonLink studentId={r.student_id} leadId={r.lead_id} className="font-medium">{r.name}</PersonLink>
+                      {r.is_test && <span className="ml-2"><Badge tone="warning">Test</Badge></span>}
                       <div className="truncate text-xs text-muted">
                         {[r.parent_name && `Parent: ${r.parent_name}`, r.phone, r.grade && `Class ${r.grade}${r.section ? ` ${r.section}` : ""}`, r.school].filter(Boolean).join(" · ")}
                       </div>
@@ -218,7 +237,8 @@ export default async function PipelinePage({ searchParams }) {
                       <div className="text-xs text-subtle">
                         {[r.lead_at && `Lead ${date(r.lead_at)}`, r.signed_up_at && `Signed in ${date(r.signed_up_at)}`,
                           r.seconds_watched > 0 && `Watched ${mins(r.seconds_watched)} (last ${date(r.last_watch_at)})`,
-                          r.bought_at && `Bought ${date(r.bought_at)}`].filter(Boolean).join(" · ")}
+                          r.bought_at && `${r.paid_waiting ? "Paid" : "Bought"} ${date(r.bought_at)}`].filter(Boolean).join(" · ")}
+                        {r.paid_waiting && <span className="ml-1 font-semibold text-warning">· not signed in yet</span>}
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
@@ -227,6 +247,7 @@ export default async function PipelinePage({ searchParams }) {
                       {r.stalled && <Badge tone="danger">Stopped</Badge>}
                       {r.source && <span className="text-[11px] text-subtle">from {r.source}</span>}
                       <NotesButton person={r} notes={notesFor(r)} />
+                      <TestAccountButton studentId={r.student_id} isTest={r.is_test} name={r.name} />
                       <DeleteLeadButton leadId={r.lead_id} name={r.name} />
                     </div>
                   </li>

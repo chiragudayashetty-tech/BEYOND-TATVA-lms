@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CalendarClock, ChartLine, CheckCircle2, Clapperboard, ClipboardCheck, Contact, Film, GraduationCap, KeyRound, ListChecks, ReceiptText, School, UserCheck, Users, Workflow } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarClock, ChartLine, CheckCircle2, Clapperboard, ClipboardCheck, Contact, Film, Flag, GraduationCap, KeyRound, ListChecks, ReceiptText, School, UserCheck, Users, Workflow } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, IconTile, StatCard } from "@/components/ui";
 import { iconFor } from "@/components/course";
@@ -20,6 +20,7 @@ const sections = [
   { href: "/admin/access", icon: KeyRound, title: "School keys", body: "Make access keys for a school and upload a class list" },
   { href: "/admin/pipeline", icon: Contact, title: "Pipeline", body: "Leads to paid: who signed in, watched Module 0 and bought" },
   { href: "/admin/outreach", icon: School, title: "School outreach", body: "Schools to approach: calls, visits and the next follow-up" },
+  { href: "/admin/races", icon: Flag, title: "Races and batches", body: "After a workshop: school batch start date and class competition" },
   { href: "/admin/analytics", icon: ChartLine, title: "Analytics", body: "Funnel, revenue, student scores and school results" },
   { href: "/admin/automations", icon: Workflow, title: "WhatsApp", body: "Messages through AiSensy: auto-send, history, failed" },
 ];

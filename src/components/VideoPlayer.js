@@ -137,7 +137,7 @@ function NativePlayer({ src, onAnswer, onProgress, onPauseProgress, startAt = 0 
       {question && (
         <div className="absolute inset-0 grid place-items-center bg-black/60 p-3 backdrop-blur-sm sm:p-6">
           <div className="w-full max-w-md animate-[pop_.2s_ease-out] rounded-2xl bg-surface p-5 text-fg shadow-2xl sm:p-6">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-primary"><Zap className="h-3.5 w-3.5" /> Quick check · +10 XP</div>
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-primary"><Zap className="h-3.5 w-3.5" /> Quick check · +10 AI points</div>
             <p className="mt-2 font-semibold sm:text-lg">{question.question}</p>
             <div className="mt-4 space-y-2">
               {question.options.map((o, i) => {

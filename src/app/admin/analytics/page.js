@@ -27,7 +27,7 @@ export default async function AnalyticsPage({ searchParams }) {
     supabase.rpc("admin_student_scores", { p_school_id: schoolId && schoolId !== "none" ? schoolId : null, p_days: days }),
     supabase.rpc("admin_school_scores", { p_days: days }),
     supabase.rpc("admin_schools"),
-    supabase.from("profiles").select("id, grade, school_id, created_at").eq("role", "student").is("duplicate_of", null).gte("created_at", startAt).lt("created_at", endAt),
+    supabase.from("profiles").select("id, grade, school_id, created_at").eq("role", "student").eq("is_test", false).is("duplicate_of", null).gte("created_at", startAt).lt("created_at", endAt),
     supabase.from("chapters").select("id, position, is_free").eq("course_id", COURSE_ID),
     supabase.from("lessons").select("id, chapter_id, position, title, minutes").eq("course_id", COURSE_ID),
     fetchAll((a, b) => supabase.from("lesson_progress").select("student_id, lesson_id, completed_at, updated_at, seen, watched_pct, video_seconds").range(a, b)),
