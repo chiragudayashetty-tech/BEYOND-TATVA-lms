@@ -3,7 +3,7 @@ import { CheckCircle2, Clock, MessageCircle, XCircle } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle, StatCard } from "@/components/ui";
 import { createClient, isPreview, requireRole } from "@/lib/supabase/server";
-import { MessageForm, Retry, RuleSwitch, SendNow } from "./AutomationControls";
+import { DeleteMessage, MessageForm, Retry, RuleName, RuleSwitch, SendNow } from "./AutomationControls";
 import { blankLabel } from "@/lib/wa-blanks";
 import { CustomRuleForm, DeleteRule, RulePreview } from "./CustomRules";
 import { describeRule } from "@/lib/custom-rules";
@@ -16,12 +16,6 @@ export const dynamic = "force-dynamic";
 const TABS = [["messages", "Messages"], ["auto", "Auto-send"], ["rules", "Your rules"], ["history", "History"]];
 const STATUS = { sent: ["success", "Sent"], failed: ["danger", "Failed"], skipped: ["neutral", "Not sent"], optout: ["warning", "Opted out"], queued: ["warning", "Waiting"], sending: ["primary", "Sending"] };
 const FILTERS = [["", "All"], ["sent", "Sent"], ["failed", "Failed"], ["optout", "Opted out"], ["waiting", "Waiting"], ["skipped", "Not sent"]];
-const TRIGGER = {
-  lead_welcome: "When a new lead is added (sheet, website, Loki chat)",
-  payment_link: "When a lead's Next step says \"payment link\"",
-  payment_received: "When a payment comes in",
-  student_welcome: "When a new student finishes sign-up (to the parent)",
-};
 const when = (iso) => (iso ? new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "");
 const daysAgo = (d) => new Date(Date.now() - d * 86400_000).toISOString();
 const maskPhone = (p) => (p ? `${p.slice(0, 3)} ••••• ${p.slice(-4)}` : "");
@@ -98,7 +92,7 @@ export default async function WhatsAppPage({ searchParams }) {
               <p className="text-sm">AiSensy campaign <code className="rounded bg-surface-2 px-1">{m.campaign}</code> · {m.language === "kn" ? "Kannada" : "English"} · {m.category}{m.media_url ? " · with photo/video" : ""}</p>
               <p className="mt-1 text-sm text-muted">{m.params?.length ? m.params.map((p, i) => `{{${i + 1}}} ${blankLabel(p)}`).join(" · ") : "No blanks"}</p>
               <p className="mt-1 text-xs text-muted">This week: {count("sent", m.key)} sent · {count("failed", m.key)} failed</p>
-              <div className="mt-2"><MessageForm message={m} /></div>
+              <div className="mt-2 flex flex-wrap items-center gap-3"><MessageForm message={m} /><DeleteMessage messageKey={m.key} /></div>
             </Card>
           ))}
           {!notReady && <Card title="Add a message"><MessageForm /></Card>}
@@ -109,8 +103,10 @@ export default async function WhatsAppPage({ searchParams }) {
         <div className="space-y-3">
           {!active.length && !notReady && <Card><p className="text-sm text-muted">Add a message first (Messages tab).</p></Card>}
           {rules.map((r) => (
-            <Card key={r.key} title={TRIGGER[r.key] ?? r.title}>
+            <Card key={r.key} title={r.title}>
+              {r.description && <p className="mb-2 text-xs text-muted">{r.description}</p>}
               <RuleSwitch rule={r} messages={active} />
+              <div className="mt-2"><RuleName rule={r} /></div>
             </Card>
           ))}
           <p className="text-xs text-muted">Each person gets each automatic message once. Nothing goes to Do not contact numbers or between 9pm and 9am.</p>

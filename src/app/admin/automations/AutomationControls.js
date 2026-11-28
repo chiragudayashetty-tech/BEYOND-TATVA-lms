@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { BLANKS } from "@/lib/wa-blanks";
-import { retryMessage, saveAutomation, saveTemplate, sendNow } from "./actions";
+import { deleteMessage, renameAutomation, retryMessage, saveAutomation, saveTemplate, sendNow } from "./actions";
 
 // WhatsApp media limits (the bucket 'whatsapp-media' is public so AiSensy can fetch the link).
 const MEDIA = { "image/jpeg": 5, "image/png": 5, "video/mp4": 16, "application/pdf": 16 }; // max MB per type
@@ -166,5 +166,43 @@ export function MessageForm({ message }) {
         <button className="btn-primary" disabled={pending}>{message ? "Save" : "Add message"}</button>
       </div>
     </form>
+  );
+}
+
+// Rename an automatic rule and give it a short note ("Name" shows as the card title).
+export function RuleName({ rule }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState(rule.title);
+  const [note, setNote] = useState(rule.description ?? "");
+  const [msg, setMsg] = useState(null);
+  const [pending, start] = useTransition();
+  if (!open) return <button type="button" className="text-xs font-medium text-primary underline" onClick={() => setOpen(true)}>Rename</button>;
+  return (
+    <form className="mt-2 space-y-2 rounded-xl border border-border p-3" onSubmit={(e) => {
+      e.preventDefault();
+      start(async () => { const r = await renameAutomation(rule.key, title, note); if (r.ok) setOpen(false); else setMsg(r.error); });
+    }}>
+      <div><label className="label" htmlFor={`n-${rule.key}`}>Name</label>
+        <input id={`n-${rule.key}`} className="input" required maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+      <div><label className="label" htmlFor={`d-${rule.key}`}>Note (for you)</label>
+        <input id={`d-${rule.key}`} className="input" maxLength={400} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" /></div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="flex-1 text-xs text-danger">{msg}</span>
+        <button type="button" className="btn-secondary" onClick={() => setOpen(false)}>Cancel</button>
+        <button className="btn-primary" disabled={pending}>Save</button>
+      </div>
+    </form>
+  );
+}
+
+export function DeleteMessage({ messageKey }) {
+  const [msg, setMsg] = useState(null);
+  const [pending, start] = useTransition();
+  return (
+    <span className="inline-flex items-center gap-2">
+      <button type="button" className="text-sm text-danger underline" disabled={pending}
+        onClick={() => { if (confirm("Delete this message? Messages already sent stay in History.")) start(async () => { const r = await deleteMessage(messageKey); if (!r.ok) setMsg(r.error); }); }}>Delete</button>
+      {msg && <span className="text-xs text-danger">{msg}</span>}
+    </span>
   );
 }

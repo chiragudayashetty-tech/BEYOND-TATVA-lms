@@ -1539,3 +1539,24 @@ select 'Z9302 journey messages have no blanks of their own (the journey fills th
 select 'Z9303 broadcast blanks: child name, school, fixed prices' t,
   (select params from public.wa_templates where key = 'bt_workshop_thanks') = array['{student_first}', '{school}']
   and (select params from public.wa_templates where key = 'bt_offer_ends') = array['{student_first}', '499', '4999', '799'] as pass;
+
+-- ── Rename rules, delete messages (20261128000004) ───────────────────────────
+reset role;
+insert into public.wa_templates (key, title, campaign, params) values ('zz_spare', 'Spare', 'zz_spare', '{}'), ('zz_used', 'Used', 'zz_used', '{}');
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_rename_automation('j_welcome_p', 'Welcome (parent, Kannada)', 'Goes 1 minute after sign-up');
+select 'Z9401 admin renames a rule and adds a note' t,
+  (select title = 'Welcome (parent, Kannada)' and description = 'Goes 1 minute after sign-up' from public.automation_rules where key = 'j_welcome_p') as pass;
+do $$ begin perform public.admin_rename_automation('j_welcome_p', '   ', ''); raise exception 'Z9402 FAIL';
+exception when others then if sqlerrm like 'Z9402%' then raise; end if; raise notice 'Z9402 pass: a blank name is refused'; end $$;
+select public.admin_delete_message('zz_spare');
+select 'Z9403 an unused message can be deleted' t, (select count(*) = 0 from public.wa_templates where key = 'zz_spare') as pass;
+select public.admin_set_automation('j_review_p', '', true, 'zz_used');
+do $$ begin perform public.admin_delete_message('zz_used'); raise exception 'Z9404 FAIL';
+exception when others then if sqlerrm like 'Z9404%' then raise; end if; if sqlerrm <> 'message_in_use' then raise; end if; raise notice 'Z9404 pass: a message used by a rule that is On cannot be deleted'; end $$;
+select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+do $$ begin perform public.admin_rename_automation('j_welcome_p', 'evil', ''); raise exception 'Z9405 FAIL';
+exception when others then if sqlerrm like 'Z9405%' then raise; end if; raise notice 'Z9405 pass: students cannot rename rules'; end $$;
+do $$ begin perform public.admin_delete_message('zz_used'); raise exception 'Z9406 FAIL';
+exception when others then if sqlerrm like 'Z9406%' then raise; end if; raise notice 'Z9406 pass: students cannot delete messages'; end $$;
+reset role;

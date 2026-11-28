@@ -84,3 +84,18 @@ export async function previewCustomRule(key) {
   const r = data?.[0] ?? { total: 0, due_now: 0, already: 0 };
   return { ok: true, total: r.total, dueNow: r.due_now, already: r.already };
 }
+
+// Rename an automatic rule (any of them) and give it a short note.
+export async function renameAutomation(key, title, description) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_rename_automation", { p_key: key, p_title: title, p_description: description ?? "" });
+  return done(error);
+}
+
+// Delete a message you no longer use (not while a rule that is On uses it).
+export async function deleteMessage(key) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_delete_message", { p_key: key });
+  if (error?.message.includes("message_in_use")) return { ok: false, error: "An automatic rule that is On uses this message. Switch that rule Off first." };
+  return done(error);
+}
