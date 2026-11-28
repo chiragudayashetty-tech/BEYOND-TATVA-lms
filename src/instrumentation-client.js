@@ -4,6 +4,7 @@
 import posthog from "posthog-js";
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/client";
+import { scrubEvent, scrubUrl } from "@/lib/scrub-url";
 
 const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 const SENTRY_DSN = process.env.NEXT_PUBLIC_SENTRY_DSN;
@@ -16,6 +17,16 @@ try {
       environment: ENV,
       release: process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || undefined,
       sendDefaultPii: false,
+      // /pay and /login carry the phone number and payment id in the address: never send those.
+      beforeSend(event) {
+        if (event.request?.url) event.request.url = scrubUrl(event.request.url);
+        if (event.request?.query_string) delete event.request.query_string;
+        return event;
+      },
+      beforeBreadcrumb(crumb) {
+        if (crumb?.data) for (const k of ["from", "to", "url"]) if (typeof crumb.data[k] === "string") crumb.data[k] = scrubUrl(crumb.data[k]);
+        return crumb;
+      },
       tracesSampleRate: ENV === "production" ? 0.2 : 1,
       enableLogs: true,
       // Replays only when an error happens (free plan: 50/month), fully masked.
@@ -44,6 +55,7 @@ try {
       capture_exceptions: true, // PostHog error tracking (Sentry stays the main error tool)
       capture_performance: { web_vitals: true },
       enable_heatmaps: true,
+      before_send: scrubEvent, // phone numbers / payment ids in /pay and /login addresses never leave the browser
       session_recording: { maskAllInputs: true, maskTextSelector: "*", blockSelector: "img, video, iframe, canvas" },
     });
     posthog.register({ app: "lms", environment: ENV });

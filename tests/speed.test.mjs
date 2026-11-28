@@ -58,7 +58,9 @@ test("quiz screen copes with hidden answers (M3)", () => {
 test("Studio delete removes uploaded files with the server-only admin client", () => {
   const a = src("app/admin/actions.js");
   assert.match(a, /rpc\("admin_delete_student"/);
-  assert.match(a, /storage\.from\("submissions"\)\.remove\(files\)/);
+  assert.match(a, /storage\.from\("submissions"\)/);
+  assert.match(a, /bucket\.list\(prefix/); // the whole student folder, not only attached files
+  assert.match(a, /bucket\.remove\(/);
   assert.doesNotMatch(src("app/admin/people/PeopleForms.js"), /supabase\/admin/);
 });
 

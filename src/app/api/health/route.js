@@ -9,12 +9,13 @@ export async function GET() {
   const started = Date.now();
   let database = false;
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+    // A real read the app needs (published courses are public): a bad key or a permission problem shows as down.
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/courses?select=id&limit=1`, {
       headers: { apikey: SUPABASE_KEY },
       cache: "no-store",
       signal: AbortSignal.timeout(3000),
     });
-    database = res.status < 500; // any answer from Supabase means it's reachable
+    database = res.ok;
   } catch {
     database = false;
   }

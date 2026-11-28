@@ -25,7 +25,7 @@ async function post(url, body) {
   }
 }
 
-export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, paidId, paidClaim }) {
+export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, paidId, paidDelayed }) {
   const [mobile, setMobile] = useState("");
   const [code, setCode] = useState("");
   const [coupon, setCoupon] = useState(null); // { code, price }
@@ -33,7 +33,7 @@ export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, p
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null); // { tone, text, paymentId? }
   // After paying we load a fresh /pay?paid=… page (iPhone Safari could crash re-rendering under the Razorpay window).
-  const [paid] = useState(paidPhone ? { phone: paidPhone, paymentId: paidId, claim: paidClaim } : null);
+  const [paid] = useState(paidPhone ? { phone: paidPhone, paymentId: paidId, delayed: paidDelayed } : null);
   // The tab may also reload while the parent is in the UPI app: offer "already paid?" for that number.
   const [lastPhone, setLastPhone] = useState("");
   useEffect(() => {
@@ -98,7 +98,6 @@ export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, p
         const offline = !saved && !data.paid && (!data.error || data.error === "No internet connection.");
         if (saved || data.paid || offline) {
           const q = new URLSearchParams({ paid: data.phone || mobile, id: resp.razorpay_payment_id });
-          if (data.claim) q.set("c", data.claim);
           if (data.delayed || offline) q.set("delayed", "1");
           return window.location.replace(`/pay?${q}`);
         }
@@ -202,7 +201,8 @@ function PaidVerify({ paid, help }) {
     <div className="mt-5">
       <div className="flex items-center gap-3 rounded-xl bg-success-soft p-3">
         <CheckCircle2 className="h-6 w-6 shrink-0 text-success" />
-        <div><p className="font-semibold text-success">Payment done!</p><p className="text-xs text-muted">Payment ID: {paid.paymentId}</p></div>
+        {/* delayed: Razorpay said paid, but our server hasn't confirmed it yet (no signal, or the bank is still capturing). */}
+        <div><p className="font-semibold text-success">{paid.delayed ? "Payment received. We're confirming it." : "Payment done!"}</p><p className="text-xs text-muted">Payment ID: {paid.paymentId}</p></div>
       </div>
       <div className="mt-4 rounded-xl border border-border p-4 text-sm">
         <p>Your course is saved on this WhatsApp number:</p>

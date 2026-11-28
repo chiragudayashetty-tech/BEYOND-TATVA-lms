@@ -12,6 +12,7 @@
 // - Watch time made offline is kept on the device and sent to save_progress when the internet is back.
 
 import { useSyncExternalStore } from "react";
+import { afterSave } from "@/lib/offline-queue";
 
 const CACHE = "bt-offline-v1";
 const SHELL = "bt-shell-v1";
@@ -272,6 +273,7 @@ export function keepProgress(userId, lessonId, { seconds, position, duration, se
   try { localStorage.setItem(PENDING, JSON.stringify(all)); } catch {}
 }
 // Sends kept watch time for this student. Returns how many lessons were saved.
+// A long offline watch needs several saves (see src/lib/offline-queue.js).
 export async function sendProgress(supabase, userId) {
   if (!navigator.onLine) return 0;
   const all = pending();
@@ -279,14 +281,35 @@ export async function sendProgress(supabase, userId) {
   for (const [key, p] of Object.entries(all)) {
     const [uid, lessonId] = key.split(":");
     if (uid !== userId) continue;
-    const { error } = await supabase.rpc("save_progress", { p_lesson: lessonId, p_seconds: p.seconds, p_position: p.position, p_duration: p.duration, p_seen: p.seen ?? [] });
+    const { data: pct, error } = await supabase.rpc("save_progress", { p_lesson: lessonId, p_seconds: p.seconds, p_position: p.position, p_duration: p.duration, p_seen: p.seen ?? [] });
     // "not open for you" will never succeed later: drop it. Anything else (network): keep and retry.
     if (error && !/open for you/i.test(error.message ?? "")) continue;
     const now = pending();
-    if (now[key]?.seconds === p.seconds && now[key]?.position === p.position && (now[key]?.seen ?? []).length === (p.seen ?? []).length) { delete now[key]; try { localStorage.setItem(PENDING, JSON.stringify(now)); } catch {} }
+    const same = now[key]?.seconds === p.seconds && now[key]?.position === p.position && (now[key]?.seen ?? []).length === (p.seen ?? []).length;
+    if (same) {
+      const next = afterSave(now[key], { pct, error: null });
+      if (next) now[key] = next;
+      else delete now[key];
+      try { localStorage.setItem(PENDING, JSON.stringify(now)); } catch {}
+    }
     if (!error) sent += 1;
   }
   return sent;
+}
+
+// Signing out on a shared phone: forget this device's offline lessons, saved Downloads page and unsent watch
+// time, so the next person can't open them. Called just before the sign-out form is sent.
+export async function forgetDevice(supabase) {
+  if (typeof window === "undefined") return;
+  // First try to save this student's unsent watch time (max 3 s), so signing out doesn't lose it.
+  try {
+    const { data } = await supabase.auth.getUser();
+    if (data?.user?.id) await Promise.race([sendProgress(supabase, data.user.id), sleep(3000)]);
+  } catch {}
+  try { localStorage.removeItem(PENDING); localStorage.removeItem(META); } catch {}
+  try { if ("caches" in window) await Promise.all([caches.delete(CACHE), caches.delete(SHELL)]); } catch {}
+  items = null;
+  listeners.forEach((l) => l());
 }
 
 // ── Opening the app without internet ─────────────────────────────────────────

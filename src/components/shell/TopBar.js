@@ -1,5 +1,6 @@
 "use client";
 
+import SignOutForm from "@/components/SignOutForm";
 import { startNavLoader } from "@/components/TopLoader";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -83,9 +84,9 @@ export default function TopBar({ name, role, greeting }) {
                 </div>
                 <Link href="/profile" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm hover:bg-surface-2"><User className="h-4 w-4 text-muted" /> Profile</Link>
                 <Link href="/profile#settings" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm hover:bg-surface-2"><Settings className="h-4 w-4 text-muted" /> Settings</Link>
-                <form action="/auth/signout" method="post">
+                <SignOutForm>
                   <button className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-danger hover:bg-danger-soft"><LogOut className="h-4 w-4" /> Log out</button>
-                </form>
+                </SignOutForm>
               </div>
             )}
           </div>

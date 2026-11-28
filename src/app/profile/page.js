@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SignOutForm from "@/components/SignOutForm";
 import { whatsappCodesReady } from "@/lib/whatsapp-code";
 import { Bell, ChevronRight, CircleHelp, Headset, LogOut, MessageCircleQuestion, Moon, ShieldCheck } from "lucide-react";
 import SocialLinks from "@/components/SocialLinks";
@@ -111,9 +112,9 @@ export default async function ProfilePage({ searchParams }) {
             </div>
             <SocialLinks />
           </section>
-          <form action="/auth/signout" method="post">
+          <SignOutForm>
             <button className="btn-secondary w-full text-danger sm:w-auto"><LogOut className="h-4 w-4" /> Log out</button>
-          </form>
+          </SignOutForm>
         </div>
       </div>
     </Shell>

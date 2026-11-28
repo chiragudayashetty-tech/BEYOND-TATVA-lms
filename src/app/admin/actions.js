@@ -190,14 +190,31 @@ export async function deleteStudent(studentId, confirmName) {
   const { data: files, error } = await supabase.rpc("admin_delete_student", { p_student: studentId, p_confirm_name: confirmName });
   if (error) return { ok: false, error: error.message };
   let filesNote = "";
-  if (files?.length) {
-    try {
-      const { createAdminClient } = await import("@/lib/supabase/admin");
-      const { error: rmError } = await createAdminClient().storage.from("submissions").remove(files);
-      if (rmError) filesNote = ` Uploaded files were not removed (${rmError.message}); remove the folder ${studentId}/ in Supabase Storage.`;
-    } catch {
-      filesNote = ` Uploaded files were not removed; remove the folder ${studentId}/ in Supabase Storage.`;
+  // Every file in the student's own folder (not only the ones still attached: an upload that was never handed in
+  // stays there too). Payment proofs are payment records and are kept.
+  try {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const bucket = createAdminClient().storage.from("submissions");
+    const all = new Set(files ?? []);
+    const walk = async (prefix, depth) => {
+      for (let offset = 0; ; offset += 1000) {
+        const { data, error: listError } = await bucket.list(prefix, { limit: 1000, offset });
+        if (listError) throw listError;
+        for (const it of data ?? []) {
+          const path = `${prefix}/${it.name}`;
+          if (it.id === null) { if (depth < 4) await walk(path, depth + 1); } else all.add(path);
+        }
+        if (!data || data.length < 1000) break;
+      }
+    };
+    if (/^[0-9a-f-]{36}$/i.test(String(studentId))) await walk(String(studentId), 0);
+    const paths = [...all].filter((p) => String(p).startsWith(`${studentId}/`) || (files ?? []).includes(p));
+    for (let i = 0; i < paths.length; i += 100) {
+      const { error: rmError } = await bucket.remove(paths.slice(i, i + 100));
+      if (rmError) throw rmError;
     }
+  } catch (e) {
+    filesNote = ` Uploaded files were not all removed (${e?.message || "storage error"}); remove the folder ${studentId}/ in Supabase Storage.`;
   }
   revalidatePath("/", "layout");
   return { ok: true, message: `Deleted.${filesNote}` };

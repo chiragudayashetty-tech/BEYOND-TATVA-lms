@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getSession } from "@/lib/supabase/server";
 import { COURSE_ID } from "@/lib/catalog";
 import { trackServer } from "@/lib/track";
-import { fetchOrder, paymentSignatureValid, razorpayKeys } from "@/lib/razorpay";
+import { captureState, fetchOrder, fetchPayment, paymentSignatureValid, razorpayKeys } from "@/lib/razorpay";
 
 // POST /api/verify-payment { razorpay_order_id, razorpay_payment_id, razorpay_signature }
 // Unlocks the course only when the signature matches AND the order was created for this student.
@@ -35,6 +35,17 @@ export async function POST(request) {
   if (order.notes?.student_id !== user.id || order.notes?.course !== COURSE_ID) {
     return NextResponse.json({ verified: false, error: "This payment belongs to a different account" }, { status: 400 });
   }
+  // The money must be captured for this order before the course opens. Not yet / lookup failed: the webhook
+  // (payment.captured) records it in a moment, and "Check for my payment" picks it up.
+  let capture = "pending";
+  try {
+    const p = await fetchPayment(keys, paymentId);
+    capture = p.ok ? captureState(p.data, order) : "pending";
+  } catch (e) {
+    console.error("razorpay payment lookup failed", paymentId, e.message);
+  }
+  if (capture === "bad") return NextResponse.json({ verified: false, error: "This payment doesn't match the order. Message us with your payment ID." }, { status: 400 });
+  if (capture !== "captured") return NextResponse.json({ verified: true, unlocked: false, error: "Payment received; your bank is still confirming it. Tap “Check for my payment” in a minute." }, { status: 202 });
 
   // Match only on this student's own login (email, or phone for phone sign-ins). The parent's mobile stays
   // in the Razorpay order notes: matching on it could unlock someone else's account with that number.

@@ -38,6 +38,9 @@ function text_(v, fmt) {
   if (v && typeof v.getTime === 'function' && typeof v.toISOString === 'function') return fmt ? fmt(v) : v.toISOString().slice(0, 10);
   return String(v === null || v === undefined ? '' : v).trim();
 }
+// Text from forms and Studio is written as plain text, never as a formula ("=…", "+…", "-…", "@…").
+// A leading apostrophe makes Sheets keep it as text and is not shown in the cell.
+function safe_(v) { return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v; }
 function yes_(v) { return /^(yes|y|true|1|✓|x)$/i.test(text_(v)); }
 
 // One sheet row → the LMS payload. touched: LMS fields edited by hand (omitted = whole row).
@@ -72,7 +75,7 @@ function changes_(head, values, rec, editedAt, fmt) {
   head.forEach(function (h, i) { if (h) col[h] = i; });
   var put = function (h, v) {
     if (col[h] === undefined) return;
-    if (text_(values[col[h]], fmt) !== text_(v, fmt)) out.push([col[h], v === null || v === undefined ? '' : v]);
+    if (text_(values[col[h]], fmt) !== text_(v, fmt)) out.push([col[h], v === null || v === undefined ? '' : safe_(v)]);
   };
   put('Signed up', rec.signed_up ? 'Yes' : 'No');
   put('Module 0', rec.module0 ? 'Done' : (rec.signed_up ? 'Not yet' : ''));
@@ -91,7 +94,7 @@ function newRow_(head, rec) {
     'Parent name': rec.parent, 'Next step': rec.status, 'Short note': rec.note, 'Next date': rec.next_date,
     'Do not contact': rec.do_not_contact ? 'Yes' : '', 'Source': sourceLabel_(rec.source), 'LMS email': rec.lms_email,
     'Paid?': rec.paid ? 'Yes' : '', 'Signed up': rec.signed_up ? 'Yes' : 'No', 'Module 0': rec.module0 ? 'Done' : '', 'ID': rec.id };
-  return head.map(function (h) { var x = v[h]; return x === null || x === undefined ? '' : x; });
+  return head.map(function (h) { var x = v[h]; return x === null || x === undefined ? '' : safe_(x); });
 }
 
 // Never let a bad answer wipe the sheet.
@@ -231,7 +234,7 @@ function automations_() {
     var last = sh.getLastRow(), seen = {};
     if (last > 1) sh.getRange(Math.max(2, last - 600), LOG_HEAD.length, Math.min(last - 1, 601), 1).getValues().forEach(function (r) { seen[r[0]] = true; });
     var rows = (data.log || []).filter(function (m) { return !seen[m.id]; }).map(function (m) {
-      return [Utilities.formatDate(new Date(m.at), 'Asia/Kolkata', 'dd MMM yyyy HH:mm'), m.rule, m.name || '', "'" + m.phone, m.status, m.error || '', m.id];
+      return [Utilities.formatDate(new Date(m.at), 'Asia/Kolkata', 'dd MMM yyyy HH:mm'), safe_(m.rule), safe_(m.name || ''), "'" + m.phone, m.status, safe_(m.error || ''), m.id];
     });
     if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, LOG_HEAD.length).setValues(rows);
     if (data.log && data.log.length) props.setProperty('auto_since', new Date(new Date(data.log[data.log.length - 1].at).getTime() - 60000).toISOString());
@@ -350,4 +353,4 @@ function checkSync() {
 }
 
 // Node tests load this file; Apps Script ignores this.
-if (typeof module !== 'undefined') module.exports = { payload_: payload_, problem_: problem_, changes_: changes_, newRow_: newRow_, safeToDelete_: safeToDelete_, sourceLabel_: sourceLabel_ };
+if (typeof module !== 'undefined') module.exports = { safe_: safe_, payload_: payload_, problem_: problem_, changes_: changes_, newRow_: newRow_, safeToDelete_: safeToDelete_, sourceLabel_: sourceLabel_ };

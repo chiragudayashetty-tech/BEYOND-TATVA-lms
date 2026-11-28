@@ -75,8 +75,9 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
-      # Uploaded files (assignment photos/PDFs, payment proofs, module attachments). Skipped until
-      # SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are added as GitHub secrets (docs/BACKUPS.md).
+      # Uploaded files (assignment photos/PDFs, payment proofs, module attachments, WhatsApp media). Fails the run
+      # (red) until SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are added as GitHub secrets (docs/BACKUPS.md), so a
+      # missing file backup is never hidden behind a green tick. The database backup above is already uploaded.
       - name: Files backup (encrypted)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -84,7 +85,7 @@ jobs:
           PASS: ${{ secrets.BACKUP_PASSPHRASE }}
         run: |
           set -euo pipefail
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then echo "::warning::Files not backed up: add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY secrets"; exit 0; fi
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then echo "::error::Files NOT backed up: add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY secrets (database backup is fine)"; exit 1; fi
           umask 077
           node scripts/backup-storage.mjs
           tar -cf files.tar storage-backup

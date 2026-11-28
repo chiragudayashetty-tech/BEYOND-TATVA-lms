@@ -66,3 +66,15 @@ export function refundPlan(payment) {
   if (payment.status !== "captured" && payment.status !== "refunded") return { error: `This payment is "${payment.status}", not captured, so there is nothing to refund.` };
   return { action: "refund", amount: payment.amount - refunded };
 }
+
+// Browser-return check (verify-payment, guest-verify): the money must really be captured for THIS order, in INR,
+// for the order's full amount. "pending" = authorized but not captured yet (the webhook records it on capture).
+export function captureState(payment, order) {
+  if (!payment?.id || !order?.id) return "bad";
+  if (payment.order_id !== order.id) return "bad";
+  if (payment.currency && payment.currency !== "INR") return "bad";
+  if (!Number.isInteger(payment.amount) || payment.amount !== order.amount) return "bad";
+  if (payment.status === "captured") return "captured";
+  if (payment.status === "authorized" || payment.status === "created") return "pending";
+  return "bad"; // failed / refunded
+}

@@ -60,6 +60,11 @@ export async function POST(request) {
 
   const admin = createAdminClient();
   const { data: found, error: userError } = await admin.auth.admin.getUserById(String(notes.student_id));
+  // A lookup that failed (network, Supabase busy) is not "no such student": answer 500 so Razorpay retries.
+  if (userError && userError.status !== 404 && !/not.?found/i.test(userError.message || "")) {
+    console.error("razorpay webhook: student lookup failed", payment.id, userError.message);
+    return NextResponse.json({ error: "retry" }, { status: 500 });
+  }
   if (userError || !found?.user) {
     console.error("razorpay webhook: student not found", payment.id);
     return NextResponse.json({ error: "student not found" }, { status: 200 }); // retrying won't help; Studio → Reconcile

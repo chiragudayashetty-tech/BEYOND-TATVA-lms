@@ -1530,3 +1530,24 @@ exception when others then if sqlerrm like 'Z9112%' then raise; end if; raise no
 do $$ begin perform public.automation_custom_tick(); raise exception 'Z9113 FAIL';
 exception when others then if sqlerrm like 'Z9113%' then raise; end if; raise notice 'Z9113 pass: only the sender can run the custom tick'; end $$;
 reset role;
+
+-- Review fixes 2026-11-28 (20261128000003): a password sign-up (email + phone typed, no code) never unlocks a
+-- waiting purchase by itself; Studio gets a suggestion. After a real code sign-in clears the flag, it unlocks.
+reset role;
+select public.record_purchase('pay_rv1', null, '9711122233') as rv_setup;
+insert into auth.users (id, email, phone, raw_app_meta_data) values
+  ('c1000000-0000-0000-0000-000000000001', 'squatter@x.in', '+919711122233', '{"signup":"password","password_unverified":true}');
+insert into public.profiles (id, role, full_name, grade, guardian_name, guardian_phone, guardian_consent_at, consent_by)
+  values ('c1000000-0000-0000-0000-000000000001', 'student', 'Squatter', 9, 'Parent', '9711122299', now(), 'student');
+set role authenticated; select pg_temp.as_user('c1000000-0000-0000-0000-000000000001');
+select 'U801 unverified password account does not unlock a purchase on its number' t,
+  public.claim_purchases() = 0 and not public.has_course_access('ai-for-students') as pass;
+reset role;
+select 'U802 it is left as a Studio suggestion' t,
+  (select suggested_student = 'c1000000-0000-0000-0000-000000000001' and status = 'pending' from public.purchases where reference = 'pay_rv1') as pass;
+select 'U803 a new payment on that number also waits' t, public.record_purchase('pay_rv2', 'squatter@x.in') = 'pending' as pass;
+update auth.users set raw_app_meta_data = '{"signup":"password","password_unverified":false}' where id = 'c1000000-0000-0000-0000-000000000001';
+set role authenticated; select pg_temp.as_user('c1000000-0000-0000-0000-000000000001');
+select 'U804 after a real code sign-in it unlocks' t, public.claim_purchases() = 1 as pass;
+select 'U805 course open' t, public.has_course_access('ai-for-students') as pass;
+reset role;

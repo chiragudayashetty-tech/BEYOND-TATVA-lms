@@ -28,6 +28,7 @@ export default function HandIn({ assignment: a, moduleLabel, submission: sub, fi
   const [done, setDone] = useState(false);
   const previews = useRef(new Map());
   const uploadedPaths = useRef(new Map()); // File -> storage path, so "Try again" doesn't upload twice
+  const savedPaths = useRef(existing.map((k) => k.path)); // files in the saved hand-in right now
   const [previewSources, setPreviewSources] = useState({});
 
   useEffect(() => {
@@ -83,15 +84,21 @@ export default function HandIn({ assignment: a, moduleLabel, submission: sub, fi
         uploaded.push(path);
       }
       setUploadProgress("Saving your work…");
+      const files = [...kept.map((k) => k.path), ...uploaded];
       const { error } = await supabase.rpc("submit_assignment", {
-        p_assignment: a.id, p_text: a.allow_text ? text : null, p_link: a.allow_link ? link : null, p_files: [...kept.map((k) => k.path), ...uploaded],
+        p_assignment: a.id, p_text: a.allow_text ? text : null, p_link: a.allow_link ? link : null, p_files: files,
       });
       if (error) throw new Error(error.message);
       track("assignment_submitted", { assignment_id: a.id, files: kept.length + uploaded.length, resubmit: Boolean(sub) });
       // Files the student took out of this hand-in: delete them so they don't use up the upload limit.
-      const keptPaths = new Set(kept.map((k) => k.path));
-      const dropped = existing.map((k) => k.path).filter((path) => !keptPaths.has(path));
+      // Compared with what was saved before this tap (not the page's first load), so a file uploaded a moment ago
+      // is never removed by the next "Update".
+      const keptPaths = new Set(files);
+      const dropped = savedPaths.current.filter((path) => !keptPaths.has(path));
       if (dropped.length) await supabase.storage.from("submissions").remove(dropped);
+      savedPaths.current = files;
+      // The new uploads are now part of the hand-in: keep them for the next update.
+      setKept((k) => [...k, ...uploaded.map((path) => ({ path, url: null }))]);
       setAdded([]);
       uploadedPaths.current.clear();
       previews.current.forEach((url) => URL.revokeObjectURL(url));
@@ -148,7 +155,7 @@ export default function HandIn({ assignment: a, moduleLabel, submission: sub, fi
             <div className="flex flex-wrap gap-2">
               {kept.map((f) => (
                 <span key={f.path} className="chip bg-surface-2 text-muted">
-                  <FileText className="h-3.5 w-3.5" /><a href={f.url} target="_blank" rel="noopener noreferrer" className="max-w-40 truncate hover:underline">{f.path.split("/").pop()}</a>
+                  <FileText className="h-3.5 w-3.5" /><a href={f.url || undefined} target="_blank" rel="noopener noreferrer" className="max-w-40 truncate hover:underline">{f.path.split("/").pop()}</a>
                   {!locked && <button type="button" onClick={() => setKept((k) => k.filter((x) => x.path !== f.path))} aria-label={`Remove ${f.path.split("/").pop()}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg"><X className="h-4 w-4" /></button>}
                 </span>
               ))}

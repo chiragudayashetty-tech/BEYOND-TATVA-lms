@@ -34,6 +34,8 @@ var SCHOOL_SYSTEM = ['Calls', 'Visits', 'History (short)'];
 var SCHOOL_PULL = { 'School': 'name', 'Area': 'area', 'Contact': 'contact', 'Phone': 'phone', 'Status': 'status', 'Workshop Status': 'status', 'After-workshop Status': 'after_status', 'Calls': 'calls', 'Visits': 'visits', 'History (short)': 'history', 'Next step': 'next_step', 'Next date': 'next_date', 'Notes': 'notes', 'Version': 'updated_at', 'ID': 'id' };
 var HIDDEN = ['ID', 'Version', 'Last synced'];
 
+// LMS text is written as plain text, never as a formula ("=…", "+…", "-…", "@…"). The apostrophe isn't shown.
+function safe_(v) { return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v; }
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('Beyond Tatva sync')
     .addItem('Set up sync', 'setupSync')
@@ -306,7 +308,7 @@ function pull_(noPush) {
   Object.keys(grouped).forEach(function (tab) {
     var t = leadTab_(tab), width = t.head.length;
     var rows = grouped[tab].map(function (rec) {
-      var row = Array(width).fill(''), put = function (h, v) { if (t.col[h] !== undefined) row[t.col[h]] = v == null ? '' : v; };
+      var row = Array(width).fill(''), put = function (h, v) { if (t.col[h] !== undefined) row[t.col[h]] = v == null ? '' : safe_(v); };
       if (rec._from) Object.keys(rec._from).forEach(function (h) { put(h, rec._from[h]); });
       put('Student', rec.student); put('First name', String(rec.student || '').split(' ')[0]); put('Class', rec.grade); put('Parent WhatsApp', rec.phone);
       put('School', rec.school); put('Status', rec.status); put('Next step', rec.next_step); put('Next date', rec.next_date);
@@ -364,7 +366,7 @@ function pullSchools_(t, schools) {
     Object.keys(SCHOOL_PULL).forEach(function (h) {
       if (t.col[h] === undefined) return;
       var want = s[SCHOOL_PULL[h]] == null ? '' : s[SCHOOL_PULL[h]];
-      if (norm(row[t.col[h]]) !== String(want)) { row[t.col[h]] = want; changed = true; }
+      if (norm(row[t.col[h]]) !== String(want)) { row[t.col[h]] = safe_(want); changed = true; }
     });
     return changed;
   };

@@ -85,6 +85,9 @@ cross-student tests for guardians / sessions / purchases / lesson_media.
   coupon codes named like WORKSHOP499 (just names). In-school workshops are a *sales activity*, tracked in School
   outreach and Pipeline, not a product feature.
 - **UPI-screenshot payments card** (removed 2026-11-09).
+- **`/api/guest-session` ("Code not coming? Skip it") and `/api/guest-claim` ("Change number")** (removed 2026-11-28).
+  The `/pay` page stopped calling them on 2026-11-27; the claim token is no longer put in the `/pay` address.
+  Wrong number after paying = WhatsApp support (Studio → Reconciliation).
 
 ## Decisions (don't reopen without Chirag)
 - **Website and LMS are completely separate.** The website (www.beyondtatva.in) is the front door for
@@ -136,11 +139,30 @@ Not before launch: WhatsApp automations, certificates/QR, Bunny signed video, in
 - Payments: 4 real ₹499; 3 signed in and unlocked, **1 paid but never finished sign-up** (see Studio → Reconciliation / Pipeline → Bought).
 - Finding: AiSensy delivers the codes but Android shows **no notification** (Chirag tested); parents asked for 5–7 codes each, each new one cancels the last.
 
+## Review fixes (2026-11-28, branch `claude/nice-knuth-4gpt5w`, both repos)
+- **Waiting for "apply":** `20261128000003_review_fixes` (tests U801–U805): password sign-ups (`password_unverified`)
+  no longer unlock a waiting purchase by themselves, they leave a Studio suggestion; they unlock after the first
+  WhatsApp code / Google / email-code sign-in. `automation_claim` re-checks Do not contact for interrupted sends.
+  `submit_quiz` locks per student + quiz (two tabs can't get a 3rd try).
+- Code (no migration): verify-payment / guest-verify check the Razorpay payment is **captured**, for this order, full
+  amount, INR (else "confirming", the webhook records it); webhook retries (500) when the student lookup fails
+  instead of answering 200; PostHog `before_send` + Sentry scrub phone / payment id / codes from URLs
+  (`src/lib/scrub-url.js`); offline watch time is re-sent until all of it is credited (`src/lib/offline-queue.js`);
+  Log out first saves offline watch time, then clears this device's downloads and saved Downloads page
+  (`src/components/SignOutForm.js`); hand-in "Update" keeps files uploaded a moment ago; Studio delete removes the
+  student's whole `submissions/<id>/` folder; health check does a real read; Sheets scripts write form text as plain
+  text (no formulas): **re-paste both .gs scripts**; nightly backup includes `whatsapp-media` and goes **red** when
+  file-backup secrets are missing; signed-in checkout also checks a waiting purchase on the login phone.
+- Website: `/api/lead` retries once and answers 502 when Studio didn't get the lead; the browser keeps it and re-sends
+  on the next visit (same reference, counted once). Homepage chat now sends the student's name to Studio. Privacy
+  answer no longer says "never shared".
+- Coupons can't be ₹0 (database: price 1–100000), so "100% coupon" in tests means a ₹1 coupon.
+
 ## Tomorrow (2026-11-28)
 **Chirag**
 1. Get the 1 paid-but-stuck family through sign-up (message them, or give Claude the details to set it up).
 2. AiSensy → `login_otp1`: check the button type; if One-tap / Zero-tap, change to **Copy code**.
-3. Android test: `/login` → Send code → "Open WhatsApp" → type code; and one `/pay` with a 100% coupon on a fresh number → "Skip it" → sign in again with number + password.
+3. Android test: `/login` → Send code → "Open WhatsApp" → type code; and one `/pay` with a ₹1 coupon on a fresh number → sign up with that number → course unlocks.
 4. Studio → School outreach: rename "Srvk" (and SVVN if needed) to full school names.
 5. Watch WhatsApp journey v2 sends (Studio → WhatsApp → History).
 6. SVVN batch starts Sun 29 Nov 10:00 IST: check Module 1 is ready.

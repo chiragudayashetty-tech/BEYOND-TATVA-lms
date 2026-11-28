@@ -14,7 +14,7 @@ export async function POST(request) {
   // Students, or a brand-new Google sign-in who hasn't filled in their details yet (pay first, details later).
   if (!user || (profile && profile.role !== "student")) return NextResponse.json({ error: "Sign in as a student first" }, { status: 401 });
   if (hasAccess) return NextResponse.json({ error: "The course is already unlocked" }, { status: 409 });
-  if (!profile && (await hasPendingPurchase(user.email))) return NextResponse.json({ error: "You've already paid. Fill in your details to open the course.", next: "/onboarding?next=%2Fcourse" }, { status: 409 });
+  if (!profile && (await hasPendingPurchase(user.email, user.phone_confirmed_at ? user.phone : null))) return NextResponse.json({ error: "You've already paid. Fill in your details to open the course.", next: "/onboarding?next=%2Fcourse" }, { status: 409 });
   const keys = razorpayKeys();
   if (!keys) return NextResponse.json({ error: "Online payments aren't set up yet" }, { status: 500 });
 

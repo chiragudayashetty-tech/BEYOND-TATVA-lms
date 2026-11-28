@@ -82,11 +82,16 @@ export async function runAutomations(db, { now = new Date(), force = false, send
     const r = await send(msg);
     if (!r.ok && isOptOutError(r.error)) {
       // The parent opted out in AiSensy (STOP etc.): record it and mark them Do not contact. Not a failure.
-      await db.rpc("automation_opted_out", { p_id: msg.id, p_reason: "Opted out on WhatsApp" });
+      const { error: optError } = await db.rpc("automation_opted_out", { p_id: msg.id, p_reason: "Opted out on WhatsApp" });
+      if (optError) console.error("automation_opted_out failed", msg.id, optError.message);
       await waEvent(track, "opted_out", msg);
       continue;
     }
-    await db.rpc("automation_done", { p_id: msg.id, p_ok: r.ok, p_error: r.ok ? null : r.error });
+    // If saving the result fails, the message stays "sending" and is sent again in 10 minutes: try once more,
+    // and say so loudly (a duplicate WhatsApp costs money and annoys the parent).
+    let { error: doneError } = await db.rpc("automation_done", { p_id: msg.id, p_ok: r.ok, p_error: r.ok ? null : r.error });
+    if (doneError) ({ error: doneError } = await db.rpc("automation_done", { p_id: msg.id, p_ok: r.ok, p_error: r.ok ? null : r.error }));
+    if (doneError) console.error("automation_done failed: message may be sent twice", msg.id, doneError.message);
     await waEvent(track, r.ok ? "sent" : "failed", msg, r.ok ? null : r.error);
     if (r.ok) sent++;
     else {
