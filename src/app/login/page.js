@@ -61,6 +61,10 @@ const T = {
 // Login code by WhatsApp (mobile; Supabase phone OTP → /api/auth/send-otp → AiSensy) when NEXT_PUBLIC_PHONE_LOGIN=1,
 // or by email. Main screen (Chirag 2026-11-16): WhatsApp code + Google; a WhatsApp code also creates the account
 // (onboarding follows). Email + password and email sign-up sit underneath.
+const CODE_KEY = "bt_login_code"; // last code sent from this tab: { contact, at }
+function rememberCode(contact) {
+  try { sessionStorage.setItem(CODE_KEY, JSON.stringify({ contact, at: Date.now() })); } catch {}
+}
 const WHATSAPP_CODES = process.env.NEXT_PUBLIC_PHONE_LOGIN === "1";
 const HOME = WHATSAPP_CODES ? "whatsapp" : "password";
 const friendly = (msg = "") => {
@@ -130,6 +134,19 @@ function LoginForm() {
   const changeLang = (l) => { setLang(l); saveLang(l); };
   useEffect(() => {
     const timer = window.setTimeout(() => setLang(readLang()), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+  // Tapping "Open WhatsApp" leaves this page; Android can reload the tab when they come back. Bring back the
+  // code box for a code sent in the last 10 minutes (no new code, which would cancel the one in WhatsApp).
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(CODE_KEY) || "null");
+        const ago = saved ? (Date.now() - saved.at) / 1000 : Infinity;
+        if (saved?.contact && ago < 600) { setContact(saved.contact); setMode("codeSent"); setWait(Math.max(0, Math.ceil(60 - ago))); }
+        else sessionStorage.removeItem(CODE_KEY);
+      } catch {}
+    }, 0);
     return () => window.clearTimeout(timer);
   }, []);
   useEffect(() => {
@@ -288,7 +305,10 @@ function LoginForm() {
       const msg = friendly(error.message);
       setError(msg);
       if (byWhatsApp && /not on WhatsApp/.test(msg)) { setWait(0); window.alert(msg); } // no code was sent, so no wait
-    } else { setCode(""); setMode("codeSent"); }
+    } else {
+      setCode(""); setMode("codeSent");
+      rememberCode(contact);
+    }
   }
 
   // Email codes are 8 digits, WhatsApp codes 6 (Supabase settings). Full code typed, pasted or autofilled → verify.
@@ -546,7 +566,7 @@ function LoginForm() {
               ? <span>{t.resendIn} <b className="tabular-nums text-fg">{Math.floor(wait / 60)}:{String(wait % 60).padStart(2, "0")}</b></span>
               : <button type="button" disabled={busy} onClick={sendCode} className="font-semibold text-primary hover:underline">{t.resend}</button>}
           </p>
-          <button type="button" onClick={() => go(byWhatsApp && mode === "codeSent" ? HOME : "code")} className="min-h-11 w-full text-sm text-muted hover:text-fg">{byWhatsApp ? t.otherNumber : "Use a different email"}</button>
+          <button type="button" onClick={() => { try { sessionStorage.removeItem(CODE_KEY); } catch {} go(byWhatsApp && mode === "codeSent" ? HOME : "code"); }} className="min-h-11 w-full text-sm text-muted hover:text-fg">{byWhatsApp ? t.otherNumber : "Use a different email"}</button>
         </form>
       )}
 
