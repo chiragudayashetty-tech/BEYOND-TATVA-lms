@@ -8,10 +8,13 @@ export const CODE_WHATSAPP = (process.env.NEXT_PUBLIC_CODE_WHATSAPP || "91733764
 export default function OpenCodeChat({ kn = false, className = "" }) {
   return (
     <div className={className}>
-      <a href={`https://wa.me/${CODE_WHATSAPP}`} target="_blank" rel="noopener" className="btn-secondary min-h-12 w-full border-2 !border-[#25D366] py-3 text-base font-semibold">
-        <WhatsAppIcon className="h-5 w-5" /> {kn ? "ಕೋಡ್ ನೋಡಲು WhatsApp ತೆರೆಯಿರಿ" : "Open WhatsApp to see your code"}
+      <a href={`https://wa.me/${CODE_WHATSAPP}`} target="_blank" rel="noopener"
+        className="bt-wa-btn flex min-h-14 w-full items-center justify-center gap-2.5 rounded-xl bg-[#25D366] px-4 py-3 text-base font-bold text-white shadow-lg shadow-[#25D366]/30">
+        <WhatsAppIcon className="h-6 w-6 shrink-0" fill="#fff" />
+        <span>{kn ? "ಕೋಡ್ ನೋಡಲು WhatsApp ತೆರೆಯಿರಿ" : "Open WhatsApp to see your code"}</span>
+        <span className="bt-wa-arrow text-xl leading-none" aria-hidden="true">→</span>
       </a>
-      <p className="mt-1.5 text-center text-xs text-muted">
+      <p className="mt-3 text-center text-xs text-muted">
         {kn
           ? "ನೋಟಿಫಿಕೇಶನ್‌ಗೆ ಕಾಯಬೇಡಿ. Beyond Tatva ಚಾಟ್‌ನಲ್ಲಿ ಕೊನೆಯ ಕೋಡ್ ನೋಡಿ, ಇಲ್ಲಿ ಟೈಪ್ ಮಾಡಿ."
           : "Don't wait for a notification. Copy the newest code from the Beyond Tatva chat and type it here."}
