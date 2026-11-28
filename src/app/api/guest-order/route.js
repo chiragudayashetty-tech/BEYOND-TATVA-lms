@@ -4,6 +4,7 @@ import { COURSE_ID } from "@/lib/catalog";
 import { createOrder, razorpayKeys } from "@/lib/razorpay";
 import { guestPrice, tenDigits, validMobile } from "@/lib/guest-pay";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { trackServer } from "@/lib/track";
 
 // POST /api/guest-order { phone, coupon?, preview? } → { order_id, amount, currency, key_id } (or { amount } for preview)
 // No login: /pay. The parent's mobile goes in the order notes (guest_phone); guest-verify and the webhook read it back.
@@ -36,6 +37,8 @@ export async function POST(request) {
       console.error("razorpay guest order failed", r.status, r.data?.error?.description);
       return NextResponse.json({ error: "Could not start the payment. Please try again." }, { status: 500 });
     }
+    // Same id as payment_completed (guest-verify, webhook) so the checkout → paid funnel works for /pay too.
+    await trackServer("checkout_started", `guest:${r.data.id}`, { amount_inr: amount / 100, coupon: code || null, via: "guest" });
     return NextResponse.json({ order_id: r.data.id, amount: r.data.amount, currency: r.data.currency, key_id: keys.id });
   } catch {
     return NextResponse.json({ error: "Could not reach Razorpay. Please try again." }, { status: 500 });

@@ -54,7 +54,7 @@ export async function POST(request) {
       console.error("razorpay webhook: guest record_purchase failed", payment.id, error.message);
       return NextResponse.json({ error: "retry" }, { status: 500 });
     }
-    if (status === "claimed" || status === "pending") await trackServer("payment_completed", `guest:${payment.id}`, { amount_inr: Number.isInteger(payment.amount) ? payment.amount / 100 : null, coupon: notes.coupon || null, via: "webhook_guest" });
+    if (status === "claimed" || status === "pending") await trackServer("payment_completed", `guest:${payment.order_id || payment.id}`, { amount_inr: Number.isInteger(payment.amount) ? payment.amount / 100 : null, coupon: notes.coupon || null, via: "webhook_guest" });
     return NextResponse.json({ ok: true, status });
   }
 
