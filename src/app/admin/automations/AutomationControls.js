@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { BLANKS } from "@/lib/wa-blanks";
 import { retryMessage, saveAutomation, saveTemplate, sendNow } from "./actions";
 
 // WhatsApp media limits (the bucket 'whatsapp-media' is public so AiSensy can fetch the link).
@@ -46,16 +47,6 @@ function MediaPicker({ value, onChange }) {
   );
 }
 
-// What can fill a template blank ({{1}}, {{2}}…). Values come from the LMS when the message is sent.
-export const BLANKS = [
-  ["{parent_name}", "Parent name"],
-  ["{student_name}", "Child's full name"],
-  ["{student_first}", "Child's first name"],
-  ["{school}", "School"],
-  ["{grade}", "Class"],
-  ["{stage}", "Stage (Lead / Signed up / Paid)"],
-];
-export const blankLabel = (p) => BLANKS.find(([v]) => v === p)?.[1] ?? `"${p}"`;
 const keyFrom = (campaign) => campaign.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40);
 
 // One automatic rule: "When … → send [message]  [On/Off]".

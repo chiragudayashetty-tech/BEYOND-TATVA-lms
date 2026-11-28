@@ -3,7 +3,8 @@ import { CheckCircle2, Clock, MessageCircle, XCircle } from "lucide-react";
 import Shell from "@/components/shell/Shell";
 import { Badge, Card, Empty, PageTitle, StatCard } from "@/components/ui";
 import { createClient, isPreview, requireRole } from "@/lib/supabase/server";
-import { MessageForm, Retry, RuleSwitch, SendNow, blankLabel } from "./AutomationControls";
+import { MessageForm, Retry, RuleSwitch, SendNow } from "./AutomationControls";
+import { blankLabel } from "@/lib/wa-blanks";
 import { CustomRuleForm, DeleteRule, RulePreview } from "./CustomRules";
 import { describeRule } from "@/lib/custom-rules";
 
