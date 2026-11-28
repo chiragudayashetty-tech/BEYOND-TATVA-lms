@@ -72,6 +72,9 @@ export async function runAutomations(db, { now = new Date(), force = false, send
   // must not stop the sending of messages already queued.
   const { error: tickError } = await db.rpc("automation_tick");
   if (tickError) console.error("automation_tick failed", tickError.message);
+  // Rules built in Studio (custom triggers, delays, audiences).
+  const { error: customError } = await db.rpc("automation_custom_tick");
+  if (customError) console.error("automation_custom_tick failed", customError.message);
   const { data: batch, error } = await db.rpc("automation_claim", { p_limit: PER_RUN });
   if (error) throw new Error(error.message);
   let sent = 0, failed = 0;
