@@ -106,7 +106,7 @@ export function Retry({ id }) {
 export function MessageForm({ message }) {
   const [t, setT] = useState({
     title: message?.title ?? "", campaign: message?.campaign ?? "", language: message?.language ?? "kn",
-    category: message?.category ?? "marketing", params: message?.params?.length ? message.params : ["{parent_name}"],
+    category: message?.category ?? "marketing", params: message ? (message.params ?? []) : ["{parent_name}"],   // editing keeps "no blanks" as it is; only a new message starts with one
     media_url: message?.media_url ?? "", active: message?.active ?? true,
   });
   const [open, setOpen] = useState(!message);
@@ -154,7 +154,7 @@ export function MessageForm({ message }) {
           );
         })}
         {t.params.length < 10 && <button type="button" className="text-sm font-medium text-primary" onClick={() => set("params", [...t.params, "{student_first}"])}>+ Add blank</button>}
-        <p className="text-xs text-muted">No blanks in the template? Remove them all.</p>
+        <p className="text-xs text-muted">Automatic course messages (names starting j_) need <b>no blanks here</b>: the LMS fills {`{{1}}`}, {`{{2}}`}… itself (first name, dates, points). Blanks set here would replace those values.</p>
       </fieldset>
       <div><label className="label" htmlFor="m-media">Photo, video or PDF at the top (only if the AiSensy template has a media header)</label>
         <MediaPicker value={t.media_url} onChange={(v) => set("media_url", v)} /></div>
