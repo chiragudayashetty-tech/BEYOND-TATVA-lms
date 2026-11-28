@@ -1,7 +1,50 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Upload } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { retryMessage, saveAutomation, saveTemplate, sendNow } from "./actions";
+
+// WhatsApp media limits (the bucket 'whatsapp-media' is public so AiSensy can fetch the link).
+const MEDIA = { "image/jpeg": 5, "image/png": 5, "video/mp4": 16, "application/pdf": 16 }; // max MB per type
+const mediaName = (url) => decodeURIComponent(url.split("/").pop() ?? "");
+
+// Upload a photo, MP4 video or PDF from this computer/phone and use it as the message's top media.
+function MediaPicker({ value, onChange }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function upload(e) {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file) return;
+    setError("");
+    const max = MEDIA[file.type];
+    if (!max) return setError("Choose a JPG or PNG photo, an MP4 video or a PDF.");
+    if (file.size > max * 1024 * 1024) return setError(`${file.name} is over ${max} MB (WhatsApp limit for this type).`);
+    setBusy(true);
+    const supabase = createClient();
+    const safe = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/^-+|-+$/g, "").slice(-80) || "file";
+    const path = `${crypto.randomUUID()}/${safe}`;
+    const { error: upErr } = await supabase.storage.from("whatsapp-media").upload(path, file, { contentType: file.type, upsert: false });
+    setBusy(false);
+    if (upErr) return setError(`Upload failed: ${upErr.message}`);
+    onChange(supabase.storage.from("whatsapp-media").getPublicUrl(path).data.publicUrl);
+  }
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className={`btn-secondary min-h-11 cursor-pointer ${busy ? "pointer-events-none opacity-60" : ""}`}>
+          <Upload className="h-4 w-4" /> {busy ? "Uploading…" : value ? "Replace file" : "Upload file"}
+          <input type="file" accept={Object.keys(MEDIA).join(",")} onChange={upload} className="sr-only" />
+        </label>
+        {value && <span className="min-w-0 flex-1 truncate text-sm">{mediaName(value)}</span>}
+        {value && <button type="button" className="text-xs text-muted underline" onClick={() => onChange("")}>Remove</button>}
+      </div>
+      <input id="m-media" className="input" value={value} onChange={(e) => onChange(e.target.value)} placeholder="or paste a link: https://…" aria-label="Media link" />
+      {error && <p role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
+      <p className="text-xs text-muted">JPG/PNG up to 5 MB, MP4 up to 16 MB, PDF up to 16 MB. The link is public, so upload only what you would send to parents. The type must match the AiSensy template header (image, video or document).</p>
+    </div>
+  );
+}
 
 // What can fill a template blank ({{1}}, {{2}}…). Values come from the LMS when the message is sent.
 export const BLANKS = [
@@ -122,8 +165,8 @@ export function MessageForm({ message }) {
         {t.params.length < 10 && <button type="button" className="text-sm font-medium text-primary" onClick={() => set("params", [...t.params, "{student_first}"])}>+ Add blank</button>}
         <p className="text-xs text-muted">No blanks in the template? Remove them all.</p>
       </fieldset>
-      <div><label className="label" htmlFor="m-media">Photo/video at the top (only if the AiSensy template has a media header)</label>
-        <input id="m-media" className="input" value={t.media_url} onChange={(e) => set("media_url", e.target.value)} placeholder="https://…" /></div>
+      <div><label className="label" htmlFor="m-media">Photo, video or PDF at the top (only if the AiSensy template has a media header)</label>
+        <MediaPicker value={t.media_url} onChange={(v) => set("media_url", v)} /></div>
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={t.active} onChange={(e) => set("active", e.target.checked)} /> Can be sent</label>
         <span className="flex-1" />
