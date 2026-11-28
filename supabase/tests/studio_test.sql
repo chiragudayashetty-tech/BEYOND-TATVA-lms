@@ -494,6 +494,17 @@ do $$ begin insert into storage.objects (bucket_id, name) values ('module-resour
 exception when insufficient_privilege then raise notice 'R6 pass: students cannot upload module files'; end $$;
 reset role;
 
+-- ── WhatsApp media bucket ────────────────────────────────────────────────────
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+insert into storage.objects (bucket_id, name) values ('whatsapp-media', '11111111-1111-4111-8111-111111111111/promo.mp4');
+select 'WM1 admin uploads WhatsApp media' t, (select count(*) from storage.objects where bucket_id = 'whatsapp-media') = 1 as pass;
+select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+select 'WM2 student cannot list WhatsApp media' t, (select count(*) from storage.objects where bucket_id = 'whatsapp-media') = 0 as pass;
+do $$ begin insert into storage.objects (bucket_id, name) values ('whatsapp-media', '11111111-1111-4111-8111-111111111111/evil.pdf'); raise exception 'WM3 FAIL';
+exception when insufficient_privilege then raise notice 'WM3 pass: students cannot upload WhatsApp media'; end $$;
+reset role;
+select 'WM4 bucket is public, 16 MB, 4 file types' t, (select public and file_size_limit = 16777216 and cardinality(allowed_mime_types) = 4 from storage.buckets where id = 'whatsapp-media') as pass;
+
 -- ── UPI claims (interim payments) ────────────────────────────────────────────
 insert into storage.objects (bucket_id, name) values
   ('payment-proofs', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee/pay.jpg'), ('payment-proofs', '66666666-6666-6666-6666-666666666666/pay.jpg');
