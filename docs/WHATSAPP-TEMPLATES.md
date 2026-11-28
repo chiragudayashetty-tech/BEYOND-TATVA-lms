@@ -64,7 +64,7 @@ Last ping from us, {{1}}. 👋 Your seat in AI Superpowers is still saved. Grab 
 ### `j_enrolled_s` · Utility · 1 min after enrolling · header: course overview PDF · button "Open course"
 ```
 🎉 You're IN, {{1}}! Welcome to the top 1% of students your age learning AI.
-📘 Your guide is attached: modules, XP, leaderboard, how it all works.
+📘 Your guide is attached: modules, AI points, leaderboard, how it all works.
 📅 Module 1 drops {{2}}. Watch any day after.
 ```
 ### `j_enrolled_p` · Utility · 1 min after paying (payments only)
@@ -80,7 +80,7 @@ Quick quest, {{1}}: {{2}} ⚡ Module 1 is coming {{3}}, be ready.
 
 ### `j_module_open_s` · Utility · module opens (Sunday 10 am) · header: module thumbnail · button "Watch now"
 ```
-🎬 New episode alert! Module {{2}} "{{3}}" just dropped, {{1}}. Watch any day this week, finish quiz + assignment for up to {{4}} XP. Current rank: #{{5}} 🏆
+🎬 New episode alert! Module {{2}} "{{3}}" just dropped, {{1}}. Watch any day this week, finish quiz + assignment for up to {{4}} AI points. Current rank: #{{5}} 🏆
 ```
 ### `j_module_open_p` · Utility · same time
 ```
@@ -108,7 +108,7 @@ Psst {{1}}... 👀 Module {{2}} is still waiting for you. 40 minutes, go!
 ```
 ### `j_pending_tue_s` · Utility · Tuesday 6 pm, watched but quiz/assignment left
 ```
-Video ✅ Nice, {{1}}! Now the fun part of Module {{2}}: finish {{4}} for +{{3}} XP. 🧠
+Video ✅ Nice, {{1}}! Now the fun part of Module {{2}}: finish {{4}} for +{{3}} AI points. 🧠
 ```
 ### `j_pending_thu_s` · Utility · Thursday 6 pm
 ```
@@ -124,7 +124,7 @@ So close, {{1}}! 🔥 Just {{3}} left on Module {{2}}. Finish it and climb the l
 ### `j_course_done_s` · Utility · all modules finished · header: certificate image · button "Get certificate"
 ```
 🏅 ACHIEVEMENT UNLOCKED: AI Superpowers Graduate
-{{1}}, you passed {{2}} quizzes and handed in {{3}} assignments, finishing with {{4}} XP (rank #{{5}}).
+{{1}}, you passed {{2}} quizzes and handed in {{3}} assignments, finishing with {{4}} AI points (rank #{{5}}).
 You now use AI for studies, creativity, life and building. Your certificate is ready. Be proud. 🎓
 ```
 ### `j_course_done_p` · Utility

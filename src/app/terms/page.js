@@ -33,13 +33,14 @@ export default function TermsPage() {
         <UL>
           <li>&quot;<strong>We</strong>&quot; is Beyond Tatva, run by Chirag Shetty (sole proprietor), Udupi, Karnataka. &quot;<strong>You</strong>&quot; means the parent or guardian who accepts these terms. &quot;<strong>Student</strong>&quot; means the child (Grades 8 to 10) using the course. A teacher or school staff member using a teacher code is also bound by the <em>teacher terms</em> shown at sign-up.</li>
           <li>A person under 18 cannot make a binding contract in India. So <strong>the parent or guardian is the contracting party</strong> and is responsible for the student&apos;s use. If the student ticks the box, they confirm that their parent or guardian knows and agrees.</li>
+          <li><strong>Tapping &quot;Yes, I agree&quot;, paying, or using the service is your confirmation</strong> that you are the student&apos;s parent or guardian (or have their permission), that you have read and accept these terms and our privacy policy, and that you consent to the student&apos;s data being used, including tracking learning progress, as the privacy policy explains.</li>
           <li>If you do not agree, please do not use the service. Module 0 is free so you can look before you decide.</li>
         </UL>
       </Section>
 
       <Section id="service" n={2} title="What we provide">
         <UL>
-          <li>Recorded video lessons organised in weekly modules, with quizzes, assignments, study material, points (XP), certificates, and WhatsApp and email updates, as described on our website and app at the time you pay.</li>
+          <li>Recorded video lessons organised in weekly modules, with quizzes, assignments, study material, AI points (which record learning progress), certificates, and WhatsApp and email updates, as described on our website and app at the time you pay.</li>
           <li>Access is for <strong>one student</strong>, for as long as we offer the course and for at least 2 years from payment, unless ended under these terms.</li>
           <li>Modules open on set dates (usually Sundays 10:00 AM IST). We may reschedule, rename, shorten, add or improve lessons, quizzes and features, and move how things are delivered, without charging extra. Items marked &quot;coming soon&quot; are plans, not promises of a date.</li>
           <li>The service is provided on a reasonable-efforts basis. It can have downtime, bugs, slow video on poor networks, or maintenance. Your device, internet and WhatsApp must work for you to use it.</li>

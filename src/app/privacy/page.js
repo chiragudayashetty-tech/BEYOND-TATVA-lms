@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       intro={
         <>
           <P>Beyond Tatva teaches AI skills to students in Grades 8 to 10. Most of our students are children, so we collect as little as we can, keep it safe, and never sell it. This page explains exactly what we do, in plain words. <strong>Parents and guardians: please read it with your child.</strong></P>
-          <Callout><strong>In short:</strong> we keep a child&apos;s name, class, school and a parent&apos;s phone number so the course works. We never sell data, never show ads to students, and never let one student see another student&apos;s information. A parent can ask us to show, correct or delete everything at any time.</Callout>
+          <Callout><strong>In short:</strong> we keep a child&apos;s name, class, school and a parent&apos;s phone number so the course works. We track learning progress openly (it is not spying). We never sell data, never show ads to students, and never let one student see another student&apos;s information. A parent can ask us to show, correct or delete everything at any time.</Callout>
         </>
       }
     >
@@ -34,11 +34,11 @@ export default function PrivacyPage() {
 
       <Section id="children" n={2} title="Children and parental consent">
         <UL>
-          <li>Our students are under 18. <strong>A parent or guardian must agree before a student joins.</strong> At sign-up, the parent (or the student on the parent&apos;s behalf, with the parent&apos;s knowledge) confirms consent and gives the parent&apos;s name and WhatsApp number. We save a record of which wording was shown and when.</li>
+          <li>Our students are under 18. <strong>A parent or guardian must agree before a student joins.</strong> At sign-up, the parent (or the student on the parent&apos;s behalf, with the parent&apos;s knowledge) gives the parent&apos;s name and WhatsApp number and taps <strong>&quot;Yes, I agree&quot;</strong>. <strong>Tapping &quot;Yes, I agree&quot;, or paying, is the parent&apos;s or guardian&apos;s confirmation</strong> that they have read this policy and our terms, that they are the parent or guardian (or the student has their permission), and that they consent to the use of the child&apos;s data as described here, including tracking learning progress (section 4). We save a record of which wording was shown and when.</li>
           <li>We may check consent by sending a code to the parent&apos;s WhatsApp number. A student who says a parent agreed when that is not true is breaking our terms.</li>
           <li>We do not show advertisements to students, do not build advertising profiles of children, and do not sell or rent any child&apos;s data.</li>
           <li>One login belongs to one child. Parents do not need a separate account; we talk to parents on WhatsApp.</li>
-          <li>The student leaderboard is <strong>off by default</strong>. If a student switches it on, other students see only a first name and initial and learning points. It can be switched off any time in Profile.</li>
+          <li>The student leaderboard is <strong>off by default</strong>. If a student switches it on, other students see only a first name and initial and AI points. It can be switched off any time in Profile.</li>
           <li>A parent can withdraw consent at any time (see section 10). Withdrawing means we stop using the data and close the account; it does not affect what we lawfully did before.</li>
         </UL>
       </Section>
@@ -50,7 +50,7 @@ export default function PrivacyPage() {
           rows={[
             ["Student profile", "Name, grade, school, class section (optional), student's own WhatsApp number or email (optional), sign-in method", "Student or parent at sign-up"],
             ["Parent or guardian", "Name, WhatsApp number, the consent record (wording version, time, how it was confirmed)", "Parent or student at sign-up"],
-            ["Learning activity", "Lessons watched and how far, quiz answers and scores, assignments and files the student uploads (photos or PDFs), points (XP), certificates, study plans", "Created as the student learns"],
+            ["Learning activity", "Lessons watched and how far, quiz answers and scores, assignments and files the student uploads (photos or PDFs), AI points, certificates, study plans", "Created as the student learns"],
             ["Payments", "Payment status, amount, date, Razorpay payment ID, coupon used, phone or email entered at checkout. We never see or store card, UPI PIN or bank details.", "Razorpay and the payer"],
             ["Enquiries (leads)", "Parent and student name, phone, school, grade, how they found us, notes from our calls and messages", "Website forms, chat, workshops, WhatsApp, schools"],
             ["Messages", "Your WhatsApp and email conversations with us, delivery status, opt-out choices", "You and our messaging tools"],
@@ -71,6 +71,7 @@ export default function PrivacyPage() {
           <li><strong>Work with schools:</strong> if a school enrolled the student, we tell that school about the student&apos;s progress and participation.</li>
           <li><strong>Meet legal duties</strong> and respond to lawful requests from authorities.</li>
         </UL>
+        <Callout><strong>Yes, we track learning progress, openly. This is not spying.</strong> We record which lessons a student watches and how far, quiz answers and scores, assignments handed in, AI points, and when they last learned. We do this so the course can unlock the next module, give certificates, show the student their own progress, send parents an update, and help us fix lessons that students find hard. The student sees their own progress in the app, and the parent gets updates on WhatsApp. We do <strong>not</strong> watch a child&apos;s screen outside our app, and we never use the camera, microphone or location, or read private chats or other apps.</Callout>
         <P>We do not use a child&apos;s data for anything else without the parent&apos;s fresh consent. We do not make automated decisions that affect a child&apos;s rights.</P>
       </Section>
 
@@ -111,11 +112,9 @@ export default function PrivacyPage() {
         <Table
           head={["Data", "How long"]}
           rows={[
-            ["Student account, progress, quiz answers, uploads", "While the account is active. If there is no sign-in and no course access for 24 months, we delete or anonymise it. A verified deletion request is completed within 30 days."],
-            ["Consent records", "As long as the account exists, then up to 3 years, to prove consent was given."],
-            ["Payment and invoice records", "As long as Indian tax and accounting law requires (not deleted on request, but cut off from the student profile)."],
-            ["Enquiries (leads) who did not enrol", "Up to 24 months after the last contact, or sooner if you ask. Parents can opt out any time."],
-            ["Messages and delivery logs", "Up to 24 months."],
+            ["Student account, progress, quiz answers, uploads, messages, consent records and enquiries", "We keep these for 3 years from the last activity on the account or the end of course access (whichever is later). After that we delete or anonymise them."],
+            ["Payment and invoice records", "As long as Indian tax and accounting law requires, which may be longer than 3 years."],
+            ["Deletion or withdrawal of consent before 3 years", "You can ask for this any time (section 10). We then delete the data within 30 days, except records the law requires us to keep."],
             ["Analytics and error reports", "Kept by PostHog and Sentry for the period set in our plans with them (generally up to 12 months)."],
             ["Encrypted backups", "Nightly encrypted backups are kept for 30 days and then destroyed, so deleted data leaves our backups within about 30 days."],
           ]}

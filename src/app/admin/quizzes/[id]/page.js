@@ -49,7 +49,7 @@ export default async function QuizResultsPage({ params }) {
   return (
     <Shell roles={["admin"]}>
       <Link href="/admin/quizzes" className="btn-ghost -ml-3 mb-2"><ArrowLeft className="h-4 w-4" /> Quizzes</Link>
-      <PageTitle title={quiz.title} subtitle={`Results. Students get ${QUIZ_TRIES} tries; XP is ${XP_RULES.quizAnswer} for each right answer, on the average of their tries. Pass mark ${quiz.pass_percent}%.`} />
+      <PageTitle title={quiz.title} subtitle={`Results. Students get ${QUIZ_TRIES} tries; AI points are ${XP_RULES.quizAnswer} for each right answer, on the average of their tries. Pass mark ${quiz.pass_percent}%.`} />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Students who tried" value={students.length} hint={`${attempts.length} tries in total`} />
@@ -88,7 +88,7 @@ export default async function QuizResultsPage({ params }) {
                       <span className="text-xs text-muted">{s.grade ? `Grade ${s.grade} · ` : ""}{s.tries.map((t, k) => `Try ${k + 1}: ${t.score}/${t.total}`).join(" · ")}</span>
                     </span>
                     <span className="text-sm text-muted">Average {Math.round(s.avg * 10) / 10}/{s.tries[0].total}</span>
-                    <Badge tone="warning">{s.xp} XP</Badge>
+                    <Badge tone="warning">{s.xp} AI points</Badge>
                     <Badge tone={s.passed ? "success" : "neutral"}>{s.passed ? "Passed" : "Not passed"}</Badge>
                     <span className="text-xs font-medium text-primary group-open:hidden">See answers</span>
                     <span className="hidden text-xs font-medium text-primary group-open:inline">Hide</span>
