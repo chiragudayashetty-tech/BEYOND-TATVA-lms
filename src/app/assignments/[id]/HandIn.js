@@ -6,6 +6,7 @@ import Image from "next/image";
 import { CircleCheck, FileText, ImagePlus, MessageSquareText, Send, X } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
+import { track } from "@/lib/track-client";
 
 const MAX_FILES = 5;
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -86,6 +87,7 @@ export default function HandIn({ assignment: a, moduleLabel, submission: sub, fi
         p_assignment: a.id, p_text: a.allow_text ? text : null, p_link: a.allow_link ? link : null, p_files: [...kept.map((k) => k.path), ...uploaded],
       });
       if (error) throw new Error(error.message);
+      track("assignment_submitted", { assignment_id: a.id, files: kept.length + uploaded.length, resubmit: Boolean(sub) });
       // Files the student took out of this hand-in: delete them so they don't use up the upload limit.
       const keptPaths = new Set(kept.map((k) => k.path));
       const dropped = existing.map((k) => k.path).filter((path) => !keptPaths.has(path));

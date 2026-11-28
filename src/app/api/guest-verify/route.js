@@ -32,6 +32,6 @@ export async function POST(request) {
     console.error("guest record_purchase failed", paymentId, error.message);
     return NextResponse.json({ paid: true, delayed: true, error: "Payment received; saving it is delayed. Message us with your payment ID." }, { status: 500 });
   }
-  if (status === "claimed" || status === "pending") await trackServer("payment_completed", `guest:${paymentId}`, { amount_inr: Number.isInteger(order.amount) ? order.amount / 100 : null, coupon: order.notes?.coupon || null, via: "guest" });
+  if (status === "claimed" || status === "pending") await trackServer("payment_completed", `guest:${orderId}`, { amount_inr: Number.isInteger(order.amount) ? order.amount / 100 : null, coupon: order.notes?.coupon || null, via: "guest" });
   return NextResponse.json({ paid: true, phone, payment_id: paymentId, claim: claimToken(paymentId) });
 }
