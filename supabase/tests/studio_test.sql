@@ -1530,3 +1530,12 @@ exception when others then if sqlerrm like 'Z9112%' then raise; end if; raise no
 do $$ begin perform public.automation_custom_tick(); raise exception 'Z9113 FAIL';
 exception when others then if sqlerrm like 'Z9113%' then raise; end if; raise notice 'Z9113 pass: only the sender can run the custom tick'; end $$;
 reset role;
+
+-- ── Seeded WhatsApp messages (20261128000003) ────────────────────────────────
+reset role;
+select 'Z9301 31 messages from the AiSensy guide exist' t, (select count(*) from public.wa_templates where key like 'j\_%' or key like 'bt\_%') = 31 as pass;
+select 'Z9302 journey messages have no blanks of their own (the journey fills them)' t,
+  (select bool_and(cardinality(params) = 0) from public.wa_templates where key like 'j\_%') as pass;
+select 'Z9303 broadcast blanks: child name, school, fixed prices' t,
+  (select params from public.wa_templates where key = 'bt_workshop_thanks') = array['{student_first}', '{school}']
+  and (select params from public.wa_templates where key = 'bt_offer_ends') = array['{student_first}', '499', '4999', '799'] as pass;
