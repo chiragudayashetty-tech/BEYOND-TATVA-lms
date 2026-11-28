@@ -553,6 +553,7 @@ function LoginForm() {
       {error && <p role="alert" className="mt-4 rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
     </div>
     <p className="mt-6 text-center text-xs text-muted">{t.consent}</p>
+    <p className="mt-2 text-center text-xs text-muted">By continuing you agree to our <a href="/terms" className="font-medium text-primary underline">Terms</a> and <a href="/privacy" className="font-medium text-primary underline">Privacy policy</a>.</p>
     </>
   );
 }

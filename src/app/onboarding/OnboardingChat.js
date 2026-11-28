@@ -339,6 +339,7 @@ export default function OnboardingChat({ defaultName, next, signedInAs, loginPho
             )}
             {ask === "consent" && (
               <div className="grid gap-2">
+                <p className="text-center text-xs text-muted">By agreeing, the parent or guardian accepts our <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline">Terms</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline">Privacy policy</a>.</p>
                 <button type="button" disabled={busy} onClick={() => { me("Yes, I agree ✅"); finish(); }} className="btn-primary w-full py-3.5 text-base"><Check className="h-5 w-5" /> Yes, I agree · Start the course</button>
                 <p lang="kn" className="text-center text-xs text-muted">ಹೌದು, ಒಪ್ಪುತ್ತೇನೆ · ಕೋರ್ಸ್ ಆರಂಭಿಸಿ</p>
               </div>

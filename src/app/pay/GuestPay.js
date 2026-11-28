@@ -166,6 +166,7 @@ export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, p
       </label>
 
       <button onClick={pay} disabled={busy} className="btn-primary mt-4 w-full !py-3 text-base">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />} {busy ? "Opening payment…" : `Pay ₹${amount}`}</button>
+      <p className="mt-2 text-center text-xs text-muted">By paying, the parent or guardian accepts our <a href="/terms" target="_blank" rel="noopener" className="font-medium text-primary underline">Terms</a>, <a href="/privacy" target="_blank" rel="noopener" className="font-medium text-primary underline">Privacy policy</a> and <a href="/refund-policy" target="_blank" rel="noopener" className="font-medium text-primary underline">Refund policy</a>.</p>
       {msg && (
         <div role={msg.tone === "error" ? "alert" : "status"} className={`mt-3 rounded-xl p-3 text-sm ${msg.tone === "error" ? "bg-danger-soft text-danger" : "bg-surface-2 text-muted"}`}>
           <p>{msg.text}{msg.paymentId && <> Payment ID: <b>{msg.paymentId}</b></>}</p>

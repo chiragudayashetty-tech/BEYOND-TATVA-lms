@@ -101,6 +101,7 @@ export default async function ProfilePage({ searchParams }) {
             <ProfileEditor userId={user.id} fullName={profile.full_name} avatar={profile.avatar} />
             <PasswordCard loginWith={loginWith} open={setNew} />
             <Row icon={ShieldCheck} label="Privacy and data" hint="What we keep, and how to delete your account" href="/delete-account" />
+            <Row icon={ShieldCheck} label="Privacy policy and terms" hint="How we protect your data, and the rules of the course" href="/privacy" />
             <Row icon={CircleHelp} label="Help and support" href="/help" />
           </section>
           <section className="card flex flex-wrap items-center justify-between gap-3 px-5 py-4">
