@@ -1,3 +1,5 @@
+"use client";
+
 // "Open WhatsApp" button for login codes. On many Android phones the code arrives without a notification,
 // so parents waited for a pop-up that never came and kept asking for new codes (each cancels the last).
 // This opens the chat with the number that sends the codes (AiSensy), where the newest code is waiting.
@@ -5,10 +7,20 @@ import WhatsAppIcon from "@/components/WhatsAppIcon";
 
 export const CODE_WHATSAPP = (process.env.NEXT_PUBLIC_CODE_WHATSAPP || "917337645448").replace(/\D/g, "");
 
+// Open the WhatsApp app itself (whatsapp://), so this page stays where it is with the code box ready when they
+// come back. Only if the app didn't open (page still visible after 1.5 s) fall back to wa.me in a new tab.
+function openApp(e) {
+  e.preventDefault();
+  window.location.href = `whatsapp://send?phone=${CODE_WHATSAPP}`;
+  window.setTimeout(() => {
+    if (document.visibilityState === "visible") window.open(`https://wa.me/${CODE_WHATSAPP}`, "_blank", "noopener");
+  }, 1500);
+}
+
 export default function OpenCodeChat({ kn = false, className = "" }) {
   return (
     <div className={className}>
-      <a href={`https://wa.me/${CODE_WHATSAPP}`} target="_blank" rel="noopener"
+      <a href={`https://wa.me/${CODE_WHATSAPP}`} onClick={openApp} target="_blank" rel="noopener"
         className="bt-wa-btn flex min-h-14 w-full items-center justify-center gap-2.5 rounded-xl bg-[#25D366] px-4 py-3 text-base font-bold text-white shadow-lg shadow-[#25D366]/30">
         <WhatsAppIcon className="h-6 w-6 shrink-0" fill="#fff" />
         <span>{kn ? "ಕೋಡ್ ನೋಡಲು WhatsApp ತೆರೆಯಿರಿ" : "Open WhatsApp to see your code"}</span>
