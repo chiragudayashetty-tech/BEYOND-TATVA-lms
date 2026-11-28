@@ -28,7 +28,7 @@ export default async function UnlockPage() {
   };
   // Just signed in with Google, no details yet: pay first, fill in the details right after.
   if (user && !session.profile && !isPreview) {
-    const paid = await hasPendingPurchase(user.email);
+    const paid = await hasPendingPurchase(user.email, user.phone);
     return (
       <main className="grid min-h-screen place-items-center bg-bg px-4 py-10">
         <div className="w-full max-w-md">
