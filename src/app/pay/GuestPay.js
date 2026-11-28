@@ -85,12 +85,21 @@ export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, p
       theme: { color: "#2563eb" },
       handler: async (resp) => {
         setMsg({ tone: "info", text: "Payment received. Saving it…" });
-        const { ok: saved, data } = await post("/api/guest-verify", resp);
-        // Even when saving is delayed the webhook records it, so the next step is the same.
-        if (saved || data.paid) {
+        // Razorpay only calls this after a successful payment. The phone often has no signal for a moment when it
+        // comes back from the UPI app, so retry; if it still fails, the Razorpay webhook records the payment on
+        // this number anyway. Only a real "not valid" answer from our server is shown as an error.
+        let res = { ok: false, data: {} };
+        for (let i = 0; i < 4; i++) {
+          res = await post("/api/guest-verify", resp);
+          if (res.ok || res.data.paid || (res.data.error && res.data.error !== "No internet connection.")) break;
+          await new Promise((r) => window.setTimeout(r, 1500 * (i + 1)));
+        }
+        const { ok: saved, data } = res;
+        const offline = !saved && !data.paid && (!data.error || data.error === "No internet connection.");
+        if (saved || data.paid || offline) {
           const q = new URLSearchParams({ paid: data.phone || mobile, id: resp.razorpay_payment_id });
           if (data.claim) q.set("c", data.claim);
-          if (data.delayed) q.set("delayed", "1");
+          if (data.delayed || offline) q.set("delayed", "1");
           return window.location.replace(`/pay?${q}`);
         }
         fail(`${data.error || "We couldn't confirm the payment."} Don't worry, message us and we'll sort it out.`, resp.razorpay_payment_id);
@@ -184,6 +193,11 @@ export default function GuestPay({ title, price, enabled, whatsapp, paidPhone, p
 // and claim_purchases unlocks the course for it.
 function PaidVerify({ paid, help }) {
   const signin = `/login?phone=${paid.phone}&next=${encodeURIComponent("/course")}`;
+  // Show "Payment done" for a moment, then take them to sign up with this number.
+  useEffect(() => {
+    const t = window.setTimeout(() => window.location.assign(signin), 4000);
+    return () => window.clearTimeout(t);
+  }, [signin]);
   return (
     <div className="mt-5">
       <div className="flex items-center gap-3 rounded-xl bg-success-soft p-3">
@@ -196,6 +210,7 @@ function PaidVerify({ paid, help }) {
         <p className="mt-3 text-muted">To open the course, sign up or sign in with <b>this same number</b>. The course unlocks by itself.</p>
       </div>
       <a href={signin} className="btn-primary mt-4 w-full !py-3 text-base">Sign up and open the course</a>
+      <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-muted"><Loader2 className="h-3 w-3 animate-spin" /> Taking you to sign up…</p>
       <p className="mt-2 text-center text-xs text-muted">Wrong number? Message us with your payment ID and we&apos;ll move it.</p>
       {help && <a href={help} target="_blank" rel="noopener" className="btn-secondary mt-4 w-full"><MessageCircle className="h-4 w-4" /> Need help? WhatsApp us</a>}
     </div>
