@@ -7,7 +7,7 @@ import { Lock } from "lucide-react";
 export const metadata = { title: "Pay for the course · Beyond Tatva" };
 export const dynamic = "force-dynamic"; // payment keys and price read on each request
 
-// Public pay page: phone number → Razorpay → sign in with a WhatsApp code on that number → details → course.
+// Public pay page: phone number → Razorpay → payment saved on that number → normal sign-up with it unlocks the course.
 export default async function PayPage({ searchParams }) {
   const sp = await searchParams;
   const paidPhone = /^[6-9]\d{9}$/.test(String(sp?.paid || "")) ? String(sp.paid) : "";
