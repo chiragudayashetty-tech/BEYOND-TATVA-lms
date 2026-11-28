@@ -48,7 +48,7 @@ test("AiSensy opt-out refusals are recognised and recorded, not counted as faile
   const db = { rpc: async (fn, a) => { calls.push(fn); return fn === "automation_claim" ? { data: [{ id: "x" }] } : { data: "ok" }; } };
   const r = await runAutomations(db, { force: true, send: async () => ({ ok: false, error: "Contact opted out" }) });
   assert.deepEqual(r, { sent: 0, failed: 0 });
-  assert.deepEqual(calls, ["automation_tick", "automation_claim", "automation_opted_out"]);
+  assert.deepEqual(calls, ["automation_tick", "automation_custom_tick", "automation_claim", "automation_opted_out"]);
 });
 
 test("each WhatsApp outcome becomes one analytics event, without the phone or name", async () => {

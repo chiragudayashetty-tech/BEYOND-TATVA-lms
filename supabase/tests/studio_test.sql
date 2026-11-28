@@ -497,13 +497,13 @@ reset role;
 -- ── WhatsApp media bucket ────────────────────────────────────────────────────
 set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
 insert into storage.objects (bucket_id, name) values ('whatsapp-media', '11111111-1111-4111-8111-111111111111/promo.mp4');
-select 'WM1 admin uploads WhatsApp media' t, (select count(*) from storage.objects where bucket_id = 'whatsapp-media') = 1 as pass;
+select 'Z9201 admin uploads WhatsApp media' t, (select count(*) from storage.objects where bucket_id = 'whatsapp-media') = 1 as pass;
 select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
-select 'WM2 student cannot list WhatsApp media' t, (select count(*) from storage.objects where bucket_id = 'whatsapp-media') = 0 as pass;
-do $$ begin insert into storage.objects (bucket_id, name) values ('whatsapp-media', '11111111-1111-4111-8111-111111111111/evil.pdf'); raise exception 'WM3 FAIL';
-exception when insufficient_privilege then raise notice 'WM3 pass: students cannot upload WhatsApp media'; end $$;
+select 'Z9202 student cannot list WhatsApp media' t, (select count(*) from storage.objects where bucket_id = 'whatsapp-media') = 0 as pass;
+do $$ begin insert into storage.objects (bucket_id, name) values ('whatsapp-media', '11111111-1111-4111-8111-111111111111/evil.pdf'); raise exception 'Z9203 FAIL';
+exception when insufficient_privilege then raise notice 'Z9203 pass: students cannot upload WhatsApp media'; end $$;
 reset role;
-select 'WM4 bucket is public, 16 MB, 4 file types' t, (select public and file_size_limit = 16777216 and cardinality(allowed_mime_types) = 4 from storage.buckets where id = 'whatsapp-media') as pass;
+select 'Z9204 bucket is public, 16 MB, 4 file types' t, (select public and file_size_limit = 16777216 and cardinality(allowed_mime_types) = 4 from storage.buckets where id = 'whatsapp-media') as pass;
 
 -- ── UPI claims (interim payments) ────────────────────────────────────────────
 insert into storage.objects (bucket_id, name) values
@@ -1449,3 +1449,84 @@ select 'W12 nudge cap: a number with 2 nudges today gets no third' t,
   (with s as (select * from public.journey_students() where id = 'a7000000-0000-0000-0000-000000000001')
    select public.journey_send('j_nudge_tue_s', 'cap1', s, '["a","1"]', true) + public.journey_send('j_nudge_thu_s', 'cap2', s, '["a","1","0"]', true)
         + public.journey_send('j_nudge_sat_s', 'cap3', s, '["a","1"]', true) = 2 from s) as pass;
+
+-- ── Custom automations (20261128000002): rules built in Studio ───────────────
+reset role;
+insert into public.wa_templates (key, title, campaign, params) values ('ct_hello', 'Custom hello', 'ct_hello', array['{student_first}']);
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+-- Window = this hour (IST) so the test works at any time of day.
+select public.admin_save_custom_rule(jsonb_build_object('title', 'CT signup', 'trigger', 'signup', 'recipient', 'parent', 'aud_stage', 'not_enrolled',
+  'template_key', 'ct_hello', 'from_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int, 'to_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int + 1));
+reset role;
+select 'Z9101 new custom rule is Off and sends nothing' t,
+  (select not enabled and custom from public.automation_rules where title = 'CT signup') and public.automation_custom_tick() = 0 as pass;
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_set_automation((select key from public.automation_rules where title = 'CT signup'), '', true, 'ct_hello');
+reset role;
+select public.automation_custom_tick();
+select 'Z9102 switching On is not retroactive: students from before are left alone' t,
+  (select count(*) = 0 from public.message_queue where rule_key = (select key from public.automation_rules where title = 'CT signup')) as pass;
+update public.automation_rules set include_past = true where title = 'CT signup';
+select public.automation_custom_tick();
+select public.automation_custom_tick();
+select 'Z9103 include past: not-enrolled student gets it once; enrolled and test accounts do not' t,
+  (select count(*) filter (where student_id = 'a7000000-0000-0000-0000-000000000003' and phone = '+919845066603' and params = '["Own"]'::jsonb) = 1
+      and count(*) filter (where student_id::text like 'a7000000-%' and student_id <> 'a7000000-0000-0000-0000-000000000003') = 0
+   from public.message_queue where rule_key = (select key from public.automation_rules where title = 'CT signup')) as pass;
+-- Outside the send window nothing is queued.
+delete from public.message_queue where rule_key = (select key from public.automation_rules where title = 'CT signup');
+update public.automation_rules set from_hour = (extract(hour from now() at time zone 'Asia/Kolkata')::int + 2) % 22,
+  to_hour = (extract(hour from now() at time zone 'Asia/Kolkata')::int + 2) % 22 + 1 where title = 'CT signup';
+select 'Z9104 outside the send window: nothing queued' t, public.automation_custom_tick() = 0 as pass;
+-- A fixed date + time to one class, once.
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+do $$ begin perform public.admin_save_custom_rule('{"title":"CT past","trigger":"date","run_at":"2020-01-01T10:00:00+05:30","template_key":"ct_hello"}');
+  raise exception 'Z9105 FAIL'; exception when others then if sqlerrm like 'Z9105%' then raise; end if; raise notice 'Z9105 pass: a date in the past is refused'; end $$;
+select public.admin_save_custom_rule(jsonb_build_object('title', 'CT date', 'trigger', 'date', 'run_at', now() + interval '1 hour', 'aud_grade', 8,
+  'template_key', 'ct_hello', 'from_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int, 'to_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int + 1));
+select public.admin_set_automation((select key from public.automation_rules where title = 'CT date'), '', true, 'ct_hello');
+reset role;
+update public.automation_rules set run_at = now() - interval '1 minute', enabled_at = now() - interval '2 minutes' where title = 'CT date';
+select public.automation_custom_tick();
+select public.automation_custom_tick();
+select 'Z9106 date rule: only the class asked for, once' t,
+  (select count(*) filter (where student_id = 'a7000000-0000-0000-0000-000000000003') = 1
+      and count(*) filter (where student_id = 'a7000000-0000-0000-0000-000000000001') = 0
+   from public.message_queue where rule_key = (select key from public.automation_rules where title = 'CT date')) as pass;
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select 'Z9107 preview counts who it reaches and who already got it' t,
+  (select total >= 1 and already >= 1 from public.admin_custom_preview((select key from public.automation_rules where title = 'CT date'))) as pass;
+-- A module opening: one message per student per module, to the student's number.
+select public.admin_save_custom_rule(jsonb_build_object('title', 'CT module', 'trigger', 'module_open', 'aud_module', 4, 'recipient', 'student', 'include_past', true,
+  'template_key', 'ct_hello', 'from_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int, 'to_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int + 1));
+select public.admin_set_automation((select key from public.automation_rules where title = 'CT module'), '', true, 'ct_hello');
+reset role;
+select public.automation_custom_tick();
+select public.automation_custom_tick();
+select 'Z9108 module opens: the student gets it once' t,
+  (select count(*) = 1 and bool_and(params = '["Journey"]'::jsonb)
+   from public.message_queue where rule_key = (select key from public.automation_rules where title = 'CT module') and student_id::text like 'a7000000-%') as pass;
+-- A new lead with no account.
+insert into public.leads (reference, phone, source, grade, parent_name) values ('ct-lead-1', '+919845066699', 'manual', 8, 'Lead Parent');
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+select public.admin_save_custom_rule(jsonb_build_object('title', 'CT lead', 'trigger', 'lead_added', 'include_past', true, 'template_key', 'ct_hello',
+  'from_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int, 'to_hour', extract(hour from now() at time zone 'Asia/Kolkata')::int + 1));
+select public.admin_set_automation((select key from public.automation_rules where title = 'CT lead'), '', true, 'ct_hello');
+reset role;
+select public.automation_custom_tick();
+select 'Z9109 new lead: queued to the lead parent; do-not-contact leads are left out' t,
+  (select count(*) filter (where phone = '+919845066699' and lead_id is not null) = 1 and count(*) filter (where phone = '+919845066603') = 0
+   from public.message_queue where rule_key = (select key from public.automation_rules where title = 'CT lead')) as pass;
+-- Delete only a rule that never sent anything.
+set role authenticated; select pg_temp.as_user('33333333-3333-3333-3333-333333333333');
+do $$ begin perform public.admin_delete_custom_rule((select key from public.automation_rules where title = 'CT lead'));
+  raise exception 'Z9110 FAIL'; exception when others then if sqlerrm like 'Z9110%' then raise; end if; raise notice 'Z9110 pass: a rule with history cannot be deleted'; end $$;
+select public.admin_delete_custom_rule(public.admin_save_custom_rule('{"title":"CT blank","trigger":"signup"}'));
+select 'Z9111 a rule that never sent can be deleted' t, (select count(*) = 0 from public.automation_rules where title = 'CT blank') as pass;
+-- Students cannot touch any of it.
+select pg_temp.as_user('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+do $$ begin perform public.admin_save_custom_rule('{"title":"evil","trigger":"signup"}'); raise exception 'Z9112 FAIL';
+exception when others then if sqlerrm like 'Z9112%' then raise; end if; raise notice 'Z9112 pass: students cannot create rules'; end $$;
+do $$ begin perform public.automation_custom_tick(); raise exception 'Z9113 FAIL';
+exception when others then if sqlerrm like 'Z9113%' then raise; end if; raise notice 'Z9113 pass: only the sender can run the custom tick'; end $$;
+reset role;
