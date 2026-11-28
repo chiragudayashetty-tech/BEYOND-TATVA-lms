@@ -74,6 +74,7 @@ export default function HelpPage() {
           <Card title="Your privacy">
             <p className="text-sm leading-relaxed text-muted">We store your name, grade, school and parent or guardian&apos;s WhatsApp number so the course can work and your family can receive important updates. We never sell this information.</p>
             <p className="mt-3 text-sm leading-relaxed text-muted">Want a copy of your data, or want it deleted? Ask a parent or guardian to message us and we will do it for you. <Link href="/delete-account" className="font-medium text-primary">How to delete your account</Link></p>
+            <p className="mt-3 text-sm leading-relaxed text-muted">Read the full <Link href="/privacy" className="font-medium text-primary">privacy policy</Link> and <Link href="/terms" className="font-medium text-primary">terms and conditions</Link>.</p>
           </Card>
         </div>
       </div>

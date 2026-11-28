@@ -64,7 +64,7 @@ export async function getLessonVideo(lessonId) {
   return data?.video_url ? signBunnyEmbed(data.video_url, { key: process.env.BUNNY_EMBED_TOKEN_KEY }) : null;
 }
 
-// Dashboard stats from my_learning_stats() (migration 10): XP with breakdown, lessons, quizzes, assignments, quick checks.
+// Dashboard stats from my_learning_stats() (migration 10): AI points with breakdown, lessons, quizzes, assignments, quick checks.
 // Preview (no real student) gets a fixed sample so the screens can be built and tested.
 const PREVIEW_STATS = {
   xp: 340, xp_breakdown: { checks: 60, quizzes: 80, modules: 100, assignments: 100, total: 340 }, minutes_total: 95,
@@ -83,7 +83,7 @@ export const getLearningStats = cache(async () => {
   return error ? null : data;
 });
 
-// XP leaderboard: { scope, batch, top: [{ rank, name: "Asha R.", xp, me }], me: { rank, xp, hidden } | null, players }.
+// AI points leaderboard: { scope, batch, top: [{ rank, name: "Asha R.", xp, me }], me: { rank, xp, hidden } | null, players }.
 // scope "batch" = only the viewer's weekly batch (batch is null when they have none); "all" = every student.
 export const getLeaderboard = cache(async (limit = 10, scope = "all") => {
   const { user } = await getSession();

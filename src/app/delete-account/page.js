@@ -32,9 +32,9 @@ export default function DeleteAccountPage() {
           <p className="text-muted">Your login, your profile (name, grade, school, parent or guardian&apos;s phone number), your course progress, quiz answers, assignments and uploaded files, and your certificates.</p>
 
           <h2 className="font-semibold">What we keep</h2>
-          <p className="text-muted">Payment and invoice records, for as long as Indian tax law asks us to keep them. Nothing else.</p>
+          <p className="text-muted">Payment and invoice records, for as long as Indian tax law asks us to keep them (they are no longer linked to a profile). Encrypted backups hold older copies for up to 30 days, then they are destroyed. We also delete the parent&apos;s enquiry record (name, phone and notes) when you ask. Nothing else.</p>
 
-          <p className="text-muted">Want only part of your data deleted, or a copy of it? Ask the same way. More details are in our <a href="https://www.beyondtatva.in/privacy" className="font-medium text-primary">privacy policy</a>.</p>
+          <p className="text-muted">Want only part of your data deleted, or a copy of it? Ask the same way. More details are in our <Link href="/privacy" className="font-medium text-primary">privacy policy</Link>.</p>
         </section>
         <p className="mt-4 text-center text-sm text-muted"><Link href="/" className="font-medium text-primary">Back to Beyond Tatva</Link></p>
       </div>

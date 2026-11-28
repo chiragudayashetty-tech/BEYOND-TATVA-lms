@@ -87,7 +87,7 @@ function ModuleQuiz({ module: m, quiz, questions, stats, open, onToggle }) {
           <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted">
             {quiz ? <>
               <Badge tone={quiz.published ? "success" : "neutral"}>{quiz.published ? "Published" : "Draft"}</Badge>
-              <span>{questions.length} questions · pass {quiz.pass_percent}% · 10 XP per right answer · 2 tries</span>
+              <span>{questions.length} questions · pass {quiz.pass_percent}% · 10 AI points per right answer · 2 tries</span>
               {stats && <span>· {stats.passed}/{stats.students} students passed ({stats.attempts} tries)</span>}
             </> : <span>No quiz yet</span>}
           </div>

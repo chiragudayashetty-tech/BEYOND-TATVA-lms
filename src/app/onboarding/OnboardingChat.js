@@ -141,7 +141,7 @@ export default function OnboardingChat({ defaultName, next, signedInAs, loginPho
     if (!/^[6-9]\d{9}$/.test(p)) return setError("Enter a 10-digit WhatsApp number.");
     me(`+91 ${p}`);
     setA((x) => ({ ...x, gPhone: p }));
-    await say(parent ? `Does ${first(a.name)} have their own WhatsApp? Course tips and XP updates go there. (Optional)` : "Do you have your own WhatsApp? Course tips and XP updates come here. (Optional)",
+    await say(parent ? `Does ${first(a.name)} have their own WhatsApp? Course tips and AI points updates go there. (Optional)` : "Do you have your own WhatsApp? Course tips and AI points updates come here. (Optional)",
       "ವಿದ್ಯಾರ್ಥಿಯ ಸ್ವಂತ WhatsApp ನಂಬರ್ (ಐಚ್ಛಿಕ)");
     go("sPhone");
   }
@@ -339,6 +339,7 @@ export default function OnboardingChat({ defaultName, next, signedInAs, loginPho
             )}
             {ask === "consent" && (
               <div className="grid gap-2">
+                <p className="text-center text-xs text-muted">Tapping &quot;Yes, I agree&quot; confirms that the parent or guardian has read and accepts our <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline">Terms</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline">Privacy policy</a>, and agrees that we track the student&apos;s learning progress in the course.</p>
                 <button type="button" disabled={busy} onClick={() => { me("Yes, I agree ✅"); finish(); }} className="btn-primary w-full py-3.5 text-base"><Check className="h-5 w-5" /> Yes, I agree · Start the course</button>
                 <p lang="kn" className="text-center text-xs text-muted">ಹೌದು, ಒಪ್ಪುತ್ತೇನೆ · ಕೋರ್ಸ್ ಆರಂಭಿಸಿ</p>
               </div>

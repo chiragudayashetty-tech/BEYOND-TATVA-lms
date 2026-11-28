@@ -25,7 +25,7 @@ export default async function CoursePage({ searchParams }) {
     [PlayCircle, `${course.modules.length} modules`, `${course.lessonCount} short video lessons`],
     [CalendarClock, "Weekly premieres", "A new module every Sunday, 10 AM"],
     [FolderKanban, "Hands-on projects", "Make real things with AI tools"],
-    [Sparkles, "Quiz in every module", "2 tries, earn XP"],
+    [Sparkles, "Quiz in every module", "2 tries, earn AI points"],
     [ClipboardList, "Assignments", "Marked with feedback"],
     [Download, "Watch offline", "Download modules in the app"],
     [Award, "Certificate", "Finish every module (coming soon)"],

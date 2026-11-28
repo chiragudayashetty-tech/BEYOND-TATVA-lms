@@ -40,7 +40,7 @@ export default function QuizRunner({ quiz, questions, tries = [], limited = fals
     setResult(data);
     track("quiz_submitted", { quiz_id: quiz.id, quiz_title: quiz.title ?? null, score: data?.score ?? null, total: data?.total ?? null, passed: data?.passed ?? null, attempt: data?.attempt ?? null });
     setUsed(data.attempt ?? used + 1);
-    router.refresh(); // XP and module status
+    router.refresh(); // AI points and module status
   }
 
   function retry() {
@@ -60,8 +60,8 @@ export default function QuizRunner({ quiz, questions, tries = [], limited = fals
         <ul className="mx-auto mt-4 max-w-xs space-y-2 text-left text-sm">
           {tries.map((t, k) => <li key={k} className="flex justify-between rounded-xl bg-surface-2 px-4 py-3"><span>Try {k + 1}</span><span className="font-semibold">{t.score} of {t.total} right</span></li>)}
         </ul>
-        <div className="mt-4"><Badge tone="warning"><Sparkles className="h-3 w-3" /> {Math.round(avg * XP_RULES.quizAnswer)} XP from this quiz</Badge></div>
-        <p className="mt-2 text-xs text-muted">XP is {XP_RULES.quizAnswer} for each right answer, on the average of your tries.</p>
+        <div className="mt-4"><Badge tone="warning"><Sparkles className="h-3 w-3" /> {Math.round(avg * XP_RULES.quizAnswer)} AI points from this quiz</Badge></div>
+        <p className="mt-2 text-xs text-muted">AI points are {XP_RULES.quizAnswer} for each right answer, on the average of your tries.</p>
         <Link href="/course" className="btn-primary mt-5">Continue the course <ArrowRight className="h-4 w-4" /></Link>
       </div>
     );
@@ -78,11 +78,11 @@ export default function QuizRunner({ quiz, questions, tries = [], limited = fals
           <h1 className="mt-3 text-2xl font-semibold">{result.passed ? "You passed!" : "Not yet. Try again!"}</h1>
           <p className="mt-1 text-muted">{result.score} of {result.total} correct ({pct}%). Pass mark is {result.pass_percent}%.</p>
           {!result.revealed && <p className="mt-2 text-sm text-muted">You&apos;ll see the right answers after your second try. Look back at the lesson first: you have 1 try left.</p>}
-          {limited && <div className="mt-3"><Badge tone="warning"><Sparkles className="h-3 w-3" /> {result.xp} XP from this quiz</Badge></div>}
+          {limited && <div className="mt-3"><Badge tone="warning"><Sparkles className="h-3 w-3" /> {result.xp} AI points from this quiz</Badge></div>}
           {limited && <p className="mt-2 text-xs text-muted">
             {left > 0
-              ? `You can try once more. Your XP will be the average of both tries, so it can go up or down.`
-              : `That was your last try. XP is ${XP_RULES.quizAnswer} for each right answer, on the average of your tries.`}
+              ? `You can try once more. Your AI points will be the average of both tries, so it can go up or down.`
+              : `That was your last try. AI points are ${XP_RULES.quizAnswer} for each right answer, on the average of your tries.`}
           </p>}
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
             {result.passed || (limited && left === 0)
@@ -120,14 +120,14 @@ export default function QuizRunner({ quiz, questions, tries = [], limited = fals
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold">{quiz.title}</h1>
-          <p className="text-sm text-muted">{questions.length} questions · pass with {quiz.pass_percent}% · {XP_RULES.quizAnswer} XP for each right answer</p>
+          <p className="text-sm text-muted">{questions.length} questions · pass with {quiz.pass_percent}% · {XP_RULES.quizAnswer} AI points for each right answer</p>
         </div>
         {best && <Badge tone={passedBefore ? "success" : "neutral"}>First try: {best.score}/{best.total}{passedBefore ? " · passed" : ""}</Badge>}
       </div>
       {limited && <p className="mb-3 rounded-xl bg-primary-soft px-4 py-3 text-sm">
         {used === 0
-          ? `You get ${QUIZ_TRIES} tries. Your XP is the average of your tries, so take your time on each one.`
-          : "This is your last try. Your XP will be the average of both tries."}
+          ? `You get ${QUIZ_TRIES} tries. Your AI points are the average of your tries, so take your time on each one.`
+          : "This is your last try. Your AI points will be the average of both tries."}
       </p>}
       <Progress value={(answered / questions.length) * 100} className="h-1.5" />
 
